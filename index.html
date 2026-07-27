@@ -4,957 +4,731 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="referrer" content="no-referrer" />
-  <meta name="description"
-    content="Rewire With Kajal — friendly, private support for stress, worry, relationships, and life changes. No jargon: learn what happens in a session and book online." />
-  <title>Rewire With Kajal — Calm, Clear Support for Your Mind</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+  <title>Rewire With Kajal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-  <!-- Full production styles from live build: css/main-from-app.css (see https://rewirewithkajal.vercel.app/) -->
-  <link rel="stylesheet" href="css/main-from-app.css" />
-  <link rel="stylesheet" href="css/site-overrides.css" />
-  <link rel="icon" type="image/png" href="images/logo3.png" />
-  <noscript>
-    <style>
-      .rw-reveal {
-        opacity: 1 !important;
-        transform: none !important;
-      }
-    </style>
-  </noscript>
+  <link rel="stylesheet" href="css/index-redesign.css" />
 </head>
 
-<body class="rw-site-bg-lines">
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+<body>
 
-  <main class="rw-home" id="main-content">
-    <!-- ========== HERO — modern floating nav + creative slider ========== -->
-    <div class="rw-hero rw-hero--creative" id="home">
-      <div class="rw-hero-ambient" aria-hidden="true"></div>
-      <div class="rw-site-line-art rw-site-line-art--hero" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <defs>
-              <linearGradient id="rw-hero-orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="rgba(249, 115, 22, 0.16)" />
-                <stop offset="45%" stop-color="rgba(249, 115, 22, 0.26)" />
-                <stop offset="100%" stop-color="rgba(249, 115, 22, 0.12)" />
-              </linearGradient>
-            </defs>
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none"
-              stroke="url(#rw-hero-orange-grad)" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
+  <!-- Navbar -->
+  <nav class="rw-navbar">
+    <div class="rw-container">
+      <a href="index.html" class="rw-logo">
+        <img src="images/logo3.png" alt="Rewire with Kajal Logo">
+      </a>
+
+      <div class="rw-nav-links d-none d-lg-flex">
+        <a href="index.html" class="active">Home</a>
+        <a href="index.html#how-it-works">How it Works</a>
+        <a href="about.html">About</a>
+        <a href="blogs.php">Blog</a>
+      </div>
+
+      <div class="rw-nav-actions d-none d-lg-flex">
+        <a href="appointment.html" class="rw-btn rw-btn-primary">Book Appointment</a>
+        <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank"
+          aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="index.html" class="rw-social-icon" aria-label="Website"><i class="bi bi-globe2"></i></a>
+        <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i
+            class="bi bi-envelope"></i></a>
+      </div>
+
+      <button class="navbar-toggler d-lg-none" type="button"
+        style="border:none; background:transparent; font-size:24px;">
+        <i class="bi bi-list"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="rw-hero">
+    <div class="rw-container">
+      <div class="row align-items-center">
+        <div class="col-lg-6">
+          <span class="rw-eyebrow">HYPNOTHERAPY FOR LASTING CHANGE</span>
+          <h1>Understand. Heal.<br><span class="rw-accent-text">Rewire.</span> Grow.</h1>
+          <p class="rw-hero-subtext">Your mind holds the answers. Hypnotherapy helps you access them, heal the past, and
+            create the life you truly want.</p>
+
+          <div class="rw-hero-buttons">
+            <a href="appointment.html" class="rw-btn rw-btn-primary">
+              Book a Free Intro Call <i class="bi bi-arrow-right"></i>
+            </a>
+            <a href="#how-it-works" class="rw-btn rw-btn-secondary">
+              How It Works <span class="rw-play-icon-wrap"><i class="bi bi-play-fill"></i></span>
+            </a>
+          </div>
+
+          <div class="rw-trust-badges">
+            <div class="rw-trust-item"><i class="bi bi-shield-check"></i> <span>Safe & Confidential</span></div>
+            <div class="rw-trust-item"><i class="bi bi-bank"></i> <span>Evidence-Informed</span></div>
+            <div class="rw-trust-item"><i class="bi bi-stopwatch"></i> <span>Personalized for You</span></div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="rw-hero-image-wrapper">
+            <!-- Organic shape background behind therapist photo -->
+            <div class="rw-hero-bg-backdrop"></div>
+
+            <!-- Leaf Floral SVG Decor (positioned behind therapist photo) -->
+            <img src="images/noun-floral-5095798.svg" class="rw-hero-leaf-svg" alt="Floral Branch Decor">
+
+            <!-- Hero Woman Photo (overlaps the leaf on the right side) -->
+            <img src="images/hero-woman.png" alt="Hypnotherapist Kajal sitting comfortably" class="rw-hero-img">
+
+            <!-- Floating Quote Box -->
+            <div class="rw-hero-quote">
+              <div class="rw-quote-icon-container">
+                <svg width="44" height="44" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M10 8C6.13 8 3 11.13 3 15C3 18.87 6.13 22 10 22C10.35 22 10.69 21.97 11.02 21.93C10.11 24.38 7.74 26.13 4.93 26.13H4V28.5H4.93C9.55 28.5 13.41 25.1 14.01 20.63C14.35 18.09 14.12 15 14.12 15C14.12 11.13 10.99 8 10 8ZM24 8C20.13 8 17 11.13 17 15C17 18.87 20.13 22 24 22C24.35 22 24.69 21.97 25.02 21.93C24.11 24.38 21.74 26.13 18.93 26.13H18V28.5H18.93C23.55 28.5 27.41 25.1 28.01 20.63C28.35 18.09 28.12 15 28.12 15C28.12 11.13 24.99 8 24 8Z"
+                    fill="#E07A5F" />
+                </svg>
+              </div>
+              <p class="rw-quote-text">Calm is not something you find, it's something you remember.</p>
+              <span class="rw-quote-author">&ndash; Unknown</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats Section -->
+  <section class="rw-stats-section">
+    <div class="rw-container">
+      <div class="rw-stats-container">
+        <div class="rw-stat-item">
+          <div class="rw-stat-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="rw-stat-text">
+            <h4>200+</h4>
+            <p>Clients Transformed</p>
+          </div>
+        </div>
+
+        <div class="rw-stat-item">
+          <div class="rw-stat-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+              </polygon>
+            </svg>
+          </div>
+          <div class="rw-stat-text">
+            <h4>8+</h4>
+            <p>Years of Experience</p>
+          </div>
+        </div>
+
+        <div class="rw-stat-item">
+          <div class="rw-stat-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+              </path>
+            </svg>
+          </div>
+          <div class="rw-stat-text">
+            <h4>98%</h4>
+            <p>Client Satisfaction</p>
+          </div>
+        </div>
+
+        <div class="rw-stat-item">
+          <div class="rw-stat-icon-wrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+          </div>
+          <div class="rw-stat-text">
+            <h4>100%</h4>
+            <p>Confidential & Safe Space</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- What is Hypnotherapy -->
+  <section class="rw-section rw-what-is">
+    <div class="rw-container">
+      <div class="row align-items-center">
+        <div class="col-lg-4 pe-lg-4">
+          <span class="rw-eyebrow">WHAT IS HYPNOTHERAPY?</span>
+          <h2>It's not magic.<br>It's <span class="rw-accent-text">science.</span></h2>
+          <p>Hypnotherapy is a natural state of focused attention and deep relaxation. It helps you access your
+            subconscious mind &ndash; the part that stores your beliefs, habits and emotions &ndash; so you can release
+            what no longer serves you and create patterns that support your well-being.</p>
+        </div>
+
+        <div
+          class="col-lg-4 rw-head-graphic position-relative text-center d-flex align-items-center justify-content-center">
+          <img src="images/brain-spiral.png" alt="Hypnotherapy Brain Silhouette" class="img-fluid rw-brain-spiral-img">
+        </div>
+
+        <div class="col-lg-4">
+          <div class="rw-faq-box">
+            <div class="accordion rw-accordion" id="faqAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1"
+                    aria-expanded="true">
+                    Will I lose control?
+                  </button>
+                </h2>
+                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">No, you remain in complete control during the entire session. Hypnotherapy
+                    is a natural state of focused attention where you stay fully aware.</div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faq2">
+                    Can I get stuck in hypnosis?
+                  </button>
+                </h2>
+                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">It is impossible to get stuck in hypnosis.</div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faq3">
+                    Will I reveal my secrets?
+                  </button>
+                </h2>
+                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">You will not say or do anything you don't want to.</div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faq4">
+                    Is hypnosis like sleep?
+                  </button>
+                </h2>
+                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">It is a relaxed state, but you are awake and aware.</div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faq5">
+                    Do I have to believe in it?
+                  </button>
+                </h2>
+                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">An open mind is helpful, but you don't need a strong belief.</div>
+                </div>
+              </div>
+            </div>
+            <div class="text-end mt-4">
+              <a href="#" class="rw-faq-link">See all answers <i class="bi bi-arrow-right"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How I Can Help You -->
+  <section class="rw-section rw-section-bg-white" id="services" style="padding: 40px 0 40px 0;">
+    <div class="rw-container" style="max-width: 1400px;">
+      <div class="rw-section-header" style="margin-bottom: 40px;">
+        <span class="rw-eyebrow" style="color: #6c8a8c; font-size: 12px; letter-spacing: 2px;">HOW I CAN HELP YOU</span>
+      </div>
+
+      <div class="row g-3 justify-content-center">
+        <!-- Service 1 -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="rw-help-card">
+            <div class="rw-help-icon"><i class="bi bi-person" style="font-size: 24px; stroke-width: 1px;"></i></div>
+            <h3 style="font-family: var(--rw-font-heading);">Anxiety & Stress</h3>
+            <p>Reduce worry, overthinking and panic. Find calm and clarity again.</p>
+          </div>
+        </div>
+        <!-- Service 2 -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="rw-help-card">
+            <div class="rw-help-icon"><i class="bi bi-heart" style="font-size: 20px;"></i></div>
+            <h3 style="font-family: var(--rw-font-heading);">Emotional Healing</h3>
+            <p>Heal past wounds, release emotional baggage and feel lighter.</p>
+          </div>
+        </div>
+        <!-- Service 3 -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="rw-help-card">
+            <div class="rw-help-icon"><i class="bi bi-star" style="font-size: 20px;"></i></div>
+            <h3 style="font-family: var(--rw-font-heading);">Confidence & Self-Esteem</h3>
+            <p>Rewire self-doubt into self-worth and step into your power.</p>
+          </div>
+        </div>
+        <!-- Service 4 -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="rw-help-card">
+            <div class="rw-help-icon"><i class="bi bi-moon" style="font-size: 20px;"></i></div>
+            <h3 style="font-family: var(--rw-font-heading);">Sleep & Insomnia</h3>
+            <p>Improve sleep naturally and wake up feeling refreshed and energized.</p>
+          </div>
+        </div>
+        <!-- Service 5 -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="rw-help-card">
+            <div class="rw-help-icon"><i class="bi bi-slash-circle" style="font-size: 20px;"></i></div>
+            <h3 style="font-family: var(--rw-font-heading);">Habits & Addictions</h3>
+            <p>Break free from unhealthy habits and build a healthier you.</p>
+          </div>
+        </div>
+        <!-- Service 6 -->
+        <div class="col-lg-2 col-md-4 col-sm-6">
+          <div class="rw-help-card">
+            <div class="rw-help-icon"><i class="bi bi-flower1" style="font-size: 20px;"></i></div>
+            <h3 style="font-family: var(--rw-font-heading);">Weight & Lifestyle</h3>
+            <p>Heal emotional eating, improve body image and support healthy habits.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="rw-section rw-process-wave-section" id="how-it-works">
+    <div class="rw-container" style="max-width: 1280px;">
+      <div class="rw-process-wave-wrapper">
+        <!-- SVG Sine Wave Background Path with Dot Nodes -->
+        <div class="rw-process-svg-wrap d-none d-lg-block">
+          <svg viewBox="0 0 1000 220" preserveAspectRatio="none" class="rw-process-svg-line">
+            <!-- Sine Wave Curve passing through circle centers (Y: Step 1=129, Step 2=89, Step 3=145, Step 4=89) -->
+            <path
+              d="M 15 138 C 50 138, 80 129, 125 129 C 180 129, 230 105, 295 99 C 330 94, 345 89, 375 89 C 420 89, 480 132, 545 139 C 570 143, 595 145, 625 145 C 670 145, 720 89, 875 89 C 925 89, 960 115, 985 115"
+              fill="none" stroke="#E07A5F" stroke-width="2.2" stroke-linecap="round" />
+            <!-- Node Dots -->
+            <circle cx="15" cy="138" r="4.5" fill="#E07A5F" />
+            <circle cx="295" cy="99" r="4.5" fill="#E07A5F" />
+            <circle cx="545" cy="139" r="4.5" fill="#E07A5F" />
+            <circle cx="985" cy="115" r="4.5" fill="#E07A5F" />
           </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
+        </div>
+
+        <div class="rw-process-grid">
+          <!-- Step 1: Connect -->
+          <div class="rw-process-item rw-step-1">
+            <div class="rw-process-badge-wrap">
+              <div class="rw-process-circle-outer">
+                <div class="rw-process-circle-inner">
+                  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </div>
+              </div>
+              <span class="rw-process-number">01</span>
+            </div>
+            <h3 class="rw-process-title">Connect</h3>
+            <p class="rw-process-desc">We connect and understand your concerns.</p>
+          </div>
+
+          <!-- Step 2: Discover -->
+          <div class="rw-process-item rw-step-2">
+            <div class="rw-process-badge-wrap">
+              <div class="rw-process-circle-outer">
+                <div class="rw-process-circle-inner">
+                  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+              <span class="rw-process-number">02</span>
+            </div>
+            <h3 class="rw-process-title">Discover</h3>
+            <p class="rw-process-desc">We explore the root cause and patterns.</p>
+          </div>
+
+          <!-- Step 3: Heal -->
+          <div class="rw-process-item rw-step-3">
+            <div class="rw-process-badge-wrap">
+              <div class="rw-process-circle-outer">
+                <div class="rw-process-circle-inner">
+                  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 2a3 3 0 0 0 0 6 3 3 0 0 0 0-6z"></path>
+                    <path d="M12 16a3 3 0 0 0 0 6 3 3 0 0 0 0-6z"></path>
+                    <path d="M2 12a3 3 0 0 0 6 0 3 3 0 0 0-6 0z"></path>
+                    <path d="M16 12a3 3 0 0 0 6 0 3 3 0 0 0-6 0z"></path>
+                    <path d="M4.93 4.93a3 3 0 0 0 4.24 4.24 3 3 0 0 0-4.24-4.24z"></path>
+                    <path d="M14.83 14.83a3 3 0 0 0 4.24 4.24 3 3 0 0 0-4.24-4.24z"></path>
+                    <path d="M14.83 9.17a3 3 0 0 0 4.24-4.24 3 3 0 0 0-4.24 4.24z"></path>
+                    <path d="M4.93 19.07a3 3 0 0 0 4.24-4.24 3 3 0 0 0-4.24 4.24z"></path>
+                  </svg>
+                </div>
+              </div>
+              <span class="rw-process-number">03</span>
+            </div>
+            <h3 class="rw-process-title">Heal</h3>
+            <p class="rw-process-desc">You relax deeply in a safe and guided state.</p>
+          </div>
+
+          <!-- Step 4: Transform -->
+          <div class="rw-process-item rw-step-4">
+            <div class="rw-process-badge-wrap">
+              <div class="rw-process-circle-outer">
+                <div class="rw-process-circle-inner">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                      d="M12 12c-2-2.5-4-4-6.5-4A4.5 4.5 0 0 0 1 12.5 4.5 4.5 0 0 0 5.5 17c2.5 0 4.5-1.5 6.5-4zm0 0c2 2.5 4 4 6.5 4a4.5 4.5 0 0 0 4.5-4.5 4.5 4.5 0 0 0-4.5-4.5c-2.5 0-4.5 1.5-6.5 4z">
+                    </path>
+                  </svg>
+                </div>
+              </div>
+              <span class="rw-process-number">04</span>
+            </div>
+            <h3 class="rw-process-title">Transform</h3>
+            <p class="rw-process-desc">We reprogram limiting beliefs and create lasting change.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Kajal - Your Guide on this Journey Banner -->
+  <section class="rw-container py-5" style="max-width: 1440px;">
+    <div class="rw-guide-banner">
+      <div class="row g-0 align-items-center">
+        <!-- Left Photo with Arch Curve -->
+        <div class="col-lg-3 col-md-4">
+          <div class="rw-guide-img-wrap">
+            <img src="images/kajal-about.png" alt="Kajal - Clinical Hypnotherapist" class="rw-guide-img">
+          </div>
+        </div>
+
+        <!-- Center Text Content -->
+        <div class="col-lg-5 col-md-8 ps-lg-5 pe-lg-4 py-4 py-lg-5 px-4">
+          <span class="rw-guide-eyebrow">HI, I'M KAJAL</span>
+          <h2 class="rw-guide-title">Your guide on this journey.</h2>
+          <p class="rw-guide-text">I'm a certified Clinical Hypnotherapist passionate about helping people understand
+            their minds and create meaningful change.</p>
+          <p class="rw-guide-subtext">My approach is compassionate, non-judgmental, and tailored to you.</p>
+          <a href="about.html" class="rw-guide-btn">Know My Story <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        <!-- Right Feature Items & Decorative Leaf SVG -->
+        <div class="col-lg-4 col-md-12 py-4 py-lg-5 px-4 pe-lg-5 position-relative">
+          <div class="rw-guide-features">
+            <!-- Feature 1 -->
+            <div class="rw-guide-feature-item">
+              <div class="rw-guide-icon-badge">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z">
+                  </path>
+                </svg>
+              </div>
+              <div class="rw-guide-feature-content">
+                <h6>Professional &amp; Certified</h6>
+                <p>Trained in clinical hypnotherapy with years of experience.</p>
+              </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="rw-guide-feature-item">
+              <div class="rw-guide-icon-badge">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                  </path>
+                </svg>
+              </div>
+              <div class="rw-guide-feature-content">
+                <h6>Compassionate &amp; Empathetic</h6>
+                <p>A safe space to be heard, understood and supported.</p>
+              </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="rw-guide-feature-item">
+              <div class="rw-guide-icon-badge">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <circle cx="12" cy="12" r="6"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+              </div>
+              <div class="rw-guide-feature-content">
+                <h6>Results-Oriented</h6>
+                <p>Helping you achieve long-lasting change, not quick fixes.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Decorative Leaf Branch on Far Right -->
+          <img src="images/noun-floral-5095798.svg" class="rw-guide-leaf-svg" alt="Leaf Decor Branch">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials - Kind Words From My Clients -->
+  <section class="rw-container py-4" style="max-width: 1440px;">
+    <div class="rw-testimonial-banner">
+      <span class="rw-testimonial-eyebrow">KIND WORDS FROM MY CLIENTS</span>
+
+      <div class="rw-testimonial-carousel-wrap position-relative">
+        <!-- Navigation Arrow Buttons -->
+        <button class="rw-carousel-nav-btn rw-carousel-prev" aria-label="Previous Testimonial">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <button class="rw-carousel-nav-btn rw-carousel-next" aria-label="Next Testimonial">
+          <i class="bi bi-arrow-right"></i>
+        </button>
+
+        <!-- 3 Testimonial Cards Grid -->
+        <div class="row g-4 align-items-stretch">
+          <!-- Card 1 (Left White Card) -->
+          <div class="col-lg-4 col-md-6">
+            <div class="rw-testimonial-card-v2">
+              <div>
+                <div class="rw-stars-v2">
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                </div>
+                <p class="rw-quote-v2">"Hypnotherapy with Kajal helped me release years of anxiety. I feel calmer,
+                  lighter and more in control of my life."</p>
+              </div>
+              <div class="rw-client-info-v2">
+                <img src="images/client1.png" alt="Priya S." class="rw-client-avatar">
+                <div>
+                  <h6 class="rw-client-name">Priya S.</h6>
+                  <span class="rw-client-meta">Client since 2022</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 (Center Deep Slate Teal Accent Card) -->
+          <div class="col-lg-4 col-md-6">
+            <div class="rw-testimonial-card-v2 rw-card-accent">
+              <div>
+                <div class="rw-stars-v2">
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                </div>
+                <p class="rw-quote-v2">"I never knew my mind was holding me back. This journey changed the way I see
+                  myself completely."</p>
+              </div>
+              <div class="rw-client-info-v2">
+                <img src="images/client2.png" alt="Rahul M." class="rw-client-avatar">
+                <div>
+                  <h6 class="rw-client-name">Rahul M.</h6>
+                  <span class="rw-client-meta">Client since 2023</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 (Right White Card) -->
+          <div class="col-lg-4 col-md-6">
+            <div class="rw-testimonial-card-v2">
+              <div>
+                <div class="rw-stars-v2">
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                  <i class="bi bi-star-fill"></i>
+                </div>
+                <p class="rw-quote-v2">"Professional, kind and deeply understanding. I felt safe from the very first
+                  session."</p>
+              </div>
+              <div class="rw-client-info-v2">
+                <img src="images/client3.png" alt="Ananya K." class="rw-client-avatar">
+                <div>
+                  <h6 class="rw-client-name">Ananya K.</h6>
+                  <span class="rw-client-meta">Client since 2021</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Insights -->
+  <section class="rw-section">
+    <div class="rw-container">
+      <div class="rw-section-header text-start">
+        <span class="rw-eyebrow">INSIGHTS & INSPIRATION</span>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-3">
+          <div class="rw-blog-card">
+            <div class="rw-blog-img-wrap">
+              <img src="images/blog-overthinking.png" alt="Why Overthinking Keeps You Stuck">
+              <span class="rw-blog-tag">MINDSET</span>
+            </div>
+            <div class="rw-blog-content">
+              <h4>Why Overthinking Keeps You Stuck (And How to Break Free)</h4>
+              <a href="blog-detail.php" class="rw-blog-link">Read More <i class="bi bi-arrow-right"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="rw-blog-card">
+            <div class="rw-blog-img-wrap">
+              <img src="images/blog-session.png" alt="What Really Happens During a Hypnotherapy Session">
+              <span class="rw-blog-tag">HYPNOTHERAPY</span>
+            </div>
+            <div class="rw-blog-content">
+              <h4>What Really Happens During a Hypnotherapy Session?</h4>
+              <a href="blog-detail.php" class="rw-blog-link">Read More <i class="bi bi-arrow-right"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="rw-blog-card">
+            <div class="rw-blog-img-wrap">
+              <img src="images/blog-nervous.png" alt="5 Simple Ways to Calm Your Nervous System Naturally">
+              <span class="rw-blog-tag">HEALING</span>
+            </div>
+            <div class="rw-blog-content">
+              <h4>5 Simple Ways to Calm Your Nervous System Naturally</h4>
+              <a href="blog-detail.php" class="rw-blog-link">Read More <i class="bi bi-arrow-right"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="rw-cta-card">
+            <h3>Ready to start your healing journey?</h3>
+            <p>Book a free 20-minute introductory call.</p>
+            <a href="appointment.html" class="rw-btn rw-btn-primary">Book Your Call Now <i
+                class="bi bi-arrow-right"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pre Footer / Book a Session CTA Banner -->
+  <section class="rw-container py-5" style="max-width: 1440px;">
+    <div class="rw-cta-banner">
+      <!-- Left Floral Leaf Decor -->
+      <img src="images/noun-floral-5095798.svg" class="rw-cta-leaf-left" alt="Leaf Decor Left">
+
+      <!-- Center Text & Button -->
+      <div class="rw-cta-content text-center">
+        <span class="rw-cta-subtitle">You don't have to do this alone.</span>
+        <h2 class="rw-cta-title">Let's create the <span class="rw-accent-text">change you deserve.</span></h2>
+        <div class="mt-4">
+          <a href="appointment.html" class="rw-cta-btn">Book a Session <i class="bi bi-arrow-right"></i></a>
         </div>
       </div>
 
-      <div class="home-hero-navbar-wrapper" id="site-nav">
-        <div class="home-hero-navbar">
-          <a class="hhn-logo" href="index.html" aria-label="Rewire With Kajal home">
-            <img src="images/logo3.png" width="160" height="167" alt="Rewire With Kajal" />
+      <!-- Right Floral Leaf Decor -->
+      <img src="images/noun-floral-5095798.svg" class="rw-cta-leaf-right" alt="Leaf Decor Right">
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="rw-footer">
+    <div class="rw-container">
+      <div class="row g-4">
+        <div class="col-lg-3 col-md-6">
+          <a href="index.html" class="rw-footer-logo">
+            <img src="images/logo3.png" alt="Rewire with Kajal Logo">
+            <span>Rewire</span>
           </a>
-          <nav class="hhn-links d-none d-lg-flex align-items-center" aria-label="Primary">
-            <a href="#plain-english">How it works</a>
-            <a href="about.html">About</a>
-            <a href="blogs.php">Blog</a>
-            <a class="hhn-book-btn" href="appointment.html">Book Appointment</a>
-          </nav>
-          <div class="hhn-socials d-none d-lg-flex align-items-center">
-            <a href="https://www.instagram.com/rewirewithkajal/" aria-label="Instagram" rel="noopener noreferrer"
-              target="_blank"><i class="bi bi-instagram" aria-hidden="true"></i></a>
-            <a href="index.html" aria-label="Home"><i class="bi bi-globe2" aria-hidden="true"></i></a>
-            <a href="mailto:hello@rewirewithkajal.com" aria-label="Email"><i class="bi bi-envelope"
-                aria-hidden="true"></i></a>
+          <p class="mb-4">Calm mind. Healthy heart.<br>Better you.</p>
+          <div class="d-flex gap-3">
+            <a href="https://www.instagram.com/rewirewithkajal/" target="_blank" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="index.html" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Website"><i class="bi bi-globe2"></i></a>
+            <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Email"><i class="bi bi-envelope"></i></a>
           </div>
-          <button type="button" class="hhn-menu-toggle d-flex d-lg-none" aria-label="Open menu" aria-expanded="false"
-            data-nav-toggle>
-            <i class="bi bi-list" aria-hidden="true"></i>
-          </button>
         </div>
 
-      </div>
-
-      <div class="rw-hero-panel" id="hero-panel">
-        <!-- Slide 0 -->
-        <div class="rw-hero-slide is-active" data-slide="0" aria-hidden="false">
-          <div class="rw-hero-copy">
-            <p class="rw-eyebrow">Support for real life</p>
-            <h1>Find Your Calm.<span>Heal from Within.</span></h1>
-            <p class="rw-hero-sub">
-              Talk in a private, respectful space. Whether you feel anxious, stuck, or exhausted, you get practical
-              help—without
-              pressure to “have it all figured out.”
-            </p>
-            <div class="rw-hero-actions">
-              <a class="rw-btn-solid" href="appointment.html">Book a free chat</a>
-              <a class="rw-btn-outline" href="#plain-english">See how it works</a>
-            </div>
-            <div class="rw-hero-stats" aria-label="Practice highlights">
-              <div>
-                <div class="rw-stat-value">200+</div>
-                <div class="rw-stat-label">Lives Transformed</div>
-              </div>
-              <div>
-                <div class="rw-stat-value">8</div>
-                <div class="rw-stat-label">Years Experience</div>
-              </div>
-              <div>
-                <div class="rw-stat-value">98%</div>
-                <div class="rw-stat-label">Client Satisfaction</div>
-              </div>
-            </div>
-          </div>
-          <div class="rw-hero-right">
-            <div class="rw-hero-card">
-              <div class="rw-card-visual" aria-hidden="true">
-                <img src="https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=800&q=80"
-                  alt="" class="rw-card-image" width="800" height="600" loading="eager" decoding="async" />
-              </div>
-              <h3>Private sessions</h3>
-              <p>One-to-one time to understand what you are going through and build steadier days—at a pace that feels
-                safe for you.</p>
-              <div class="rw-tag-row"><span>Calm</span><span>Clarity</span><span>Support</span></div>
-            </div>
-          </div>
-        </div>
-        <!-- Slide 1 -->
-        <div class="rw-hero-slide" data-slide="1" aria-hidden="true">
-          <div class="rw-hero-copy">
-            <p class="rw-eyebrow">When life feels heavy</p>
-            <h1>Reclaim Your<span>Peace of Mind.</span></h1>
-            <p class="rw-hero-sub">
-              You do not have to carry everything alone. We work step by step on stress, low mood, and the patterns that
-              keep you
-              tired or on edge.
-            </p>
-            <div class="rw-hero-actions">
-              <a class="rw-btn-solid" href="appointment.html">Book a session</a>
-              <a class="rw-btn-outline" href="blogs.php">Read simple articles</a>
-            </div>
-            <div class="rw-hero-stats" aria-label="Practice highlights">
-              <div>
-                <div class="rw-stat-value">200+</div>
-                <div class="rw-stat-label">Lives Transformed</div>
-              </div>
-              <div>
-                <div class="rw-stat-value">8</div>
-                <div class="rw-stat-label">Years Experience</div>
-              </div>
-              <div>
-                <div class="rw-stat-value">98%</div>
-                <div class="rw-stat-label">Client Satisfaction</div>
-              </div>
-            </div>
-          </div>
-          <div class="rw-hero-right">
-            <div class="rw-hero-card">
-              <div class="rw-card-visual" aria-hidden="true">
-                <img src="https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=800&q=80"
-                  alt="" class="rw-card-image" width="800" height="533" loading="lazy" decoding="async" />
-              </div>
-              <h3>Stress &amp; burnout</h3>
-              <p>Learn boundaries, rest, and small habits so work and life stop draining you every day.</p>
-              <div class="rw-tag-row"><span>Rest</span><span>Boundaries</span><span>Energy</span></div>
-            </div>
-          </div>
-        </div>
-        <!-- Slide 2 -->
-        <div class="rw-hero-slide" data-slide="2" aria-hidden="true">
-          <div class="rw-hero-copy">
-            <p class="rw-eyebrow">Change &amp; relationships</p>
-            <h1>Navigate Life’s<span>Transitions Safely.</span></h1>
-            <p class="rw-hero-sub">
-              Breakups, moves, family stress, or job changes can shake anyone. Get steady support while you adjust—not
-              quick fixes,
-              honest guidance.
-            </p>
-            <div class="rw-hero-actions">
-              <a class="rw-btn-solid" href="appointment.html">Book a session</a>
-              <a class="rw-btn-outline" href="about.html">Meet Kajal</a>
-            </div>
-            <div class="rw-hero-stats" aria-label="Practice highlights">
-              <div>
-                <div class="rw-stat-value">200+</div>
-                <div class="rw-stat-label">Lives Transformed</div>
-              </div>
-              <div>
-                <div class="rw-stat-value">8</div>
-                <div class="rw-stat-label">Years Experience</div>
-              </div>
-              <div>
-                <div class="rw-stat-value">98%</div>
-                <div class="rw-stat-label">Client Satisfaction</div>
-              </div>
-            </div>
-          </div>
-          <div class="rw-hero-right">
-            <div class="rw-hero-card">
-              <div class="rw-card-visual" aria-hidden="true">
-                <img src="https://images.unsplash.com/photo-1471180625745-944903837c22?auto=format&fit=crop&w=800&q=80"
-                  alt="" class="rw-card-image" width="800" height="533" loading="lazy" decoding="async" />
-              </div>
-              <h3>Tools that fit you</h3>
-              <p>We blend proven talk-based methods with body-aware exercises when helpful—always explained in words you
-                understand.</p>
-              <div class="rw-tag-row"><span>Tools</span><span>Trust</span><span>Care</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Ticker -->
-    <div class="rw-ticker" aria-hidden="true">
-      <div class="rw-ticker-track">
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Anxiety and Stress</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Relationship Healing</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Trauma Recovery</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Mind Rewiring</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Emotional Healing</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Self Worth and Identity</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Life Transitions</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Anxiety and Stress</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Relationship Healing</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Trauma Recovery</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Mind Rewiring</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Emotional Healing</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Self Worth and Identity</span>
-        <span class="rw-ticker-item"><span class="rw-dot"></span>Life Transitions</span>
-      </div>
-    </div>
-
-    <!-- Challenges -->
-    <section class="rw-section rw-challenges rw-reveal rw-section--line-bg" aria-labelledby="ch-heading">
-      <div class="rw-site-line-art rw-site-line-art--section" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
-          </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
-        </div>
-      </div>
-      <header class="rw-section-head rw-center">
-        <p class="rw-kicker">What We Address</p>
-        <h2 id="ch-heading">Mental Health Challenges<span>We Navigate Together</span></h2>
-        <p class="rw-section-desc">
-          Understanding the root of your experience is the first step toward meaningful and lasting change.
-        </p>
-      </header>
-      <div class="rw-challenge-grid rw-challenge-grid--tiles">
-        <!-- Classic mental health (illustration-style references) -->
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(images/challenge-anxiety.jpg);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Anxiety</h3>
-            <p class="rw-challenge-card__blurb">Worry that disrupts your daily calm.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(images/challenge-depression.jpg);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Depression</h3>
-            <p class="rw-challenge-card__blurb">Sadness, low energy, and lost interest.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(https://www.darlingdowns.health.qld.gov.au/__data/assets/image/0014/105161/20211122-burnout-864x486px.jpg);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Burnout</h3>
-            <p class="rw-challenge-card__blurb">Exhaustion from prolonged stress and overload.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(https://cdn.powerofpositivity.com/wp-content/uploads/2022/08/Psychologist-Explains-Eight-Habits-to-Stop-Overthinking.jpg);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Overthinking</h3>
-            <p class="rw-challenge-card__blurb">Thought loops that stall clear decisions.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <!-- Service tiles -->
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Stress: mind and emotion hypnosis</h3>
-            <p class="rw-challenge-card__blurb">Calm stress and overwhelm with hypnosis.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=1200&q=80);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Hypnosis for children</h3>
-            <p class="rw-challenge-card__blurb">Gentle hypnosis tailored to kids’ needs.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=1200&q=80);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Insomnia</h3>
-            <p class="rw-challenge-card__blurb">Sleep better with calmer, steadier nights.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-        <article class="rw-challenge-card" style="
-              background-image: linear-gradient(150deg, rgba(0, 55, 62, 0.35), rgba(0, 55, 62, 0.72)),
-                url(https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=1200&q=80);
-            ">
-          <div class="rw-challenge-card__body">
-            <h3>Fears and phobias</h3>
-            <p class="rw-challenge-card__blurb">Face fears with calm, steady confidence.</p>
-          </div>
-          <a class="rw-challenge-card__cta" href="appointment.html">View more<span class="rw-challenge-card__cta-icon"
-              aria-hidden="true"><i class="bi bi-chevron-right"></i></span></a>
-        </article>
-      </div>
-    </section>
-
-    <!-- Process: tall pin + sticky panel so all steps complete while UI stays on screen -->
-    <div class="rw-process-pin rw-section--line-bg" id="plain-english">
-      <div class="rw-site-line-art rw-site-line-art--section" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
-          </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
-        </div>
-      </div>
-      <section class="rw-process-sticky rw-section rw-process-steps rw-reveal is-visible" id="process-section"
-        aria-labelledby="process-heading">
-        <div class="rw-process-light">
-          <div class="rw-process-light__inner">
-            <header class="rw-process-top">
-              <h2 id="process-heading">The process</h2>
-            </header>
-            <div class="rw-process-flow">
-              <div class="rw-process-columns" role="list">
-                <div class="rw-process-col" role="listitem" data-process-step>
-                  <div class="rw-process-col__node" aria-hidden="true">
-                    <span class="rw-process-node__circle">
-                      <span class="rw-process-node__label">01</span>
-                      <i class="bi bi-check-lg rw-process-node__check" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                  <article class="rw-process-card">
-                    <div class="rw-process-card__icon" aria-hidden="true"><i class="bi bi-flag"></i></div>
-                    <p class="rw-process-card__label">Step 1</p>
-                    <h3 class="rw-process-card__title">Settle in</h3>
-                  </article>
-                </div>
-                <div class="rw-process-col" role="listitem" data-process-step>
-                  <div class="rw-process-col__node" aria-hidden="true">
-                    <span class="rw-process-node__circle">
-                      <span class="rw-process-node__label">02</span>
-                      <i class="bi bi-check-lg rw-process-node__check" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                  <article class="rw-process-card">
-                    <div class="rw-process-card__icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></div>
-                    <p class="rw-process-card__label">Step 2</p>
-                    <h3 class="rw-process-card__title">Slow down</h3>
-                  </article>
-                </div>
-                <div class="rw-process-col" role="listitem" data-process-step>
-                  <div class="rw-process-col__node" aria-hidden="true">
-                    <span class="rw-process-node__circle">
-                      <span class="rw-process-node__label">03</span>
-                      <i class="bi bi-check-lg rw-process-node__check" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                  <article class="rw-process-card">
-                    <div class="rw-process-card__icon" aria-hidden="true"><i class="bi bi-chat-heart"></i></div>
-                    <p class="rw-process-card__label">Step 3</p>
-                    <h3 class="rw-process-card__title">Talk without pressure</h3>
-                  </article>
-                </div>
-                <div class="rw-process-col" role="listitem" data-process-step>
-                  <div class="rw-process-col__node" aria-hidden="true">
-                    <span class="rw-process-node__circle">
-                      <span class="rw-process-node__label">04</span>
-                      <i class="bi bi-check-lg rw-process-node__check" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                  <article class="rw-process-card">
-                    <div class="rw-process-card__icon" aria-hidden="true"><i class="bi bi-clipboard-check"></i></div>
-                    <p class="rw-process-card__label">Step 4</p>
-                    <h3 class="rw-process-card__title">Understand more</h3>
-                  </article>
-                </div>
-                <div class="rw-process-col" role="listitem" data-process-step>
-                  <div class="rw-process-col__node" aria-hidden="true">
-                    <span class="rw-process-node__circle">
-                      <span class="rw-process-node__label">05</span>
-                      <i class="bi bi-check-lg rw-process-node__check" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                  <article class="rw-process-card">
-                    <div class="rw-process-card__icon" aria-hidden="true"><i class="bi bi-diagram-3"></i></div>
-                    <p class="rw-process-card__label">Step 5</p>
-                    <h3 class="rw-process-card__title">Connect the dots</h3>
-                  </article>
-                </div>
-                <div class="rw-process-col" role="listitem" data-process-step>
-                  <div class="rw-process-col__node" aria-hidden="true">
-                    <span class="rw-process-node__circle">
-                      <span class="rw-process-node__label">06</span>
-                      <i class="bi bi-check-lg rw-process-node__check" aria-hidden="true"></i>
-                    </span>
-                  </div>
-                  <article class="rw-process-card">
-                    <div class="rw-process-card__icon" aria-hidden="true"><i class="bi bi-stars"></i></div>
-                    <p class="rw-process-card__label">Step 6</p>
-                    <h3 class="rw-process-card__title">Things make sense</h3>
-                  </article>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Services -->
-    <section class="rw-section rw-services rw-reveal rw-section--line-bg" aria-labelledby="svc-heading">
-      <div class="rw-site-line-art rw-site-line-art--section" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
-          </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
-        </div>
-      </div>
-      <header class="rw-section-head">
-        <p class="rw-kicker">What We Offer</p>
-        <h2 id="svc-heading">Your Path to<span>Well-being</span></h2>
-        <p class="rw-section-desc">Discover expert guidance for a healthier mind and balanced life.</p>
-      </header>
-      <div class="rw-services-grid">
-        <article class="rw-service-featured">
-          <div class="rw-featured-badge" aria-hidden="true">1:1</div>
-          <div>
-            <p class="rw-kicker" style="color: white;">Signature Care</p>
-            <h3>Individual Counseling</h3>
-            <p>
-              A private and grounded space to work through anxiety, depression, trauma, and identity patterns using
-              structured and
-              compassionate therapeutic methods.
-            </p>
-          </div>
-          <a class="rw-btn-featured" href="appointment.html">Book Sessions</a>
-        </article>
-        <article class="rw-service-card rw-service-card-white">
-          <div class="rw-service-icon" aria-hidden="true"><i class="bi bi-people-fill"></i></div>
-          <h4>Relationship Guidance</h4>
-          <p>Rebuild trust, communication, and emotional safety in key relationships.</p>
-        </article>
-        <article class="rw-service-card rw-service-card-peach">
-          <div class="rw-service-icon" aria-hidden="true"><i class="bi bi-activity"></i></div>
-          <h4>Stress Management</h4>
-          <p>Body-based tools to regulate your nervous system and reclaim calm.</p>
-        </article>
-        <article class="rw-service-card rw-service-card-sand">
-          <div class="rw-service-icon" aria-hidden="true"><i class="bi bi-lightning-charge-fill"></i></div>
-          <h4>Mind Rewiring Sessions</h4>
-          <p>Shift the core beliefs and thought loops that keep you stuck.</p>
-        </article>
-        <article class="rw-service-card rw-service-card-white">
-          <div class="rw-service-icon" aria-hidden="true"><i class="bi bi-heart-fill"></i></div>
-          <h4>Emotional Healing</h4>
-          <p>Process grief and emotional pain through trauma-informed care.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- Journey + FAQ -->
-    <section class="rw-section rw-reveal rw-section--line-bg" aria-labelledby="journey-heading">
-      <div class="rw-site-line-art rw-site-line-art--section" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
-          </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
-        </div>
-      </div>
-      <div class="rw-journey-wrap">
-        <div class="rw-journey-copy">
-          <p class="rw-kicker">Your Journey</p>
-          <h2 id="journey-heading">Therapy Starts with<span>One Brave Conversation</span></h2>
-          <p>
-            Therapy is not about fixing what is broken. It is about understanding, healing, and moving toward the life
-            that feels
-            true to you.
-          </p>
-          <p>
-            If you feel stuck, overwhelmed, emotionally tired, or disconnected, counseling gives you tools, clarity, and
-            support to
-            move forward.
-          </p>
-          <a class="rw-btn-dark" href="appointment.html">Book Sessions</a>
-        </div>
-        <div class="rw-faq-list" id="faq-list">
-          <article class="rw-faq-item open">
-            <button type="button" class="rw-faq-question" aria-expanded="true" data-faq-btn>
-              <span>What happens during a mind rewiring session?</span>
-              <span class="rw-faq-toggle" aria-hidden="true"><i class="bi bi-chevron-up"></i></span>
-            </button>
-            <div class="rw-faq-answer">
-              Mind rewiring combines CBT methods, mindfulness, and somatic awareness to help you notice and gradually
-              shift limiting
-              thought patterns at your pace.
-            </div>
-          </article>
-          <article class="rw-faq-item">
-            <button type="button" class="rw-faq-question" aria-expanded="false" data-faq-btn>
-              <span>How long does therapy usually take?</span>
-              <span class="rw-faq-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
-            </button>
-            <div class="rw-faq-answer">
-              The timeline is different for everyone. Some clients feel meaningful change in 6 to 8 sessions, while
-              others choose longer
-              support based on their goals.
-            </div>
-          </article>
-          <article class="rw-faq-item">
-            <button type="button" class="rw-faq-question" aria-expanded="false" data-faq-btn>
-              <span>Is my personal information confidential?</span>
-              <span class="rw-faq-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
-            </button>
-            <div class="rw-faq-answer">
-              Yes. Your sessions and information are handled with strict confidentiality and professional ethics, except
-              in situations
-              of immediate safety risk.
-            </div>
-          </article>
-          <article class="rw-faq-item">
-            <button type="button" class="rw-faq-question" aria-expanded="false" data-faq-btn>
-              <span>Do you offer online sessions?</span>
-              <span class="rw-faq-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
-            </button>
-            <div class="rw-faq-answer">
-              Yes. Online and in-person sessions are available in Gujarati, English and Hindi, depending on your comfort
-              and schedule.
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- Insights / blogs preview -->
-    <section class="rw-section rw-insights-section rw-reveal rw-section--line-bg" id="insights"
-      aria-labelledby="insights-heading">
-      <div class="rw-site-line-art rw-site-line-art--section" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
-          </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
-        </div>
-      </div>
-      <header class="rw-section-head rw-center">
-        <p class="rw-kicker">Latest Insights</p>
-        <h2 id="insights-heading">Thoughts on Mental Wellness<span>for Everyday Life</span></h2>
-        <p class="rw-section-desc">
-          Read the full library on the <a href="blogs.php">Blog</a> page — same layout as the live site.
-        </p>
-      </header>
-      <div class="rw-insights-grid">
-        <article class="rw-insight-featured">
-          <div class="rw-insight-cover">
-            <img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=900&q=80"
-              alt="" loading="lazy" />
-          </div>
-          <div class="rw-insight-body">
-            <h3>Calm is a skill you can practice</h3>
-            <p>
-              Small daily practices—breath, boundaries, and compassionate self-talk—add up to a steadier nervous system.
-              Start where
-              you are; consistency matters more than intensity.
-            </p>
-            <a class="rw-insight-readmore" href="blog-detail.php">Read more</a>
-          </div>
-        </article>
-        <div class="rw-insight-list">
-          <article class="rw-insight-item">
-            <div class="rw-insight-thumb-wrap">
-              <img class="rw-insight-thumb-image"
-                src="https://images.unsplash.com/photo-1493836512294-502baa1986e2?auto=format&fit=crop&w=200&q=80"
-                alt="" loading="lazy" />
-            </div>
-            <div class="rw-insight-content">
-              <p class="rw-insight-tag">Latest Blog</p>
-              <h4>Understanding anxiety loops</h4>
-              <p class="rw-insight-snippet">Notice the trigger, the thought, and the body response—then choose a gentler
-                next step.</p>
-              <a class="rw-insight-readmore" href="blogs.php">Read more</a>
-            </div>
-          </article>
-          <article class="rw-insight-item">
-            <div class="rw-insight-thumb-wrap">
-              <img class="rw-insight-thumb-image"
-                src="https://images.unsplash.com/photo-1527137342181-19aab11a8ee8?auto=format&fit=crop&w=200&q=80"
-                alt="" loading="lazy" />
-            </div>
-            <div class="rw-insight-content">
-              <p class="rw-insight-tag">Latest Blog</p>
-              <h4>Relationships and emotional safety</h4>
-              <p class="rw-insight-snippet">Repair starts with clear, kind communication—and room for both people to be
-                imperfect.</p>
-              <a class="rw-insight-readmore" href="blogs.php">Read more</a>
-            </div>
-          </article>
-          <article class="rw-insight-item">
-            <div class="rw-insight-thumb-wrap">
-              <img class="rw-insight-thumb-image"
-                src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=400&q=80"
-                alt="" loading="lazy" />
-            </div>
-            <div class="rw-insight-content">
-              <p class="rw-insight-tag">Latest Blog</p>
-              <h4>Burnout is not a character flaw</h4>
-              <p class="rw-insight-snippet">Your energy is information. Listening early helps you reset before you hit
-                empty.</p>
-              <a class="rw-insight-readmore" href="blogs.php">Read more</a>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- Book session (same block as live Home.tsx) -->
-    <section class="rw-section rw-appointment-section rw-reveal rw-section--line-bg" id="book-session"
-      aria-labelledby="book-heading">
-      <div class="rw-site-line-art rw-site-line-art--section" aria-hidden="true">
-        <div class="rw-site-line-art__float">
-          <svg class="rw-site-line-art__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-            preserveAspectRatio="xMidYMid slice" focusable="false">
-            <path class="rw-site-line-art__path rw-site-line-art__path--1" fill="none" stroke="rgba(249, 115, 22, 0.22)"
-              stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"
-              d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--2" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
-              d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--3" fill="none" stroke="rgba(249, 115, 22, 0.18)"
-              stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"
-              d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--4" fill="none" stroke="rgba(249, 115, 22, 0.2)"
-              stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198" />
-            <path class="rw-site-line-art__path rw-site-line-art__path--5" fill="none" stroke="rgba(249, 115, 22, 0.15)"
-              stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-              d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346" />
-          </svg>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-          <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
-        </div>
-      </div>
-      <header class="rw-section-head rw-center">
-        <p class="rw-kicker">Take the First Step</p>
-        <h2 id="book-heading">Book Your <span>Session</span></h2>
-        <p class="rw-section-desc">
-          You can also use the dedicated <a href="appointment.html">Appointment</a> page or the
-          <a href="intake-form.html">Intake form</a> page (mirrors the live site routes).
-        </p>
-      </header>
-      <div class="container rw-book-split">
-        <div class="rw-book-split__form">
-          <form class="ra-form-card ra-form-card--compact" id="bookingForm" novalidate>
-            <input type="hidden" name="form_type" value="booking" />
-            <h3 class="ra-form-section-hdr"><span>Contact</span></h3>
-            <div class="ra-form-row">
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="bf-name">Full name</label>
-                <input class="ra-form-input" id="bf-name" name="name" type="text" autocomplete="name" required />
-              </div>
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="bf-email">Email</label>
-                <input class="ra-form-input" id="bf-email" name="email" type="email" autocomplete="email" required />
-              </div>
-            </div>
-            <div class="ra-form-row ra-form-row--phone">
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="bf-cc">Country code</label>
-                <select class="ra-form-select" id="bf-cc" name="country_code" autocomplete="tel-country-code">
-                  <option value="+1">+1 (US/CA)</option>
-                  <option value="+44">+44 (UK)</option>
-                  <option value="+91" selected>+91 (IN)</option>
-                  <option value="+61">+61 (AU)</option>
-                  <option value="+971">+971 (AE)</option>
-                  <option value="+49">+49 (DE)</option>
-                  <option value="+33">+33 (FR)</option>
-                  <option value="+81">+81 (JP)</option>
-                  <option value="+86">+86 (CN)</option>
-                  <option value="+65">+65 (SG)</option>
-                  <option value="+27">+27 (ZA)</option>
-                  <option value="+55">+55 (BR)</option>
-                  <option value="+52">+52 (MX)</option>
-                </select>
-              </div>
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="bf-phone">Phone number</label>
-                <input class="ra-form-input" id="bf-phone" name="phone" type="tel" inputmode="numeric"
-                  autocomplete="tel-national" placeholder="98765 43210" required />
-              </div>
-            </div>
-            <div class="ra-form-row">
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="bf-date">Preferred date</label>
-                <input class="ra-form-input" id="bf-date" name="date" type="date" required />
-              </div>
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="bf-time">Preferred time</label>
-                <select class="ra-form-select" id="bf-time" name="time" required>
-                  <option value="" disabled selected hidden>Select preferred time</option>
-                  <option value="09:00">9:00 AM</option>
-                  <option value="10:00">10:00 AM</option>
-                  <option value="11:00">11:00 AM</option>
-                  <option value="12:00">12:00 PM</option>
-                  <option value="13:00">1:00 PM</option>
-                  <option value="14:00">2:00 PM</option>
-                  <option value="15:00">3:00 PM</option>
-                  <option value="16:00">4:00 PM</option>
-                  <option value="17:00">5:00 PM</option>
-                  <option value="18:00">6:00 PM</option>
-                  <option value="19:00">7:00 PM</option>
-                  <option value="20:00">8:00 PM</option>
-                </select>
-              </div>
-            </div>
-            <div class="ra-form-group">
-              <label class="ra-form-label" for="bf-pref">Preference</label>
-              <select class="ra-form-select" id="bf-pref" name="preference" required>
-                <option value="" disabled selected hidden>Select your preferred mode</option>
-                <option value="online">Online</option>
-                <option value="inperson">In person</option>
-              </select>
-            </div>
-            <div class="ra-form-group">
-              <label class="ra-form-label" for="bf-msg">What would you like support with?</label>
-              <textarea class="ra-form-textarea" id="bf-msg" name="message" rows="3" required></textarea>
-            </div>
-            <p id="bf-feedback" class="ra-form-alert success" role="status" hidden></p>
-            <button type="submit" class="ra-btn-submit">Send request <span class="ra-btn-arrow"
-                aria-hidden="true">→</span></button>
-            <p class="ra-btn-note">Demo form — connect to your email or CRM. Official intake lives on the main site.</p>
-          </form>
-        </div>
-        <aside class="rw-book-split__aside" aria-labelledby="book-aside-heading">
-          <div class="rw-book-split__copy">
-            <p class="rw-book-split__kicker">What to expect</p>
-            <h3 id="book-aside-heading" class="rw-book-split__title">A calm, confidential first step</h3>
-            <p class="rw-book-split__lead">
-              Share a few details and your preferred time—we’ll follow up to confirm or suggest alternatives.
-            </p>
-            <ul class="rw-book-split__list">
-              <li>Private, judgment-free conversation tailored to your goals</li>
-              <li>Online or in-person options when scheduling allows</li>
-              <li>Questions welcome before you commit to a full session</li>
-            </ul>
-          </div>
-          <figure class="rw-book-split__figure">
-            <img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=900&q=80"
-              alt="Peaceful, softly lit space for reflection and focus" width="900" height="675" loading="lazy"
-              decoding="async" />
-          </figure>
-        </aside>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="footer-wave" aria-hidden="true">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-        <path
-          d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
-          class="shape-fill"></path>
-      </svg>
-    </div>
-    <div class="container footer-container">
-      <div class="footer-panel">
-        <div class="footer-col brand-col">
-          <img src="images/logo3.png" alt="Rewire With Kajal" class="footer-logo" width="180" height="188"
-            loading="lazy" decoding="async" />
-          <p class="footer-description">Calm, professional support for your mind.</p>
-        </div>
-        <div class="footer-col links-col">
-          <h3 class="footer-heading">Quick Links</h3>
-          <p class="footer-col-lead">Stories, services, and easy booking here.</p>
-          <ul class="footer-links">
+        <div class="col-lg-2 col-md-6">
+          <h5>Quick Links</h5>
+          <ul>
             <li><a href="index.html">Home</a></li>
-            <li><a href="about.html">About Us</a></li>
-            <li><a href="blogs.php">Blog Insights</a></li>
-            <li><a href="appointment.html">Contact</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="index.html#how-it-works">How It Works</a></li>
+            <li><a href="index.html#services">Services</a></li>
+            <li><a href="blogs.php">Blog</a></li>
           </ul>
         </div>
-        <div class="footer-col contact-col">
-          <h3 class="footer-heading">Get in Touch</h3>
-          <p class="footer-col-lead">Appointment-based care in person or online.</p>
-          <ul class="footer-contact-info">
-            <li>
-              <i class="bi bi-geo-alt contact-icon" aria-hidden="true"></i>
-              <span>In person or online by appointment.</span>
-            </li>
-            <li>
-              <i class="bi bi-telephone contact-icon" aria-hidden="true"></i>
-              <span><a href="tel:+15551234567">(555) 123-4567</a> (placeholder)</span>
-            </li>
-            <li>
-              <i class="bi bi-envelope contact-icon" aria-hidden="true"></i>
-              <span><a href="mailto:hello@rewirewithkajal.com">hello@rewirewithkajal.com</a></span>
-            </li>
+
+        <div class="col-lg-2 col-md-6">
+          <h5>Resources</h5>
+          <ul>
+            <li><a href="index.html#faq">FAQs</a></li>
+            <li><a href="about.html">Hypnosis Myths</a></li>
+            <li><a href="index.html#testimonials">Client Stories</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms &amp; Conditions</a></li>
           </ul>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <h5>Get In Touch</h5>
+          <ul class="rw-footer-contact">
+            <li><i class="bi bi-envelope"></i> <a href="mailto:hello@rewirewithkajal.com">hello@rewirewithkajal.com</a></li>
+            <li><i class="bi bi-telephone"></i> <a href="tel:+919876543210">+91 98765 43210</a></li>
+            <li><i class="bi bi-geo-alt"></i> <span>New Delhi, India</span></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+          <h5>Book a Session</h5>
+          <p class="mb-3" style="font-size: 14px; line-height: 1.5;">Take the first step towards inner peace and lasting change.</p>
+          <a href="appointment.html" class="rw-footer-btn">Book Free Call <i class="bi bi-arrow-right"></i></a>
         </div>
       </div>
-    </div>
-    <div class="footer-bottom">
-      <div class="container footer-bottom-inner">
-        <p>© <span id="y"></span> Rewire With Kajal. All rights reserved.</p>
-        <div class="social-links">
-          <a href="https://www.instagram.com/rewirewithkajal/" aria-label="Instagram" rel="noopener noreferrer"
-            target="_blank"><i class="bi bi-instagram"></i></a>
-          <a href="https://www.linkedin.com/" aria-label="LinkedIn" rel="noopener noreferrer" target="_blank"><i
-              class="bi bi-linkedin"></i></a>
-          <a href="https://twitter.com/" aria-label="Twitter" rel="noopener noreferrer" target="_blank"><i
-              class="bi bi-twitter-x"></i></a>
-        </div>
+
+      <div class="rw-footer-bottom">
+        &copy; 2026 Rewire with Kajal. All rights reserved.
       </div>
     </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-    crossorigin="anonymous"></script>
-  <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
-  </script>
-  <script src="js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

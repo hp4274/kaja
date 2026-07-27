@@ -1,318 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Book a session with Rewire With Kajal — appointment and assessment form." />
-    <title>Book Appointment | Rewire With Kajal</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="css/main-from-app.css" />
-    <link rel="stylesheet" href="css/site-overrides.css" />
-    <link rel="icon" type="image/png" href="images/logo3.png" />
-    <noscript>
-      <style>
-        .rw-reveal {
-          opacity: 1 !important;
-          transform: none !important;
-        }
-      </style>
-    </noscript>
-  </head>
-  <body class="rw-site-bg-lines">
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <div class="home-hero-navbar-wrapper" id="site-nav">
-      <div class="home-hero-navbar">
-        <a class="hhn-logo" href="index.html" aria-label="Rewire With Kajal home">
-          <img src="images/logo3.png" width="160" height="167" alt="Rewire With Kajal" />
-        </a>
-        <nav class="hhn-links d-none d-lg-flex align-items-center" aria-label="Primary">
-          <a href="index.html#plain-english">How it works</a>
-          <a href="about.html">About</a>
-          <a href="blogs.php">Blog</a>
-          <a class="hhn-book-btn" href="appointment.html">Book Appointment</a>
-        </nav>
-        <div class="hhn-socials d-none d-lg-flex align-items-center">
-          <a href="https://www.instagram.com/rewirewithkajal/" aria-label="Instagram" rel="noopener noreferrer" target="_blank"
-            ><i class="bi bi-instagram" aria-hidden="true"></i
-          ></a>
-          <a href="index.html" aria-label="Home"><i class="bi bi-globe2" aria-hidden="true"></i></a>
-          <a href="mailto:hello@rewirewithkajal.com" aria-label="Email"><i class="bi bi-envelope" aria-hidden="true"></i></a>
-        </div>
-        <button type="button" class="hhn-menu-toggle d-flex d-lg-none" aria-label="Open menu" aria-expanded="false" data-nav-toggle>
-          <i class="bi bi-list" aria-hidden="true"></i>
-        </button>
-      </div>
-      <!-- <div class="hhn-drawer d-lg-none" id="nav-drawer" hidden>
-        <a href="index.html#plain-english">How it works</a>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Appointment | Rewire With Kajal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="css/index-redesign.css" />
+</head>
+
+<body>
+
+  <!-- Navbar -->
+  <nav class="rw-navbar">
+    <div class="rw-container">
+      <a href="index.html" class="rw-logo">
+        <img src="images/logo3.png" alt="Rewire with Kajal Logo">
+      </a>
+
+      <div class="rw-nav-links d-none d-lg-flex">
+        <a href="index.html">Home</a>
+        <a href="index.html#how-it-works">How it Works</a>
         <a href="about.html">About</a>
         <a href="blogs.php">Blog</a>
-        <a class="hhn-book-btn" href="appointment.html">Book Appointment</a>
-      </div> -->
+      </div>
+
+      <div class="rw-nav-actions d-none d-lg-flex">
+        <a href="appointment.html" class="rw-btn rw-btn-primary">Book Appointment</a>
+        <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="index.html" class="rw-social-icon" aria-label="Website"><i class="bi bi-globe2"></i></a>
+        <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i class="bi bi-envelope"></i></a>
+      </div>
+
+      <button class="navbar-toggler d-lg-none" type="button" style="border:none; background:transparent; font-size:24px;">
+        <i class="bi bi-list"></i>
+      </button>
     </div>
-    <div class="rw-site-line-art" aria-hidden="true">
-      <div class="rw-site-line-art__float">
-        <svg
-          class="rw-site-line-art__svg"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 1200 520"
-          preserveAspectRatio="xMidYMid slice"
-          focusable="false"
-        >
-          <defs>
-            <linearGradient id="rw-site-orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="rgba(249, 115, 22, 0.09)" />
-              <stop offset="45%" stop-color="rgba(249, 115, 22, 0.16)" />
-              <stop offset="100%" stop-color="rgba(249, 115, 22, 0.07)" />
-            </linearGradient>
-          </defs>
-          <path
-            class="rw-site-line-art__path rw-site-line-art__path--1"
-            fill="none"
-            stroke="url(#rw-site-orange-grad)"
-            stroke-width="1.35"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M 32 168 C 32 78 118 42 228 72 C 338 102 372 196 308 278 C 244 360 118 348 76 268 C 48 218 32 198 32 168"
-          />
-          <path
-            class="rw-site-line-art__path rw-site-line-art__path--2"
-            fill="none"
-            stroke="rgba(249, 115, 22, 0.13)"
-            stroke-width="1.15"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M 468 52 C 612 8 792 36 892 118 C 992 200 968 292 862 332 C 756 372 628 328 564 248 C 508 178 468 128 468 52"
-          />
-          <path
-            class="rw-site-line-art__path rw-site-line-art__path--3"
-            fill="none"
-            stroke="rgba(249, 115, 22, 0.11)"
-            stroke-width="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M 128 88 C 268 12 396 28 528 96 C 652 158 592 212 484 232 C 388 250 268 198 196 128 C 158 92 138 82 128 88"
-          />
-          <path
-            class="rw-site-line-art__path rw-site-line-art__path--4"
-            fill="none"
-            stroke="rgba(249, 115, 22, 0.12)"
-            stroke-width="1.05"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M 636 198 C 712 128 824 152 868 228 C 912 304 836 372 748 372 C 660 372 584 308 604 236 C 616 198 628 192 636 198"
-          />
-          <path
-            class="rw-site-line-art__path rw-site-line-art__path--5"
-            fill="none"
-            stroke="rgba(249, 115, 22, 0.09)"
-            stroke-width="0.95"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M 88 412 C 276 348 484 432 712 384 C 928 338 1088 408 1168 364 C 1192 350 1196 346 1196 346"
-          />
-        </svg>
-        <span class="rw-site-line-art__orb rw-site-line-art__orb--1"></span>
-        <span class="rw-site-line-art__orb rw-site-line-art__orb--2"></span>
-        <span class="rw-site-line-art__orb rw-site-line-art__orb--3"></span>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="rw-apt-hero-section">
+    <div class="rw-container" style="max-width: 1240px;">
+      <div class="row align-items-center">
+        <!-- Left Content -->
+        <div class="col-lg-5 pe-lg-4 mb-4 mb-lg-0">
+          <span class="rw-apt-eyebrow"><i class="bi bi-flower1"></i> BEGIN YOUR JOURNEY</span>
+          <h1 class="rw-apt-title">Book Your<br><span class="rw-accent-text rw-font-italic">Session.</span></h1>
+          <p class="rw-apt-subtext">Book time that fits you. You say what you need; we confirm next steps&mdash;forms use simple words, not clinic jargon.</p>
+          <a href="#intake" class="rw-btn rw-btn-primary rw-apt-btn">
+            <i class="bi bi-calendar-event me-2"></i> Start Intake <i class="bi bi-arrow-right ms-2"></i>
+          </a>
+        </div>
+
+        <!-- Right Overlapping Dual Image Layout with Floating Glass Badge -->
+        <div class="col-lg-7">
+          <div class="rw-apt-hero-images-wrap">
+            <!-- Main Ceramic Vase Photo -->
+            <div class="rw-apt-main-img-box">
+              <img src="images/apt-hero-main.png" alt="Studio desk with ceramics and books" class="rw-apt-main-img">
+            </div>
+
+            <!-- Sub Teacup Photo overlapping bottom left -->
+            <div class="rw-apt-sub-img-box d-none d-sm-block">
+              <img src="images/apt-hero-sub.png" alt="Hands holding warm teacup" class="rw-apt-sub-img">
+            </div>
+
+            <!-- Floating White Circle Badge -->
+            <div class="rw-apt-float-badge">
+              <div class="rw-apt-badge-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  <path d="m9 12 2 2 4-4"></path>
+                </svg>
+              </div>
+              <p>A safe space<br>for you.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="serene-appointment-page" id="main-content">
-      <section class="serene-hero rw-reveal">
-        <div>
-          <span class="serene-hero-badge">Begin Your Journey</span>
-          <h1 class="serene-font-headline">Book Your <br /><i class="serene-font-headline">Session.</i></h1>
-          <p>
-            Book time that fits you. You say what you need; we confirm next steps—forms use simple words, not clinic jargon.
-          </p>
-          <a href="intake-form.html" class="serene-btn">Start Intake</a>
-        </div>
-        <div class="serene-hero-image-wrapper">
-          <div class="serene-hero-img-main">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAW6Ze4Ziu8H2MeiFDxqXzUFhCF6yLmf9vb7b09Fs3bvnA82OVTzROJn_2Prgnnix0cja0nDvELK8lqUjGh-4m1eNLkh_tryA4RwnRX9U0DqylkPBxXmKIW73Zh_DQ93EHtAFxz5gLyDbOxcrtzEiuqVKZv4h1htaNf1_srk_1JpnhlyC8Tdzwd7XI1HRKH3GUN6YaIXzn9smqgbc_Q8LbcMnIPj7p2e3w69nfhddoQuoqUcPctnSSnyX77GXQewMi94K28BrSe-15"
-              alt="Calm spa environment"
-              loading="eager"
-            />
-          </div>
-          <div class="serene-hero-img-sub d-none d-md-block">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEkWPZenPJ6-5BLcNTV-PY0Py4avSWk0SS08kRcX4fOc_LWdW-i-FmLm6zx8_ld-G4GvW_iO8y4I3aaeCJnanh-GQjv8Qs_x9J2l_KrX-GFXBriU1Vk1stA8_TNP_tUhesJk1bww8XxgdijRR_Ak-1r1wCPqM_Aetf7O1tox7CZxwSq_NmXpfwGXmvhOmjTsSwxdDbNrR7M8qLsqN5lBP4nALcUfNenpEYGVdbcGaexmXfoiD2h45lg7jU7O5LYBddd0vpaVgF-S12"
-              alt="Hands resting peacefully"
-              loading="lazy"
-            />
-          </div>
-        </div>
-      </section>
+  <!-- Assessment Form Section -->
+  <section class="rw-apt-assessment-section" id="intake">
+    <div class="rw-container" style="max-width: 1240px;">
+      <div class="rw-assessment-card">
+        <div class="row g-0">
+          <!-- Left Privacy Panel (Soft Peach Background) -->
+          <div class="col-lg-4 rw-privacy-panel">
+            <div class="rw-privacy-panel-content">
+              <!-- Top Lock Badge -->
+              <div class="rw-lock-icon-badge">
+                <i class="bi bi-lock"></i>
+              </div>
 
-      <section class="serene-intake-section" id="intake">
-        <div class="serene-intake-container rw-reveal">
-          <div class="serene-intake-heading">
-            <h2 class="serene-font-headline">Assessment Form</h2>
-            <p style="color: #5e6059; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em">Secure &amp; Private</p>
-          </div>
-          <div style="width: 100%; max-width: 520px; margin: 0 auto">
-            <form class="ra-form-card ra-form-card--compact rw-appointment-section" id="appointmentBookingForm" novalidate>
-              <input type="hidden" name="form_type" value="appointment" />
-              <h3 class="ra-form-section-hdr"><span>Contact</span></h3>
-              <div class="ra-form-row">
-                <div class="ra-form-group">
-                  <label class="ra-form-label" for="ap-name">Full name</label>
-                  <input class="ra-form-input" id="ap-name" name="name" type="text" autocomplete="name" required />
+              <!-- Background Leaf Line Art SVG -->
+              <img src="images/noun-floral-5095798.svg" class="rw-privacy-leaf-svg" alt="Leaf Art Decor">
+
+              <!-- Title & Desc -->
+              <h3 class="rw-privacy-title">Your privacy<br><span class="rw-accent-text">matters.</span></h3>
+              <p class="rw-privacy-desc">All details are confidential and used only to support your care.</p>
+
+              <!-- 3 Bullet Badges -->
+              <div class="rw-privacy-bullets">
+                <div class="rw-privacy-bullet-item">
+                  <i class="bi bi-lock"></i>
+                  <span>Private &amp; Secure</span>
                 </div>
-                <div class="ra-form-group">
-                  <label class="ra-form-label" for="ap-email">Email</label>
-                  <input class="ra-form-input" id="ap-email" name="email" type="email" autocomplete="email" required />
+                <div class="rw-privacy-bullet-item">
+                  <i class="bi bi-journal-check"></i>
+                  <span>Evidence-Based Care</span>
+                </div>
+                <div class="rw-privacy-bullet-item">
+                  <i class="bi bi-flower1"></i>
+                  <span>Compassionate Support</span>
                 </div>
               </div>
-              <div class="ra-form-row ra-form-row--phone">
-                <div class="ra-form-group">
-                  <label class="ra-form-label" for="ap-cc">Country code</label>
-                  <select class="ra-form-select" id="ap-cc" name="country_code" autocomplete="tel-country-code">
+            </div>
+          </div>
+
+          <!-- Right Form Area -->
+          <div class="col-lg-8 rw-form-panel">
+            <div class="rw-form-header">
+              <h2>Assessment Form</h2>
+              <div class="rw-form-divider">
+                <span class="rw-divider-line"></span>
+                <span class="rw-divider-text">SECURE &amp; PRIVATE</span>
+                <span class="rw-divider-line"></span>
+              </div>
+            </div>
+
+            <form id="appointmentBookingForm" action="submit-form.php" method="POST" novalidate>
+              <input type="hidden" name="form_type" value="appointment">
+
+              <div class="row g-3">
+                <!-- Full Name -->
+                <div class="col-md-6">
+                  <label for="ap-name" class="rw-form-label">FULL NAME</label>
+                  <input type="text" id="ap-name" name="name" class="rw-form-input" placeholder="Enter your full name" required>
+                </div>
+
+                <!-- Email -->
+                <div class="col-md-6">
+                  <label for="ap-email" class="rw-form-label">EMAIL</label>
+                  <input type="email" id="ap-email" name="email" class="rw-form-input" placeholder="Enter your email" required>
+                </div>
+
+                <!-- Country Code -->
+                <div class="col-md-6">
+                  <label for="ap-cc" class="rw-form-label">COUNTRY CODE</label>
+                  <select id="ap-cc" name="country_code" class="rw-form-select">
+                    <option value="+91" selected>+91 (IN)</option>
                     <option value="+1">+1 (US/CA)</option>
                     <option value="+44">+44 (UK)</option>
-                    <option value="+91" selected>+91 (IN)</option>
                     <option value="+61">+61 (AU)</option>
                     <option value="+971">+971 (AE)</option>
-                    <option value="+49">+49 (DE)</option>
-                    <option value="+33">+33 (FR)</option>
-                    <option value="+81">+81 (JP)</option>
-                    <option value="+86">+86 (CN)</option>
-                    <option value="+65">+65 (SG)</option>
-                    <option value="+27">+27 (ZA)</option>
-                    <option value="+55">+55 (BR)</option>
-                    <option value="+52">+52 (MX)</option>
                   </select>
                 </div>
-                <div class="ra-form-group">
-                  <label class="ra-form-label" for="ap-phone">Phone number</label>
-                  <input
-                    class="ra-form-input"
-                    id="ap-phone"
-                    name="phone"
-                    type="tel"
-                    inputmode="numeric"
-                    autocomplete="tel-national"
-                    placeholder="555 123 4567"
-                    required
-                  />
+
+                <!-- Phone Number -->
+                <div class="col-md-6">
+                  <label for="ap-phone" class="rw-form-label">PHONE NUMBER</label>
+                  <input type="tel" id="ap-phone" name="phone" class="rw-form-input" placeholder="Enter your phone number" required>
                 </div>
-              </div>
-              <div class="ra-form-row">
-                <div class="ra-form-group">
-                  <label class="ra-form-label" for="ap-date">Preferred date</label>
-                  <input class="ra-form-input" id="ap-date" name="date" type="date" required />
+
+                <!-- Preferred Date -->
+                <div class="col-md-6">
+                  <label for="ap-date" class="rw-form-label">PREFERRED DATE</label>
+                  <input type="date" id="ap-date" name="preferred_date" class="rw-form-input" required>
                 </div>
-                <div class="ra-form-group">
-                  <label class="ra-form-label" for="ap-time">Preferred time</label>
-                  <select class="ra-form-select" id="ap-time" name="time" required>
+
+                <!-- Preferred Time -->
+                <div class="col-md-6">
+                  <label for="ap-time" class="rw-form-label">PREFERRED TIME</label>
+                  <select id="ap-time" name="preferred_time" class="rw-form-select" required>
                     <option value="" disabled selected hidden>Select preferred time</option>
-                    <option value="09:00">9:00 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="12:00">12:00 PM</option>
-                    <option value="13:00">1:00 PM</option>
-                    <option value="14:00">2:00 PM</option>
-                    <option value="15:00">3:00 PM</option>
-                    <option value="16:00">4:00 PM</option>
-                    <option value="17:00">5:00 PM</option>
-                    <option value="18:00">6:00 PM</option>
-                    <option value="19:00">7:00 PM</option>
-                    <option value="20:00">8:00 PM</option>
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="02:00 PM">02:00 PM</option>
+                    <option value="04:00 PM">04:00 PM</option>
+                    <option value="06:00 PM">06:00 PM</option>
                   </select>
                 </div>
+
+                <!-- Preference -->
+                <div class="col-12">
+                  <label for="ap-pref" class="rw-form-label">PREFERENCE</label>
+                  <select id="ap-pref" name="preference" class="rw-form-select" required>
+                    <option value="" disabled selected hidden>Online / In-person</option>
+                    <option value="Online">Online</option>
+                    <option value="In-person">In-person</option>
+                  </select>
+                </div>
+
+                <!-- What would you like support with -->
+                <div class="col-12">
+                  <label for="ap-msg" class="rw-form-label">WHAT WOULD YOU LIKE SUPPORT WITH?</label>
+                  <textarea id="ap-msg" name="message" class="rw-form-textarea" rows="3" placeholder="Share what's on your mind..." required></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="col-12 mt-4">
+                  <button type="submit" class="rw-btn-submit-full">
+                    Submit <i class="bi bi-arrow-right ms-2"></i>
+                  </button>
+                  <p class="rw-form-footer-note">
+                    <i class="bi bi-lock me-1"></i> Demo form &ndash; wire to your backend. Full multi-step intake-form page.
+                  </p>
+                </div>
               </div>
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="ap-pref">Preference</label>
-                <select class="ra-form-select" id="ap-pref" name="preference" required>
-                  <option value="" disabled selected hidden>Online / In-person</option>
-                  <option value="online">Online</option>
-                  <option value="inperson">In person</option>
-                </select>
-              </div>
-              <div class="ra-form-group">
-                <label class="ra-form-label" for="ap-msg">What would you like support with?</label>
-                <textarea class="ra-form-textarea" id="ap-msg" name="message" rows="3" required></textarea>
-              </div>
-              <p id="ap-feedback" class="ra-form-alert success" role="status" hidden></p>
-              <button type="submit" class="ra-btn-submit">Submit <span class="ra-btn-arrow" aria-hidden="true">→</span></button>
-              <p class="ra-btn-note">Demo form — wire to your backend. Full multi-step intake: <a href="intake-form.html">intake-form page</a>.</p>
             </form>
           </div>
         </div>
-      </section>
-
-      <section class="serene-quote-section rw-reveal">
-        <blockquote class="serene-font-headline">
-          “Dedicated to helping you navigate <i>life's complexities</i> with curated grace and evidence-based precision.”
-        </blockquote>
-        <p class="serene-quote-label">— Our Commitment to You</p>
-      </section>
+      </div>
     </div>
+  </section>
 
-    <footer class="site-footer">
-      <div class="footer-wave" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path
-            d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
-            class="shape-fill"
-          ></path>
-        </svg>
-      </div>
-      <div class="container footer-container">
-        <div class="footer-panel">
-          <div class="footer-col brand-col">
-            <img src="images/logo3.png" alt="Rewire With Kajal" class="footer-logo" width="180" height="188" loading="lazy" decoding="async" />
-            <p class="footer-description">Calm, professional support for your mind.</p>
+  <!-- Commitment Quote Banner -->
+  <section class="rw-commitment-quote-section">
+    <div class="rw-container" style="max-width: 1240px;">
+      <div class="rw-quote-commitment-banner">
+        <div class="row align-items-center">
+          <div class="col-lg-8 ps-lg-5 pe-lg-4 mb-4 mb-lg-0 position-relative">
+            <!-- Left Decorative Leaf Line Art -->
+            <img src="images/noun-floral-5095798.svg" class="rw-commitment-leaf-svg" alt="Leaf Art">
+
+            <div class="rw-quote-content-inner">
+              <span class="rw-big-quote-mark">&ldquo;</span>
+              <p class="rw-commitment-quote-text">
+                Dedicated to helping you navigate <span class="rw-accent-text rw-font-italic">life's complexities</span> with curated grace and evidence-based precision.
+              </p>
+              <span class="rw-commitment-attribution">&mdash; OUR COMMITMENT TO YOU</span>
+            </div>
           </div>
-          <div class="footer-col links-col">
-            <h3 class="footer-heading">Quick Links</h3>
-            <p class="footer-col-lead">Stories, services, and easy booking here.</p>
-            <ul class="footer-links">
-              <li><a href="index.html">Home</a></li>
-              <li><a href="about.html">About Us</a></li>
-              <li><a href="blogs.php">Blog Insights</a></li>
-              <li><a href="appointment.html">Contact</a></li>
-            </ul>
-          </div>
-          <div class="footer-col contact-col">
-            <h3 class="footer-heading">Get in Touch</h3>
-            <p class="footer-col-lead">Appointment-based care in person or online.</p>
-            <ul class="footer-contact-info">
-              <li><i class="bi bi-envelope contact-icon" aria-hidden="true"></i><span><a href="mailto:hello@rewirewithkajal.com">hello@rewirewithkajal.com</a></span></li>
-            </ul>
+
+          <div class="col-lg-4 text-end text-lg-end text-center">
+            <div class="rw-commitment-img-wrap">
+              <img src="images/apt-quote-candle.png" alt="Lit candle and ceramic vase setup" class="rw-commitment-img">
+            </div>
           </div>
         </div>
       </div>
-      <div class="footer-bottom">
-        <div class="container footer-bottom-inner">
-          <p>© <span id="y"></span> Rewire With Kajal. All rights reserved.</p>
-          <div class="social-links">
-            <a href="https://www.instagram.com/rewirewithkajal/" aria-label="Instagram" rel="noopener noreferrer" target="_blank"
-              ><i class="bi bi-instagram"></i
-            ></a>
-            <a href="https://www.linkedin.com/" aria-label="LinkedIn" rel="noopener noreferrer" target="_blank"><i class="bi bi-linkedin"></i></a>
-            <a href="https://twitter.com/" aria-label="Twitter" rel="noopener noreferrer" target="_blank"><i class="bi bi-twitter-x"></i></a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="rw-footer">
+    <div class="rw-container">
+      <div class="row g-4">
+        <div class="col-lg-3 col-md-6">
+          <a href="index.html" class="rw-footer-logo">
+            <img src="images/logo3.png" alt="Rewire with Kajal Logo">
+            <span>Rewire</span>
+          </a>
+          <p class="mb-4">Calm mind. Healthy heart.<br>Better you.</p>
+          <div class="d-flex gap-3">
+            <a href="https://www.instagram.com/rewirewithkajal/" target="_blank" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="index.html" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Website"><i class="bi bi-globe2"></i></a>
+            <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Email"><i class="bi bi-envelope"></i></a>
           </div>
         </div>
+
+        <div class="col-lg-2 col-md-6">
+          <h5>Quick Links</h5>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="index.html#how-it-works">How It Works</a></li>
+            <li><a href="index.html#services">Services</a></li>
+            <li><a href="blogs.php">Blog</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+          <h5>Resources</h5>
+          <ul>
+            <li><a href="index.html#faq">FAQs</a></li>
+            <li><a href="about.html">Hypnosis Myths</a></li>
+            <li><a href="index.html#testimonials">Client Stories</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms &amp; Conditions</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <h5>Get In Touch</h5>
+          <ul class="rw-footer-contact">
+            <li><i class="bi bi-envelope"></i> <a href="mailto:hello@rewirewithkajal.com">hello@rewirewithkajal.com</a></li>
+            <li><i class="bi bi-telephone"></i> <a href="tel:+919876543210">+91 98765 43210</a></li>
+            <li><i class="bi bi-geo-alt"></i> <span>New Delhi, India</span></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+          <h5>Book a Session</h5>
+          <p class="mb-3" style="font-size: 14px; line-height: 1.5;">Take the first step towards inner peace and lasting change.</p>
+          <a href="appointment.html" class="rw-footer-btn">Book Free Call <i class="bi bi-arrow-right"></i></a>
+        </div>
       </div>
-    </footer>
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-      crossorigin="anonymous"
-    ></script>
-    <script>
-      document.getElementById("y").textContent = new Date().getFullYear();
-    </script>
-    <script src="js/main.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/appointment.js"></script>
-  </body>
+
+      <div class="rw-footer-bottom">
+        &copy; 2026 Rewire with Kajal. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
 </html>
