@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../includes/lead-status.php';
 require_once __DIR__ . '/../../includes/intake-repo.php';
 require_once __DIR__ . '/../../includes/intake-status.php';
 require_once __DIR__ . '/../../includes/mail-queue.php';
+require_once __DIR__ . '/../../includes/intake-data.php';
 
 $db = getDbConnection();
 
@@ -18,6 +19,7 @@ $newLeads        = (int) $db->query("SELECT COUNT(*) FROM `leads` WHERE `status`
 $pendingLeads    = dashboardPendingLeads($db);
 $stalledIntakes  = staleIntakeLinks($db, getSettingInt('admin_reminder_hours', 48));
 $queuedMail      = queuedMailCount();
+$awaitingReview  = clientsAwaitingReview($db);
 $totalLeads      = $db->query("SELECT COUNT(*) FROM `leads`")->fetchColumn();
 $totalIntakes    = $db->query("SELECT COUNT(*) FROM `patient-intake`")->fetchColumn();
 $intakeRate      = $totalLeads > 0 ? round(($totalIntakes / $totalLeads) * 100) : 0;
@@ -194,6 +196,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               'lead_confirmed' => ['bi-send-check', 'teal'],
               'intake_reminder_sent' => ['bi-bell', 'amber'],
               'intake_submitted' => ['bi-clipboard-check', 'green'],
+              'intake_reviewed' => ['bi-clipboard-check', 'green'],
             ];
             $ic = $iconMap[$act['action']] ?? ['bi-circle', 'teal'];
             $timeAgo = '';
@@ -224,6 +227,31 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <i class="bi bi-envelope-exclamation"></i>
     <?php echo (int) $queuedMail; ?> email(s) failed to send and are waiting for the hourly job to retry them.
   </div>
+<?php endif; ?>
+
+<?php if (!empty($awaitingReview)): ?>
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-clipboard-check" style="color:var(--clr-warning);"></i> Intakes awaiting review</div>
+  </div>
+  <div class="panel-body-flush">
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <tbody>
+          <?php foreach (array_slice($awaitingReview, 0, 5) as $ar): ?>
+            <tr>
+              <td class="td-name"><?php echo htmlspecialchars($ar['first_name'] . ' ' . $ar['last_name']); ?></td>
+              <td class="td-nowrap td-muted">submitted <?php echo $ar['intake_submitted_at'] ? date('d M Y', strtotime($ar['intake_submitted_at'])) : 'recently'; ?></td>
+              <td style="text-align:right;">
+                <a href="index.php?page=client-profile&id=<?php echo (int) $ar['id']; ?>" class="btn btn-primary btn-sm">Review</a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 <?php endif; ?>
 
 <?php if (!empty($stalledIntakes)): ?>

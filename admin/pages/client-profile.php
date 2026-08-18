@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../includes/intake-data.php';
+
 $db = getDbConnection();
 $clientId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
@@ -45,6 +47,11 @@ $intakes = $piStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $latestIntake = !empty($intakes) ? $intakes[count($intakes) - 1] : null;
 
+// The canonical intake: encrypted JSON on the client, rendered against the
+// form version it was actually filled under.
+$intakeRecord   = readClientIntakeData($db, $clientId);
+$intakeSections = $intakeRecord ? renderClientIntake($db, $clientId) : [];
+
 $intakeScore = null;
 if ($latestIntake) {
     $q1s = 0; $q2s = 0;
@@ -85,12 +92,21 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
   </div>
 </div>
 
+<?php if ($client['status'] === 'review'): ?>
+  <div class="bulk-bar" style="background:var(--clr-warning-light); border-color:var(--clr-warning); color:#b45309;">
+    <i class="bi bi-clipboard-check"></i>
+    Intake submitted and waiting for your review. This client is not bookable yet.
+    <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="markReviewed(<?php echo (int) $client['id']; ?>)">Mark reviewed</button>
+  </div>
+<?php endif; ?>
+
 <!-- Tabs -->
 <div class="profile-tabs">
   <button class="profile-tab active" onclick="showProfileTab('overview')">Overview</button>
   <button class="profile-tab" onclick="showProfileTab('sessions')">Sessions (<?php echo count($sessions); ?>)</button>
   <button class="profile-tab" onclick="showProfileTab('notes')">Notes (<?php echo count($notes); ?>)</button>
   <button class="profile-tab" onclick="showProfileTab('fees')">Fees (₹<?php echo number_format($totalFees,2); ?>)</button>
+  <button class="profile-tab" onclick="showProfileTab('intake')">Intake Data</button>
 </div>
 
 <!-- Overview Tab -->
@@ -340,6 +356,44 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
   </div>
 </div>
 
+<!-- Intake Data Tab -->
+<div class="profile-tab-content" id="tab-intake">
+  <?php if (!$intakeRecord): ?>
+    <div class="empty-state">
+      <i class="bi bi-clipboard-x"></i>
+      <p>No intake form on file</p>
+      <p style="font-size:0.78rem;">It appears here once the questionnaire is submitted.</p>
+    </div>
+  <?php else: ?>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          Intake responses
+          <?php if ($intakeRecord['version'] < 2): ?>
+            <!-- Only older forms are tagged. Labelling the current one would
+                 add noise to every record for the sake of the few that differ. -->
+            <span class="badge badge-archived" title="Answered under an older version of the form">Form v<?php echo (int) $intakeRecord['version']; ?></span>
+          <?php endif; ?>
+        </div>
+        <span class="td-muted" style="font-size:0.8rem;">
+          Submitted <?php echo $intakeRecord['submitted_at'] ? date('d M Y, H:i', strtotime($intakeRecord['submitted_at'])) : 'unknown'; ?>
+        </span>
+      </div>
+      <div class="panel-body">
+        <?php foreach ($intakeSections as $section): ?>
+          <h3 class="intake-section-title"><?php echo htmlspecialchars($section['title']); ?></h3>
+          <dl class="lead-answers" style="margin-bottom:1.75rem;">
+            <?php foreach ($section['answers'] as $a): ?>
+              <dt><?php echo htmlspecialchars($a['label']); ?></dt>
+              <dd><?php echo nl2br(htmlspecialchars($a['value'])); ?></dd>
+            <?php endforeach; ?>
+          </dl>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+</div>
+
 <!-- Add Note Modal -->
 <div class="modal-overlay" id="noteModal">
   <div class="modal-box">
@@ -448,6 +502,20 @@ function updateSessionStatus(id, status) {
       }
     })
     .catch(function(){ showToast('Network error', 'error'); });
+}
+
+function markReviewed(id) {
+  var fd = new FormData();
+  fd.append('action', 'mark_reviewed');
+  fd.append('client_id', id);
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.success) { showToast(d.error || 'Error', 'error'); return; }
+      showToast('Client marked reviewed and is now active');
+      setTimeout(function() { location.reload(); }, 700);
+    })
+    .catch(function() { showToast('Network error', 'error'); });
 }
 
 function showProfileTab(tab) {

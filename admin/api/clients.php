@@ -15,10 +15,31 @@ $action = isset($_POST['action']) ? trim($_POST['action']) : '';
 
 try {
     switch ($action) {
+        case 'mark_reviewed':
+            $clientId = intval($_POST['client_id'] ?? 0);
+            if (!$clientId) {
+                echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+                exit;
+            }
+
+            // Only a client actually awaiting review moves. The precondition is
+            // in the WHERE clause so a second click on a stale page cannot log
+            // a review that never happened.
+            $stmt = $db->prepare("UPDATE `clients` SET `status`='active' WHERE `id`=:id AND `status`='review'");
+            $stmt->execute([':id' => $clientId]);
+
+            if ($stmt->rowCount() > 0) {
+                $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('intake_reviewed',:d,'client',:rid)")
+                   ->execute([':d' => "Intake reviewed; client #{$clientId} is now active", ':rid' => $clientId]);
+            }
+
+            echo json_encode(['success' => true, 'moved' => $stmt->rowCount() > 0]);
+            break;
+
         case 'update_status':
             $clientId = intval($_POST['client_id'] ?? 0);
             $status = trim($_POST['status'] ?? '');
-            if (!$clientId || !in_array($status, ['active', 'inactive', 'discharged'])) {
+            if (!$clientId || !in_array($status, ['review', 'active', 'inactive', 'discharged'])) {
                 echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
                 exit;
             }
