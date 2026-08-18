@@ -168,14 +168,17 @@ function sendIntakeLinkEmail($toEmail, $recipientName, $url, $expiresAt) {
     $greeting      = $greetingName !== '' ? $greetingName : 'there';
     $expiryLabel   = date('d M Y', strtotime($expiresAt));
 
-    $subject = "Complete Your Patient Intake Form - {$practiceName}";
+    // Copy comes from Settings so the therapist can reword it without a
+    // deploy. The defaults in settingDefaults() are the fallback.
+    $vars = [
+        'name'          => $greeting,
+        'intake_link'   => $url,
+        'expires'       => $expiryLabel,
+        'practice_name' => $practiceName,
+    ];
 
-    $body  = "Hello {$greeting},\n\n";
-    $body .= "Please take a few moments to complete your intake questionnaire using your personal link below:\n\n";
-    $body .= $url . "\n\n";
-    $body .= "This link is unique to you, so please do not forward it. It stays active until {$expiryLabel}.\n\n";
-    $body .= "Once submitted, we will review your responses and reach out to schedule your first session.\n\n";
-    $body .= "Best regards,\n{$practiceName}";
+    $subject = renderNotificationTemplate(getSetting('notify_lead_confirmed_subject'), $vars);
+    $body    = renderNotificationTemplate(getSetting('notify_lead_confirmed_body'), $vars);
 
     $headers  = "From: {$practiceEmail}\r\n";
     $headers .= "Reply-To: {$practiceEmail}\r\n";

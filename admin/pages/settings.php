@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../includes/settings.php';
+
 $db = getDbConnection();
 $currentUserId = $_SESSION['user_id'];
 
@@ -57,6 +59,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['settings_action'])) {
                 }
             }
         }
+    }
+
+    if ($_POST['settings_action'] === 'save_settings') {
+        // Whitelisted on purpose: setSetting() writes any key it is handed, and
+        // this form is the one place a browser gets to choose one. Looping the
+        // raw POST would let a crafted request create settings the app reads.
+        $editable = [
+            'practice_name', 'practice_email', 'site_base_url',
+            'intake_token_expiry_days', 'admin_reminder_hours', 'intake_form_version',
+            'notify_lead_confirmed_subject', 'notify_lead_confirmed_body',
+        ];
+        foreach ($editable as $key) {
+            if (array_key_exists($key, $_POST)) {
+                setSetting($key, trim($_POST[$key]));
+            }
+        }
+        $successMsg = 'Settings saved.';
     }
 }
 
@@ -128,6 +147,49 @@ $admins = $db->query("SELECT * FROM `users` ORDER BY `username` ASC")->fetchAll(
 <?php endif; ?>
 
 <!-- Theme Settings Panel -->
+<div class="panel" style="margin-bottom:1.5rem;max-width:900px;">
+  <div class="panel-header"><div class="panel-title">Practice &amp; intake settings</div></div>
+  <div class="panel-body">
+    <form method="post">
+      <input type="hidden" name="settings_action" value="save_settings" />
+
+      <div class="form-group">
+        <label class="form-label" for="set-practice-name">Practice name</label>
+        <input class="form-input" id="set-practice-name" name="practice_name" value="<?php echo htmlspecialchars(getSetting('practice_name')); ?>" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-practice-email">Practice email</label>
+        <input class="form-input" id="set-practice-email" name="practice_email" type="email" value="<?php echo htmlspecialchars(getSetting('practice_email')); ?>" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-base-url">Site base URL</label>
+        <input class="form-input" id="set-base-url" name="site_base_url" placeholder="http://localhost/Kaja/" value="<?php echo htmlspecialchars(getSetting('site_base_url')); ?>" />
+        <small style="color:var(--clr-text-muted);">Required for scheduled jobs — a command-line process has no request to derive a link from.</small>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-expiry">Intake link expiry (days)</label>
+        <input class="form-input" id="set-expiry" name="intake_token_expiry_days" type="number" min="1" value="<?php echo htmlspecialchars(getSetting('intake_token_expiry_days')); ?>" />
+        <small style="color:var(--clr-text-muted);">Applies to links issued from now on. Links already sent keep the deadline they were given.</small>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-reminder">Reminder threshold (hours)</label>
+        <input class="form-input" id="set-reminder" name="admin_reminder_hours" type="number" min="1" value="<?php echo htmlspecialchars(getSetting('admin_reminder_hours')); ?>" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-subject">Confirm email subject</label>
+        <input class="form-input" id="set-subject" name="notify_lead_confirmed_subject" value="<?php echo htmlspecialchars(getSetting('notify_lead_confirmed_subject')); ?>" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-body">Confirm email body</label>
+        <textarea class="form-input" id="set-body" name="notify_lead_confirmed_body" rows="10"><?php echo htmlspecialchars(getSetting('notify_lead_confirmed_body')); ?></textarea>
+        <small style="color:var(--clr-text-muted);">Placeholders: <code>{{name}}</code>, <code>{{intake_link}}</code>, <code>{{expires}}</code>, <code>{{practice_name}}</code></small>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save settings</button>
+    </form>
+  </div>
+</div>
+
 <div class="panel" style="margin-bottom:1.5rem;max-width:900px;">
   <div class="panel-header"><div class="panel-title">Appearance Settings</div></div>
   <div class="panel-body">

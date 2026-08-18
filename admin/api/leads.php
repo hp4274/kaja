@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../includes/lead-status.php';
 require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-notes.php';
 require_once __DIR__ . '/../../includes/lead-confirm.php';
+require_once __DIR__ . '/../../includes/mail-queue.php';
 require_once __DIR__ . '/../../includes/lead-form-map.php';
 require_once __DIR__ . '/../../includes/lead-timeline.php';
 $db = getDbConnection();
@@ -174,6 +175,18 @@ try {
                 $mailed = sendIntakeLinkEmail(
                     $lead['email'], $lead['name'], $result['intake_url'], $result['expires_at']
                 );
+                if (!$mailed) {
+                    // The confirm itself is committed and correct. Losing the
+                    // email silently would leave someone waiting for a link
+                    // that never arrives, with nothing anywhere to say so.
+                    queueFailedMail([
+                        'to'      => $lead['email'],
+                        'name'    => $lead['name'],
+                        'url'     => $result['intake_url'],
+                        'expires' => $result['expires_at'],
+                        'kind'    => 'intake_link',
+                    ], 'mail() returned false');
+                }
             }
 
             echo json_encode([
