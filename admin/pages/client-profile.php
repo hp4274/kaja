@@ -26,7 +26,7 @@ if (!$client) {
 $pageTitle = $client['first_name'] . ' ' . $client['last_name'];
 
 // Fetch related data
-$sessions = $db->prepare("SELECT * FROM `sessions` WHERE `client_id`=:cid ORDER BY `session_date` DESC, `session_time` DESC");
+$sessions = $db->prepare("SELECT * FROM `sessions` WHERE `client_id`=:cid ORDER BY `start_time` DESC");
 $sessions->execute([':cid'=>$clientId]);
 $sessions = $sessions->fetchAll(PDO::FETCH_ASSOC);
 
@@ -79,7 +79,7 @@ $clientDob = $client['dob'] ?: ($latestIntake ? $latestIntake['dob'] : '');
 $clientConcern = $client['concern'] ?: ($latestIntake ? $latestIntake['concern'] : '');
 
 // Next session
-$nextSession = $db->prepare("SELECT * FROM `sessions` WHERE `client_id`=:cid AND `session_date` >= CURDATE() AND `status`='scheduled' ORDER BY `session_date` ASC LIMIT 1");
+$nextSession = $db->prepare("SELECT * FROM `sessions` WHERE `client_id`=:cid AND `start_time` >= NOW() AND `status` IN ('pending','confirmed') ORDER BY `start_time` ASC LIMIT 1");
 $nextSession->execute([':cid'=>$clientId]);
 $nextSession = $nextSession->fetch(PDO::FETCH_ASSOC);
 
@@ -162,8 +162,8 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
             <div class="kpi-icon-wrap teal"><i class="bi bi-calendar-event"></i></div>
             <div>
               <div style="font-size:0.78rem;color:var(--clr-text-muted);text-transform:uppercase;font-weight:500;">Next Session</div>
-              <div style="font-size:1rem;font-weight:600;"><?php echo date('d M Y', strtotime($nextSession['session_date'])) . ' at ' . date('h:i A', strtotime($nextSession['session_time'])); ?></div>
-              <div style="font-size:0.78rem;color:var(--clr-text-muted);"><?php echo $nextSession['session_type']; ?> · <?php echo $nextSession['duration_minutes']; ?> min</div>
+              <div style="font-size:1rem;font-weight:600;"><?php echo date('d M Y, h:i A', strtotime($nextSession['start_time'])); ?></div>
+              <div style="font-size:0.78rem;color:var(--clr-text-muted);"><?php echo $nextSession['session_type']; ?> · <?php echo round((strtotime($nextSession['end_time']) - strtotime($nextSession['start_time'])) / 60); ?> min</div>
             </div>
           </div>
         </div>
@@ -265,20 +265,21 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
             <tbody>
               <?php foreach ($sessions as $s): ?>
                 <tr>
-                  <td class="td-nowrap"><?php echo date('d M Y', strtotime($s['session_date'])); ?></td>
-                  <td class="td-nowrap"><?php echo date('h:i A', strtotime($s['session_time'])); ?></td>
-                  <td><?php echo $s['duration_minutes']; ?> min</td>
+                  <td class="td-nowrap"><?php echo date('d M Y', strtotime($s['start_time'])); ?></td>
+                  <td class="td-nowrap"><?php echo date('h:i A', strtotime($s['start_time'])); ?></td>
+                  <td><?php echo round((strtotime($s['end_time']) - strtotime($s['start_time'])) / 60); ?> min</td>
                   <td><span class="badge badge-<?php echo $s['session_type']; ?>"><?php echo $s['session_type']; ?></span></td>
                   <td>
                     <select class="status-select" onchange="updateSessionStatus(<?php echo $s['id']; ?>, this.value)" style="margin:0;">
-                      <option value="scheduled" <?php echo $s['status'] === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
+                      <option value="pending" <?php echo $s['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                      <option value="confirmed" <?php echo $s['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                       <option value="completed" <?php echo $s['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
                       <option value="cancelled" <?php echo $s['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                     </select>
                   </td>
                   <td class="td-muted" style="max-width:200px;"><?php echo htmlspecialchars($s['notes'] ?? '-'); ?></td>
                   <td class="td-nowrap">
-                    <button class="btn btn-icon btn-sm" onclick="openRescheduleModal(<?php echo $s['id']; ?>, '<?php echo $s['session_date']; ?>', '<?php echo substr($s['session_time'], 0, 5); ?>')" title="Reschedule" style="padding:0.2rem 0.4rem; height:auto; width:auto;"><i class="bi bi-pencil-square"></i></button>
+                    <button class="btn btn-icon btn-sm" onclick="openRescheduleModal(<?php echo $s['id']; ?>, '<?php echo date('Y-m-d', strtotime($s['start_time'])); ?>', '<?php echo date('H:i', strtotime($s['start_time'])); ?>')" title="Reschedule" style="padding:0.2rem 0.4rem; height:auto; width:auto;"><i class="bi bi-pencil-square"></i></button>
                   </td>
                 </tr>
               <?php endforeach; ?>

@@ -521,6 +521,20 @@ try {
         }
     );
 
+    // Dropped last, once every reader has moved onto the range. Keeping them
+    // through the earlier steps meant nothing broke mid-migration.
+    step('sessions: drop the retired date, time and duration columns',
+        tableExists($db, 'sessions') && columnExists($db, 'sessions', 'session_date'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `sessions`
+                DROP COLUMN `session_date`,
+                DROP COLUMN `session_time`,
+                DROP COLUMN `duration_minutes`
+            ");
+        }
+    );
+
     step('client_notes.session_id',
         tableExists($db, 'client_notes') && !columnExists($db, 'client_notes', 'session_id'),
         function (PDO $db) {

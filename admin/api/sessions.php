@@ -1,4 +1,15 @@
 <?php
+/**
+ * Session actions.
+ *
+ * Every write delegates to includes/session-repo.php, which owns the conflict
+ * guard. Nothing here writes to `sessions` directly — a guard with a second
+ * door is not a guard.
+ *
+ * The form posts a date and a time separately because that is the right pair
+ * of inputs to show; they are combined into one start_time here.
+ */
+
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -9,123 +20,192 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 require_once __DIR__ . '/../../db-config.php';
-$db = getDbConnection();
+require_once __DIR__ . '/../../includes/settings.php';
+require_once __DIR__ . '/../../includes/session-repo.php';
+require_once __DIR__ . '/../../includes/session-recurring.php';
 
+$db     = getDbConnection();
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
+
+/** A date input plus a time input is one instant. */
+function postedStart($dateKey = 'session_date', $timeKey = 'session_time') {
+    $date = trim($_POST[$dateKey] ?? '');
+    $time = trim($_POST[$timeKey] ?? '');
+    if ($date === '' || $time === '') {
+        return null;
+    }
+    $ts = strtotime($date . ' ' . $time);
+    return $ts === false ? null : date('Y-m-d H:i:s', $ts);
+}
+
+function sessionLabel(PDO $db, $sessionId) {
+    $stmt = $db->prepare('
+        SELECT s.`start_time`, c.`first_name`, c.`last_name`
+        FROM `sessions` s JOIN `clients` c ON c.`id` = s.`client_id`
+        WHERE s.`id` = :id
+    ');
+    $stmt->execute([':id' => (int) $sessionId]);
+    $r = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $r
+        ? trim($r['first_name'] . ' ' . $r['last_name']) . ' on ' . date('d M Y, h:i A', strtotime($r['start_time']))
+        : 'Session #' . (int) $sessionId;
+}
 
 try {
     switch ($action) {
         case 'add_session':
             $clientId = intval($_POST['client_id'] ?? 0);
-            $sessionDate = trim($_POST['session_date'] ?? '');
-            $sessionTime = trim($_POST['session_time'] ?? '');
-            $duration = intval($_POST['duration'] ?? 60);
-            $sessionType = trim($_POST['session_type'] ?? 'online');
-            $notes = trim($_POST['notes'] ?? '');
+            $start    = postedStart();
+            $duration = intval($_POST['duration_minutes'] ?? getSettingInt('default_session_duration', 60));
+            $type     = trim($_POST['session_type'] ?? 'online');
+            $notes    = trim($_POST['notes'] ?? '');
+            $repeat   = trim($_POST['repeat'] ?? '');
 
-            if (!$clientId || empty($sessionDate) || empty($sessionTime) || !in_array($sessionType, ['online', 'inperson'])) {
-                echo json_encode(['success' => false, 'error' => 'Missing or invalid fields']);
+            if (!$clientId || $start === null) {
+                echo json_encode(['success' => false, 'error' => 'A client, a date and a time are all required']);
                 exit;
             }
 
-            $stmt = $db->prepare("INSERT INTO `sessions` (`client_id`, `session_date`, `session_time`, `duration_minutes`, `session_type`, `status`, `notes`) VALUES (:cid, :sd, :st, :dur, :stype, 'scheduled', :n)");
-            $stmt->execute([
-                ':cid' => $clientId,
-                ':sd' => $sessionDate,
-                ':st' => $sessionTime,
-                ':dur' => $duration,
-                ':stype' => $sessionType,
-                ':n' => $notes
-            ]);
-            $sessionId = $db->lastInsertId();
+            try {
+                if ($repeat !== '' && $repeat !== 'none') {
+                    $endType  = trim($_POST['repeat_end_type'] ?? 'count');
+                    $endValue = trim($_POST['repeat_end_value'] ?? '4');
 
-            // Get client name for logging
-            $cStmt = $db->prepare("SELECT `first_name`, `last_name` FROM `clients` WHERE `id` = :id");
-            $cStmt->execute([':id' => $clientId]);
-            $client = $cStmt->fetch(PDO::FETCH_ASSOC);
-            $name = $client ? "{$client['first_name']} {$client['last_name']}" : "Client #{$clientId}";
+                    $ids = generateSeries($db, $clientId, $start, $duration, $type, [
+                        'frequency' => $repeat,
+                        'end'       => ['type' => $endType, 'value' => $endValue],
+                    ]);
 
-            // Log activity
-            $formattedDateTime = date('d M Y \a\t h:i A', strtotime("$sessionDate $sessionTime"));
-            $desc = "Scheduled a new {$sessionType} session with {$name} on {$formattedDateTime}";
-            $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('session_scheduled', :d, 'session', :rid)")
-               ->execute([':d' => $desc, ':rid' => $sessionId]);
+                    if (!$ids) {
+                        echo json_encode(['success' => false, 'error' => 'Every occurrence clashed with an existing session']);
+                        exit;
+                    }
+                    $sessionId = $ids[0];
+                    $booked    = count($ids);
+                } else {
+                    $sessionId = createSession($db, $clientId, $start, $duration, $type);
+                    $booked    = 1;
+                }
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
 
-            // Auto-invoice/fee record: let's create a pending fee for the scheduled session as well!
-            // Let's assume a default assessment/session fee of ₹150 or similar, but since we decided manual entry is preferred, we don't auto-create fees. Let's keep it purely session scheduling.
+            if ($notes !== '') {
+                $db->prepare('UPDATE `sessions` SET `notes` = :n WHERE `id` = :id')
+                   ->execute([':n' => $notes, ':id' => $sessionId]);
+            }
 
-            echo json_encode(['success' => true, 'session_id' => $sessionId]);
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_scheduled',:d,'client',:rid)")
+               ->execute([':d' => $booked . ' session(s) booked for ' . sessionLabel($db, $sessionId), ':rid' => $clientId]);
+
+            echo json_encode(['success' => true, 'session_id' => $sessionId, 'booked' => $booked]);
             break;
 
         case 'update_status':
             $sessionId = intval($_POST['session_id'] ?? 0);
-            $status = trim($_POST['status'] ?? '');
+            $status    = trim($_POST['status'] ?? '');
+            $scope     = trim($_POST['scope'] ?? 'one');
+            $reason    = trim($_POST['cancelled_reason'] ?? '');
 
-            if (!$sessionId || !in_array($status, ['scheduled', 'completed', 'cancelled', 'no-show'])) {
+            if (!$sessionId || !isValidSessionStatus($status)) {
                 echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
                 exit;
             }
 
-            $stmt = $db->prepare("UPDATE `sessions` SET `status` = :s WHERE `id` = :id");
-            $stmt->execute([':s' => $status, ':id' => $sessionId]);
-
-            // Fetch session client name for log
-            $sStmt = $db->prepare("
-                SELECT s.session_date, c.first_name, c.last_name, c.id as client_id
-                FROM `sessions` s
-                JOIN `clients` c ON s.client_id = c.id
-                WHERE s.id = :id
-            ");
-            $sStmt->execute([':id' => $sessionId]);
-            $sData = $sStmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($sData) {
-                $name = "{$sData['first_name']} {$sData['last_name']}";
-                $desc = "Session with {$name} on {$sData['session_date']} status marked as {$status}";
-                $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('status_changed', :d, 'session', :rid)")
-                   ->execute([':d' => $desc, ':rid' => $sessionId]);
+            try {
+                // Scope is taken from the request, never inferred. The UI is
+                // required to ask whenever the session belongs to a series.
+                $targets = applyToScope($db, $sessionId, $scope);
+            } catch (InvalidArgumentException $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
             }
 
-            echo json_encode(['success' => true]);
+            $label   = sessionLabel($db, $sessionId);
+            $changed = 0;
+            $skipped = [];
+
+            foreach ($targets as $tid) {
+                try {
+                    if ($status === 'cancelled') {
+                        cancelSession($db, $tid, $reason);
+                    } else {
+                        setSessionStatus($db, $tid, $status);
+                    }
+                    $changed++;
+                } catch (Throwable $e) {
+                    // A later occurrence already completed or cancelled is not
+                    // an error for the batch; report it rather than abort.
+                    $skipped[] = (int) $tid;
+                }
+            }
+
+            if ($changed === 0) {
+                echo json_encode(['success' => false, 'error' => 'Nothing could be changed']);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_status_changed',:d,'session',:rid)")
+               ->execute([':d' => $label . ' marked ' . sessionStatusLabel($status)
+                                . ($changed > 1 ? ' (' . $changed . ' occurrences)' : ''), ':rid' => $sessionId]);
+
+            echo json_encode(['success' => true, 'changed' => $changed, 'skipped' => $skipped]);
             break;
 
         case 'reschedule_session':
             $sessionId = intval($_POST['session_id'] ?? 0);
-            $sessionDate = trim($_POST['session_date'] ?? '');
-            $sessionTime = trim($_POST['session_time'] ?? '');
+            $start     = postedStart();
+            $scope     = trim($_POST['scope'] ?? 'one');
 
-            if (!$sessionId || empty($sessionDate) || empty($sessionTime)) {
-                echo json_encode(['success' => false, 'error' => 'Missing or invalid fields']);
+            if (!$sessionId || $start === null) {
+                echo json_encode(['success' => false, 'error' => 'A date and a time are required']);
                 exit;
             }
 
-            // Update session date and time
-            $stmt = $db->prepare("UPDATE `sessions` SET `session_date` = :sd, `session_time` = :st WHERE `id` = :id");
-            $stmt->execute([
-                ':sd' => $sessionDate,
-                ':st' => $sessionTime,
-                ':id' => $sessionId
-            ]);
-
-            // Fetch session client name for log
-            $sStmt = $db->prepare("
-                SELECT s.session_date, c.first_name, c.last_name, c.id as client_id
-                FROM `sessions` s
-                JOIN `clients` c ON s.client_id = c.id
-                WHERE s.id = :id
-            ");
-            $sStmt->execute([':id' => $sessionId]);
-            $sData = $sStmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($sData) {
-                $name = "{$sData['first_name']} {$sData['last_name']}";
-                $formattedDateTime = date('d M Y \a\t h:i A', strtotime("$sessionDate $sessionTime"));
-                $desc = "Rescheduled session with {$name} to {$formattedDateTime}";
-                $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('session_rescheduled', :d, 'session', :rid)")
-                   ->execute([':d' => $desc, ':rid' => $sessionId]);
+            $existing = fetchSession($db, $sessionId);
+            if ($existing === null) {
+                echo json_encode(['success' => false, 'error' => 'Session not found']);
+                exit;
             }
 
-            echo json_encode(['success' => true]);
+            $duration = (int) round(
+                (strtotime($existing['end_time']) - strtotime($existing['start_time'])) / 60
+            );
+
+            try {
+                if ($scope === 'future' && !empty($existing['recurring_series_id'])) {
+                    // Every later occurrence shifts by the same delta, so the
+                    // rhythm of the series is preserved rather than collapsed
+                    // onto one repeated date.
+                    $delta   = strtotime($start) - strtotime($existing['start_time']);
+                    $targets = applyToScope($db, $sessionId, 'future');
+                    $moved   = 0;
+
+                    foreach ($targets as $tid) {
+                        $t = fetchSession($db, $tid);
+                        if ($t === null || sessionStatusIsTerminal($t['status'])) {
+                            continue;
+                        }
+                        $newStart = date('Y-m-d H:i:s', strtotime($t['start_time']) + $delta);
+                        $tDur     = (int) round((strtotime($t['end_time']) - strtotime($t['start_time'])) / 60);
+                        rescheduleSession($db, $tid, $newStart, $tDur);
+                        $moved++;
+                    }
+                    echo json_encode(['success' => true, 'moved' => $moved]);
+                    exit;
+                }
+
+                rescheduleSession($db, $sessionId, $start, $duration);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_rescheduled',:d,'session',:rid)")
+               ->execute([':d' => 'Rescheduled to ' . date('d M Y, h:i A', strtotime($start)), ':rid' => $sessionId]);
+
+            echo json_encode(['success' => true, 'moved' => 1]);
             break;
 
         default:
@@ -133,5 +213,6 @@ try {
     }
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    error_log('[sessions-api] ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Database error']);
 }

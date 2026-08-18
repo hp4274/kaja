@@ -14,7 +14,7 @@ $db = getDbConnection();
 // client still counted on the dashboard is the failure soft delete exists to
 // prevent.
 $totalClients    = $db->query("SELECT COUNT(*) FROM `clients` WHERE `status`='active' AND `archived_at` IS NULL")->fetchColumn();
-$upcomingSessions= $db->query("SELECT COUNT(*) FROM `sessions` WHERE `session_date` >= CURDATE() AND `status`='scheduled'")->fetchColumn();
+$upcomingSessions= $db->query("SELECT COUNT(*) FROM `sessions` WHERE `start_time` >= NOW() AND `status` IN ('pending','confirmed')")->fetchColumn();
 // Every lead still at 'new', with no age cap. A lead ignored for five weeks
 // is more urgent than one that arrived today, not less; the old 30-day window
 // made it disappear from the number entirely.
@@ -41,15 +41,15 @@ $calStmt = $db->prepare("
     SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as client_name
     FROM `sessions` s
     LEFT JOIN `clients` c ON s.client_id = c.id
-    WHERE MONTH(s.`session_date`)=:m AND YEAR(s.`session_date`)=:y
-    ORDER BY s.`session_time` ASC
+    WHERE MONTH(s.`start_time`)=:m AND YEAR(s.`start_time`)=:y
+    ORDER BY s.`start_time` ASC
 ");
 $calStmt->execute([':m'=>$month, ':y'=>$year]);
 $allSessions = $calStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $calSessions = [];
 foreach ($allSessions as $s) {
-    $d = intval(date('j', strtotime($s['session_date'])));
+    $d = intval(date('j', strtotime($s['start_time'])));
     $calSessions[$d][] = $s;
 }
 
@@ -393,7 +393,7 @@ function selectCalendarDay(element, day) {
       var clientName = escapeHtml(s.client_name || 'Unknown Client');
       
       // Format time (e.g. "10:00:00") to 12-hour format
-      var timeParts = s.session_time.split(':');
+      var timeParts = s.start_time.split(' ')[1].split(':');
       var hours = parseInt(timeParts[0], 10);
       var minutes = timeParts[1];
       var ampm = hours >= 12 ? 'PM' : 'AM';
@@ -401,7 +401,7 @@ function selectCalendarDay(element, day) {
       hours = hours ? hours : 12;
       var timeStr = hours + ':' + minutes + ' ' + ampm;
       
-      var duration = parseInt(s.duration_minutes, 10);
+      var duration = Math.round((Date.parse(s.end_time.replace(' ', 'T')) - Date.parse(s.start_time.replace(' ', 'T'))) / 60000);
       var type = s.session_type;
       var status = s.status;
       var notes = s.notes || '';

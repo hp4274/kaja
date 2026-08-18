@@ -23,7 +23,7 @@ for ($i = 5; $i >= 0; $i--) {
     $m = date('n', strtotime("-{$i} months"));
     $y = date('Y', strtotime("-{$i} months"));
     $label = date('M', strtotime("-{$i} months"));
-    $cnt = $db->query("SELECT COUNT(*) FROM `sessions` WHERE MONTH(`session_date`)={$m} AND YEAR(`session_date`)={$y}")->fetchColumn();
+    $cnt = $db->query("SELECT COUNT(*) FROM `sessions` WHERE MONTH(`start_time`)={$m} AND YEAR(`start_time`)={$y}")->fetchColumn();
     $monthlyData[] = ['label'=>$label, 'count'=>intval($cnt)];
 }
 $maxSessions = max(array_column($monthlyData, 'count'));

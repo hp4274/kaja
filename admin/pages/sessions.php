@@ -21,15 +21,15 @@ $calStmt = $db->prepare("
     SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as client_name
     FROM `sessions` s
     LEFT JOIN `clients` c ON s.client_id = c.id
-    WHERE MONTH(s.`session_date`)=:m AND YEAR(s.`session_date`)=:y
-    ORDER BY s.`session_time` ASC
+    WHERE MONTH(s.`start_time`)=:m AND YEAR(s.`start_time`)=:y
+    ORDER BY s.`start_time` ASC
 ");
 $calStmt->execute([':m'=>$month, ':y'=>$year]);
 $allSessions = $calStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $calSessions = [];
 foreach ($allSessions as $s) {
-    $d = intval(date('j', strtotime($s['session_date'])));
+    $d = intval(date('j', strtotime($s['start_time'])));
     $calSessions[$d][] = $s;
 }
 
@@ -38,8 +38,8 @@ $upcoming = $db->query("
     SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as client_name
     FROM `sessions` s
     LEFT JOIN `clients` c ON s.client_id = c.id
-    WHERE s.`session_date` >= CURDATE() AND s.`status`='scheduled'
-    ORDER BY s.`session_date` ASC, s.`session_time` ASC
+    WHERE s.`start_time` >= NOW() AND s.`status` IN ('pending','confirmed')
+    ORDER BY s.`start_time` ASC
     LIMIT 10
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -77,7 +77,7 @@ $clientList = $db->query("SELECT `id`, `first_name`, `last_name` FROM `clients` 
             <?php if ($hasSessions): ?>
               <?php foreach (array_slice($calSessions[$day], 0, 3) as $cs):
                 $dotClass = 'teal';
-                if ($cs['status'] === 'scheduled') {
+                if (in_array($cs['status'], ['pending', 'confirmed'], true)) {
                     $dotClass = 'amber';
                 } elseif ($cs['status'] === 'completed') {
                     $dotClass = 'green';
@@ -120,17 +120,19 @@ $clientList = $db->query("SELECT `id`, `first_name`, `last_name` FROM `clients` 
                 </div>
                 <div>
                   <div class="activity-text" style="font-weight:500; font-size:0.88rem;"><?php echo htmlspecialchars($us['client_name'] ?? 'Unknown'); ?></div>
-                  <div class="activity-time" style="font-size:0.78rem; color:var(--clr-text-muted);"><?php echo date('D, d M', strtotime($us['session_date'])) . ' · ' . date('h:i A', strtotime($us['session_time'])) . ' · ' . $us['duration_minutes'] . ' min'; ?></div>
+                  <div class="activity-time" style="font-size:0.78rem; color:var(--clr-text-muted);"><?php echo date('D, d M', strtotime($us['start_time'])) . ' · ' . date('h:i A', strtotime($us['start_time']))
+              . ' · ' . round((strtotime($us['end_time']) - strtotime($us['start_time'])) / 60) . ' min'; ?></div>
                 </div>
               </div>
               <div style="display:flex; align-items:center; gap:0.5rem; margin-left:0.5rem;">
                 <span class="badge badge-<?php echo $us['session_type']; ?>"><?php echo $us['session_type']; ?></span>
                 <select class="status-select" onchange="updateSessionStatus(<?php echo $us['id']; ?>, this.value)" style="margin:0;">
-                  <option value="scheduled" <?php echo $us['status'] === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
+                  <option value="pending" <?php echo $us['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                  <option value="confirmed" <?php echo $us['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                   <option value="completed" <?php echo $us['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
                   <option value="cancelled" <?php echo $us['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                 </select>
-                <button class="btn btn-icon btn-sm" onclick="openRescheduleModal(<?php echo $us['id']; ?>, '<?php echo $us['session_date']; ?>', '<?php echo substr($us['session_time'], 0, 5); ?>')" title="Reschedule" style="padding:0.2rem 0.4rem; height:auto; width:auto;"><i class="bi bi-pencil-square"></i></button>
+                <button class="btn btn-icon btn-sm" onclick="openRescheduleModal(<?php echo $us['id']; ?>, '<?php echo date('Y-m-d', strtotime($us['start_time'])); ?>', '<?php echo date('H:i', strtotime($us['start_time'])); ?>')" title="Reschedule" style="padding:0.2rem 0.4rem; height:auto; width:auto;"><i class="bi bi-pencil-square"></i></button>
               </div>
             </li>
           <?php endforeach; ?>
@@ -225,16 +227,19 @@ function showDaySessions(day) {
     html += '<div class="activity-icon ' + (s.session_type === 'online' ? 'teal' : 'amber') + '"><i class="bi ' + (s.session_type === 'online' ? 'bi-camera-video' : 'bi-geo-alt') + '"></i></div>';
     html += '<div>';
     html += '<div style="font-weight:500;font-size:0.88rem;">' + escapeHtml(s.client_name || 'Unknown') + '</div>';
-    html += '<div style="font-size:0.78rem;color:var(--clr-text-muted);">' + s.session_time.substring(0,5) + ' · ' + s.duration_minutes + ' min · <span class="badge badge-' + s.status + '">' + s.status + '</span></div>';
+    var startsAt = s.start_time.split(' ')[1].substring(0, 5);
+    var mins = Math.round((Date.parse(s.end_time.replace(' ', 'T')) - Date.parse(s.start_time.replace(' ', 'T'))) / 60000);
+    html += '<div style="font-size:0.78rem;color:var(--clr-text-muted);">' + startsAt + ' · ' + mins + ' min · <span class="badge badge-' + s.status + '">' + s.status + '</span></div>';
     html += '</div>';
     html += '</div>';
     html += '<div style="display:flex; align-items:center; gap:0.5rem; margin-left:0.5rem;">';
     html += '<select class="status-select" onchange="updateSessionStatus(' + s.id + ', this.value)" style="margin:0;">';
-    html += '<option value="scheduled"' + (s.status === 'scheduled' ? ' selected' : '') + '>Scheduled</option>';
+    html += '<option value="pending"' + (s.status === 'pending' ? ' selected' : '') + '>Pending</option>';
+    html += '<option value="confirmed"' + (s.status === 'confirmed' ? ' selected' : '') + '>Confirmed</option>';
     html += '<option value="completed"' + (s.status === 'completed' ? ' selected' : '') + '>Completed</option>';
     html += '<option value="cancelled"' + (s.status === 'cancelled' ? ' selected' : '') + '>Cancelled</option>';
     html += '</select>';
-    html += '<button class="btn btn-icon btn-sm" onclick="openRescheduleModal(' + s.id + ', \'' + s.session_date + '\', \'' + s.session_time.substring(0,5) + '\')" title="Reschedule" style="padding:0.2rem 0.4rem; height:auto; width:auto;"><i class="bi bi-pencil-square"></i></button>';
+    html += '<button class="btn btn-icon btn-sm" onclick="openRescheduleModal(' + s.id + ', \'' + s.start_time.split(' ')[0] + '\', \'' + startsAt + '\')" title="Reschedule" style="padding:0.2rem 0.4rem; height:auto; width:auto;"><i class="bi bi-pencil-square"></i></button>';
     html += '</div>';
     html += '</div>';
   });
