@@ -128,7 +128,7 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
               <select class="status-select" onchange="updateClientStatus(<?php echo $clientId; ?>, this.value)">
                 <option value="active" <?php echo $client['status']==='active'?'selected':''; ?>>Active</option>
                 <option value="inactive" <?php echo $client['status']==='inactive'?'selected':''; ?>>Inactive</option>
-                <option value="discharged" <?php echo $client['status']==='discharged'?'selected':''; ?>>Discharged</option>
+                <option value="completed" <?php echo $client['status']==='completed'?'selected':''; ?>>Completed</option>
               </select>
             </div>
           </div>

@@ -39,7 +39,7 @@ try {
         case 'update_status':
             $clientId = intval($_POST['client_id'] ?? 0);
             $status = trim($_POST['status'] ?? '');
-            if (!$clientId || !in_array($status, ['review', 'active', 'inactive', 'discharged'])) {
+            if (!$clientId || !in_array($status, ['review', 'active', 'inactive', 'completed'])) {
                 echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
                 exit;
             }

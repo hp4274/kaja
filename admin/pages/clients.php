@@ -10,7 +10,7 @@ $sql = "SELECT c.*,
 $params = [];
 $where = [];
 
-if ($statusFilter && in_array($statusFilter, ['active','inactive','discharged'])) {
+if ($statusFilter && in_array($statusFilter, ['pending','review','active','inactive','completed'])) {
     $where[] = "c.`status` = :status";
     $params[':status'] = $statusFilter;
 }
@@ -33,7 +33,7 @@ $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <a href="index.php?page=clients" class="filter-btn <?php echo !$statusFilter ? 'active' : ''; ?>">All</a>
     <a href="index.php?page=clients&status=active" class="filter-btn <?php echo $statusFilter==='active' ? 'active' : ''; ?>">Active</a>
     <a href="index.php?page=clients&status=inactive" class="filter-btn <?php echo $statusFilter==='inactive' ? 'active' : ''; ?>">Inactive</a>
-    <a href="index.php?page=clients&status=discharged" class="filter-btn <?php echo $statusFilter==='discharged' ? 'active' : ''; ?>">Discharged</a>
+    <a href="index.php?page=clients&status=completed" class="filter-btn <?php echo $statusFilter==='completed' ? 'active' : ''; ?>">Completed</a>
   </div>
   <div class="toolbar-right">
     <form method="get" action="index.php" class="search-bar">

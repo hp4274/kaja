@@ -367,6 +367,88 @@ try {
         }
     );
 
+    // ---- 11. clients module ----------------------------------------------
+
+    step('clients.status: discharged becomes completed',
+        tableExists($db, 'clients') && !enumHasValue($db, 'clients', 'status', 'completed'),
+        function (PDO $db) {
+            // Widen, move the rows, then narrow -- the same three-step dance the
+            // lead vocabulary needed. One ALTER would coerce every 'discharged'
+            // row to '' on the way through.
+            $db->exec("
+                ALTER TABLE `clients` MODIFY `status`
+                ENUM('pending','review','active','inactive','discharged','completed')
+                NOT NULL DEFAULT 'active'
+            ");
+            $db->exec("UPDATE `clients` SET `status`='completed' WHERE `status`='discharged'");
+            $db->exec("
+                ALTER TABLE `clients` MODIFY `status`
+                ENUM('pending','review','active','inactive','completed')
+                NOT NULL DEFAULT 'active'
+            ");
+        }
+    );
+
+    step('clients archive and merge columns',
+        tableExists($db, 'clients') && !columnExists($db, 'clients', 'archived_at'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `clients`
+                ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                ADD COLUMN `archived_at` DATETIME DEFAULT NULL,
+                ADD COLUMN `merged_into_id` INT DEFAULT NULL
+            ");
+        }
+    );
+
+    step('client_notes author, kind and correction columns',
+        tableExists($db, 'client_notes') && !columnExists($db, 'client_notes', 'user_id'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `client_notes`
+                ADD COLUMN `user_id` INT DEFAULT NULL,
+                ADD COLUMN `note_kind` ENUM('session','administrative') NOT NULL DEFAULT 'session',
+                ADD COLUMN `corrects_note_id` INT DEFAULT NULL
+            ");
+        }
+    );
+
+    step('client_fees method and reference',
+        tableExists($db, 'client_fees') && !columnExists($db, 'client_fees', 'method'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `client_fees`
+                ADD COLUMN `method` ENUM('cash','upi','bank_transfer','other') NOT NULL DEFAULT 'cash',
+                ADD COLUMN `reference` VARCHAR(255) DEFAULT NULL
+            ");
+        }
+    );
+
+    step('client_documents table',
+        !tableExists($db, 'client_documents'),
+        function (PDO $db) {
+            $db->exec("
+                CREATE TABLE `client_documents` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `client_id` INT NOT NULL,
+                    `original_name` VARCHAR(255) NOT NULL,
+                    `stored_name` VARCHAR(80) NOT NULL,
+                    `mime_type` VARCHAR(120) NOT NULL,
+                    `size_bytes` INT NOT NULL,
+                    `uploaded_by` INT DEFAULT NULL,
+                    `uploaded_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `archived_at` DATETIME DEFAULT NULL,
+                    UNIQUE KEY `uniq_stored` (`stored_name`),
+                    KEY `idx_client` (`client_id`),
+                    CONSTRAINT `fk_client_documents_client`
+                        FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE,
+                    CONSTRAINT `fk_client_documents_user`
+                        FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+                ) ENGINE=InnoDB
+            ");
+        }
+    );
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo "MIGRATION FAILED\n" . $e->getMessage() . "\n";

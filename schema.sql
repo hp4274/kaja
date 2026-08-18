@@ -164,15 +164,24 @@ CREATE TABLE IF NOT EXISTS `clients` (
     `occupation` VARCHAR(100) DEFAULT NULL,
     `dob` DATE DEFAULT NULL,
     `concern` VARCHAR(100) DEFAULT NULL,
-    -- 'pending' = created when a lead was confirmed, intake not yet returned.
-    -- 'review'  = intake submitted, awaiting a human look before bookable.
-    `status` ENUM('pending','review','active','inactive','discharged') NOT NULL DEFAULT 'active',
+    -- 'pending'   = created when a lead was confirmed, intake not yet returned.
+    -- 'review'    = intake submitted, awaiting a human look before bookable.
+    -- 'completed' = treatment finished; the record stays and they can return.
+    `status` ENUM('pending','review','active','inactive','completed') NOT NULL DEFAULT 'active',
     -- The intake answers, AES-256-GCM encrypted. Written and read only through
     -- includes/intake-data.php, keyed by question id from intake_form_version.
     `intake_data` LONGTEXT DEFAULT NULL,
     `intake_form_version` INT DEFAULT NULL,
     `intake_submitted_at` DATETIME DEFAULT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- Soft delete. There is no hard delete: a client row anchors sessions,
+    -- notes, documents and payments, and removing it would orphan a history
+    -- that has to stay explicable.
+    `archived_at` DATETIME DEFAULT NULL,
+    -- Set when this row was merged INTO another, so the loser's history stays
+    -- traceable rather than becoming a dead-end archived record.
+    `merged_into_id` INT DEFAULT NULL
 ) ENGINE=InnoDB;
 
 -- 6. Sessions Table
@@ -194,6 +203,12 @@ CREATE TABLE IF NOT EXISTS `client_notes` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `client_id` INT NOT NULL,
     `note_type` ENUM('session','general','clinical') DEFAULT 'general',
+    `user_id` INT DEFAULT NULL,
+    -- 'session' notes are clinical; 'administrative' is everything else.
+    `note_kind` ENUM('session','administrative') NOT NULL DEFAULT 'session',
+    -- A correction is a NEW note pointing at the one it corrects. Nothing is
+    -- ever overwritten, so the original stays readable beside the fix.
+    `corrects_note_id` INT DEFAULT NULL,
     `content` TEXT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
@@ -207,9 +222,33 @@ CREATE TABLE IF NOT EXISTS `client_fees` (
     `amount` DECIMAL(10, 2) NOT NULL,
     `description` VARCHAR(255) DEFAULT NULL,
     `status` ENUM('paid','pending','waived') DEFAULT 'pending',
+    `method` ENUM('cash','upi','bank_transfer','other') NOT NULL DEFAULT 'cash',
+    `reference` VARCHAR(255) DEFAULT NULL,
     `fee_date` DATE NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Client Documents
+-- The file itself lives outside the project at document_storage_path. Only its
+-- metadata is here, and stored_name is generated: an uploaded filename is
+-- attacker-controlled and must never become a path.
+CREATE TABLE IF NOT EXISTS `client_documents` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `client_id` INT NOT NULL,
+    `original_name` VARCHAR(255) NOT NULL,
+    `stored_name` VARCHAR(80) NOT NULL,
+    `mime_type` VARCHAR(120) NOT NULL,
+    `size_bytes` INT NOT NULL,
+    `uploaded_by` INT DEFAULT NULL,
+    `uploaded_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `archived_at` DATETIME DEFAULT NULL,
+    UNIQUE KEY `uniq_stored` (`stored_name`),
+    KEY `idx_client` (`client_id`),
+    CONSTRAINT `fk_client_documents_client`
+        FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_client_documents_user`
+        FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- 9. Activity Log Table
