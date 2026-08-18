@@ -144,7 +144,7 @@ function leadsUrl(array $filters, array $overrides = []) {
               <tr id="lead-row-<?php echo $l['id']; ?>" class="lead-item" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
                 <td><input type="checkbox" class="lead-select" value="<?php echo $l['id']; ?>" /></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($l['created_at'])); ?></td>
-                <td class="td-name"><?php echo htmlspecialchars($l['name']); ?></td>
+                <td class="td-name"><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a></td>
                 <td class="td-nowrap"><?php echo htmlspecialchars(($l['country_code'] ?? '') . ' ' . ($l['phone'] ?? '')); ?></td>
                 <td class="td-nowrap td-muted">
@@ -214,7 +214,7 @@ function leadsUrl(array $filters, array $overrides = []) {
               <div class="grid-card-header">
                 <div class="grid-card-title">
                   <i class="bi bi-person-badge" style="color:var(--clr-primary); font-size:1.1rem;"></i>
-                  <span><?php echo htmlspecialchars($l['name']); ?></span>
+                  <span><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></span>
                 </div>
                 <div style="font-size:0.75rem;color:var(--clr-text-muted);"><?php echo date('d M Y', strtotime($l['created_at'])); ?></div>
               </div>
@@ -285,6 +285,50 @@ function leadsUrl(array $filters, array $overrides = []) {
     <?php endif; ?>
   </div>
 </div>
+
+<div class="lead-drawer-backdrop" id="lead-drawer-backdrop" hidden></div>
+<aside class="lead-drawer" id="lead-drawer" hidden aria-label="Lead detail">
+  <header class="lead-drawer-header">
+    <div>
+      <h2 id="drawer-name">Lead</h2>
+      <div class="lead-drawer-sub" id="drawer-meta"></div>
+    </div>
+    <button class="btn btn-icon btn-sm" id="drawer-close" title="Close"><i class="bi bi-x-lg"></i></button>
+  </header>
+
+  <div class="lead-drawer-body">
+    <div class="lead-dup-banner" id="drawer-duplicate" hidden></div>
+
+    <section class="lead-drawer-section">
+      <h3>Actions</h3>
+      <div class="lead-drawer-actions">
+        <select class="status-select" id="drawer-status"></select>
+        <button class="btn btn-primary btn-sm" id="drawer-confirm"><i class="bi bi-send-check"></i> Confirm</button>
+        <button class="btn btn-danger btn-sm" id="drawer-reject"><i class="bi bi-x-lg"></i> Reject</button>
+        <button class="btn btn-ghost btn-sm" id="drawer-spam"><i class="bi bi-slash-circle"></i> Mark Spam</button>
+      </div>
+    </section>
+
+    <section class="lead-drawer-section">
+      <h3>Submitted answers</h3>
+      <dl class="lead-answers" id="drawer-answers"></dl>
+    </section>
+
+    <section class="lead-drawer-section">
+      <h3>Notes</h3>
+      <form id="drawer-note-form">
+        <textarea id="drawer-note-input" rows="2" placeholder="Add a note..." class="form-control"></textarea>
+        <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.5rem;">Add note</button>
+      </form>
+      <ul class="lead-notes" id="drawer-notes"></ul>
+    </section>
+
+    <section class="lead-drawer-section">
+      <h3>Activity</h3>
+      <ul class="activity-list" id="drawer-timeline"></ul>
+    </section>
+  </div>
+</aside>
 
 <script>
 function toggleMessage(id) {
@@ -445,6 +489,148 @@ function checkEmptyState() {
     location.reload();
   }
 }
+
+// ─── Detail drawer ───────────────────────────────────────────────────────
+var DRAWER_LEAD_ID = null;
+
+function openLeadDrawer(id) {
+  var fd = new FormData();
+  fd.append('action', 'detail');
+  fd.append('id', id);
+
+  fetch('api/leads.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) { showToast(data.error || 'Error', 'error'); return; }
+      DRAWER_LEAD_ID = id;
+      renderLeadDrawer(data);
+      document.getElementById('lead-drawer').hidden = false;
+      document.getElementById('lead-drawer-backdrop').hidden = false;
+    })
+    .catch(function() { showToast('Network error', 'error'); });
+}
+
+function closeLeadDrawer() {
+  document.getElementById('lead-drawer').hidden = true;
+  document.getElementById('lead-drawer-backdrop').hidden = true;
+  DRAWER_LEAD_ID = null;
+}
+
+function renderLeadDrawer(data) {
+  var lead = data.lead;
+  document.getElementById('drawer-name').textContent = lead.name;
+  document.getElementById('drawer-meta').textContent =
+    lead.email + ' · ' + (lead.phone || 'no phone') + ' · via ' + lead.source;
+
+  var dup = document.getElementById('drawer-duplicate');
+  if (data.duplicate) {
+    // textContent throughout: a duplicate's name is visitor-supplied, and the
+    // banner is the one place two people's data meet on screen.
+    dup.textContent = '';
+    var icon = document.createElement('i');
+    icon.className = 'bi bi-exclamation-triangle-fill';
+    dup.appendChild(icon);
+    dup.appendChild(document.createTextNode(
+      ' Possible duplicate of ' + data.duplicate.name + ' (' + data.duplicate.email + ')' +
+      (data.duplicate.is_client ? ' — already an existing client.' : '.')
+    ));
+    dup.hidden = false;
+  } else {
+    dup.hidden = true;
+  }
+
+  var sel = document.getElementById('drawer-status');
+  sel.innerHTML = '';
+  data.allowed_statuses.forEach(function(opt) {
+    var o = document.createElement('option');
+    o.value = opt.value;
+    o.textContent = opt.label;
+    if (opt.value === lead.status) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  var closed = (lead.status === 'rejected' || lead.status === 'spam' || lead.status === 'converted');
+  document.getElementById('drawer-confirm').hidden = (lead.status !== 'contacted');
+  document.getElementById('drawer-reject').hidden  = closed;
+  document.getElementById('drawer-spam').hidden    = closed;
+
+  var dl = document.getElementById('drawer-answers');
+  dl.innerHTML = '';
+  data.answers.forEach(function(a) {
+    var dt = document.createElement('dt'); dt.textContent = a.label;
+    var dd = document.createElement('dd'); dd.textContent = a.value;
+    dl.appendChild(dt); dl.appendChild(dd);
+  });
+
+  renderDrawerNotes(data.notes);
+
+  var tl = document.getElementById('drawer-timeline');
+  tl.innerHTML = '';
+  data.timeline.forEach(function(e) {
+    var li = document.createElement('li');
+    li.className = 'activity-item';
+    li.innerHTML =
+      '<div class="activity-icon ' + e.tone + '"><i class="bi ' + e.icon + '"></i></div>' +
+      '<div><div class="activity-text"></div><div class="activity-time"></div></div>';
+    li.querySelector('.activity-text').textContent = e.text + (e.author ? ' — ' + e.author : '');
+    li.querySelector('.activity-time').textContent = e.at;
+    tl.appendChild(li);
+  });
+}
+
+function renderDrawerNotes(notes) {
+  var ul = document.getElementById('drawer-notes');
+  ul.innerHTML = '';
+  notes.forEach(function(n) {
+    var li = document.createElement('li');
+    li.innerHTML = '<p class="lead-note-body"></p><span class="lead-note-meta"></span>';
+    li.querySelector('.lead-note-body').textContent = n.content;
+    li.querySelector('.lead-note-meta').textContent = n.author + ' · ' + n.created_at;
+    ul.appendChild(li);
+  });
+}
+
+(function() {
+  document.getElementById('drawer-close').addEventListener('click', closeLeadDrawer);
+  document.getElementById('lead-drawer-backdrop').addEventListener('click', closeLeadDrawer);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && DRAWER_LEAD_ID !== null) closeLeadDrawer();
+  });
+
+  document.getElementById('drawer-status').addEventListener('change', function() {
+    updateLeadStatus(DRAWER_LEAD_ID, this.value);
+  });
+  document.getElementById('drawer-reject').addEventListener('click', function() {
+    updateLeadStatus(DRAWER_LEAD_ID, 'rejected');
+  });
+  document.getElementById('drawer-spam').addEventListener('click', function() {
+    updateLeadStatus(DRAWER_LEAD_ID, 'spam');
+  });
+  document.getElementById('drawer-confirm').addEventListener('click', function() {
+    confirmLeadAction(DRAWER_LEAD_ID, document.getElementById('drawer-name').textContent);
+  });
+
+  document.getElementById('drawer-note-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var input = document.getElementById('drawer-note-input');
+    if (!input.value.trim()) return;
+
+    var fd = new FormData();
+    fd.append('action', 'add_note');
+    fd.append('id', DRAWER_LEAD_ID);
+    fd.append('content', input.value);
+
+    fetch('api/leads.php', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) { showToast(data.error || 'Error', 'error'); return; }
+        input.value = '';
+        renderDrawerNotes(data.notes);
+        showToast('Note added');
+      })
+      .catch(function() { showToast('Network error', 'error'); });
+  });
+})();
 
 // Bulk selection
 (function() {

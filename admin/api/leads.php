@@ -15,6 +15,8 @@ require_once __DIR__ . '/../../includes/lead-status.php';
 require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-notes.php';
 require_once __DIR__ . '/../../includes/lead-confirm.php';
+require_once __DIR__ . '/../../includes/lead-form-map.php';
+require_once __DIR__ . '/../../includes/lead-timeline.php';
 $db = getDbConnection();
 
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
@@ -57,6 +59,53 @@ try {
                ->execute([':d'=>$desc, ':rid'=>$id]);
 
             echo json_encode(['success'=>true,'status'=>$status]);
+            break;
+
+        case 'detail':
+            $id   = intval($_POST['id'] ?? 0);
+            $lead = $id ? fetchLead($db, $id) : null;
+
+            if ($lead === null) {
+                echo json_encode(['success'=>false,'error'=>'Lead not found']);
+                exit;
+            }
+
+            // Opening the drawer IS the review, so the stamp lands here rather
+            // than behind a "mark as reviewed" button nobody would click.
+            markLeadViewed($db, $id);
+
+            $duplicate = null;
+            if (!empty($lead['possible_duplicate_of'])) {
+                $dup = fetchLead($db, (int) $lead['possible_duplicate_of']);
+                if ($dup !== null) {
+                    $duplicate = [
+                        'id'         => (int) $dup['id'],
+                        'name'       => $dup['name'],
+                        'email'      => $dup['email'],
+                        'created_at' => $dup['created_at'],
+                        'is_client'  => (int) $lead['is_existing_client'],
+                    ];
+                }
+            }
+
+            // Only offer moves the server would actually accept, plus the
+            // current status so the select has something selected.
+            $allowed = [];
+            foreach (leadStatuses() as $optS) {
+                if ($optS === $lead['status'] || leadCanTransition($lead['status'], $optS)) {
+                    $allowed[] = ['value' => $optS, 'label' => leadStatusLabel($optS)];
+                }
+            }
+
+            echo json_encode([
+                'success'          => true,
+                'lead'             => $lead,
+                'answers'          => leadAnswers($lead),
+                'timeline'         => leadTimeline($db, $id),
+                'notes'            => leadNotes($db, $id),
+                'duplicate'        => $duplicate,
+                'allowed_statuses' => $allowed,
+            ]);
             break;
 
         case 'add_note':

@@ -1444,3 +1444,78 @@ body.admin-body.admin-dark-theme {
   color: var(--clr-primary);
 }
 .bulk-bar[hidden] { display: none; }
+
+/* ═══════════════════════════════════════════
+   LEAD DETAIL DRAWER
+   ═══════════════════════════════════════════ */
+.lead-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 900;
+}
+.lead-drawer-backdrop[hidden] { display: none; }
+
+.lead-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(520px, 100vw);
+  height: 100vh;
+  background: var(--clr-surface);
+  border-left: 1px solid var(--clr-border);
+  box-shadow: var(--shadow-lg);
+  z-index: 901;
+  display: flex;
+  flex-direction: column;
+}
+.lead-drawer[hidden] { display: none; }
+
+.lead-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid var(--clr-border);
+}
+.lead-drawer-header h2 { font-size: 1.05rem; margin: 0; }
+.lead-drawer-sub { font-size: 0.78rem; color: var(--clr-text-muted); margin-top: 0.2rem; }
+
+.lead-drawer-body { padding: 1.35rem; overflow-y: auto; flex: 1; }
+
+.lead-drawer-section { margin-bottom: 1.75rem; }
+.lead-drawer-section h3 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--clr-text-muted);
+  margin: 0 0 0.65rem;
+}
+
+.lead-drawer-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+.lead-dup-banner {
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1.25rem;
+  background: var(--clr-warning-light);
+  color: #b45309;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+}
+.lead-dup-banner[hidden] { display: none; }
+
+.lead-answers { display: grid; grid-template-columns: 40% 60%; gap: 0.4rem 0.75rem; margin: 0; }
+.lead-answers dt { font-size: 0.78rem; color: var(--clr-text-muted); }
+.lead-answers dd { font-size: 0.85rem; margin: 0; word-break: break-word; }
+
+.lead-notes { list-style: none; padding: 0; margin: 1rem 0 0; }
+.lead-notes li {
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.5rem;
+  background: var(--clr-bg);
+  border-radius: var(--radius-sm);
+}
+.lead-note-body { margin: 0 0 0.3rem; font-size: 0.85rem; }
+.lead-note-meta { font-size: 0.72rem; color: var(--clr-text-muted); }
