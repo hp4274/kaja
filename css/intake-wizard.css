@@ -1,11 +1,36 @@
+/* Intake wizard.
+ *
+ * Injected by intake.php after the site stylesheets, so it can lean on the
+ * brand tokens rather than inventing a palette. Every colour here is
+ * var(--ra-*) for that reason: the Continue button has to read as the same
+ * family as the form's own Submit button, or the page looks assembled from
+ * two designs.
+ *
+ * Fallbacks are the values site-overrides.css sets, so the wizard still looks
+ * right if it is ever loaded on a page that has not defined them.
+ */
+
 .intake-step[hidden] { display: none; }
 
-.intake-progress { margin: 0 0 2rem; }
+/* The form's own components set display on a class — .ra-form-group is flex,
+   .ra-form-row is grid — and a class selector outranks the browser's built-in
+   [hidden] rule. Without this, every conditionally revealed question and every
+   hidden step stays on screen.
+
+   Scoped by id so it beats any class rule in the component sheets without
+   reaching for !important. */
+#patientIntakeForm [hidden] { display: none; }
+
+/* ── Progress ─────────────────────────────────────────────────────────── */
+
+.intake-progress {
+  margin: 0 0 2rem;
+}
 
 .intake-progress-track {
   height: 6px;
   border-radius: 999px;
-  background: rgba(15, 59, 54, 0.10);
+  background: rgba(0, 55, 62, 0.10);
   overflow: hidden;
 }
 
@@ -13,40 +38,85 @@
   height: 100%;
   width: 0;
   border-radius: 999px;
-  background: #0F3B36;
+  /* The same accent as the Submit button, so filling the bar and reaching the
+     end of the form are visibly the same journey. */
+  background: var(--ra-amber, #e6845c);
   transition: width 260ms ease;
 }
 
 .intake-progress-label {
   margin-top: 0.6rem;
+  font-family: var(--font-body, "Quicksand", sans-serif);
   font-size: 0.82rem;
-  color: #4A5C5A;
+  color: var(--ra-text-muted, rgba(0, 55, 62, 0.65));
 }
+
+/* ── Navigation ───────────────────────────────────────────────────────── */
 
 .intake-nav {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
 }
 
 .intake-btn {
-  padding: 13px 28px;
-  border-radius: 60px;
-  border: 1px solid rgba(15, 59, 54, 0.2);
+  /* 50px matches .ra-btn-submit; anything else reads as a different control. */
+  padding: 13px 30px;
+  border-radius: 50px;
+  border: 1px solid rgba(0, 55, 62, 0.22);
   background: transparent;
-  color: #0F3B36;
-  font: inherit;
-  font-size: 0.9rem;
+  color: var(--ra-brown, #00373e);
+  font-family: var(--font-body, "Quicksand", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
-.intake-btn:hover { opacity: 0.85; }
+
+.intake-btn:hover {
+  background: rgba(0, 55, 62, 0.06);
+}
+
+.intake-btn:focus-visible {
+  outline: 2px solid var(--ra-brown, #00373e);
+  outline-offset: 2px;
+}
+
 .intake-btn[hidden] { display: none; }
 
 .intake-btn-next {
-  background: #0F3B36;
-  border-color: #0F3B36;
+  background: var(--ra-amber, #e6845c);
+  border-color: var(--ra-amber, #e6845c);
   color: #fff;
   margin-left: auto;
+}
+
+.intake-btn-next:hover {
+  background: var(--ra-amber, #e6845c);
+  opacity: 0.9;
+}
+
+.intake-btn-next:focus-visible {
+  outline-color: var(--ra-amber, #e6845c);
+}
+
+/* ── Quality floor ────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .intake-nav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .intake-btn { width: 100%; }
+  /* margin-left:auto would strand the button in a column layout. */
+  .intake-btn-next { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intake-progress-fill,
+  .intake-btn {
+    transition: none;
+  }
 }
