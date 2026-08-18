@@ -525,6 +525,13 @@ a:hover { color: var(--clr-primary-dark); }
 .badge-pending { background: var(--clr-warning-light); color: #b45309; }
 .badge-waived { background: #f3f4f6; color: var(--clr-text-muted); }
 
+/* Intake link lifecycle */
+.badge-intake-sent      { background: #f3f4f6; color: var(--clr-text-muted); }
+.badge-intake-opened    { background: var(--clr-info-light); color: var(--clr-info); }
+.badge-intake-filled    { background: var(--clr-warning-light); color: #b45309; }
+.badge-intake-submitted { background: var(--clr-success-light); color: var(--clr-success); }
+.badge-intake-expired   { background: var(--clr-danger-light); color: var(--clr-danger); }
+
 /* Aging flag — a lead left at 'new' past 24h. */
 .badge-aging {
   background: var(--clr-danger-light);
