@@ -3,10 +3,12 @@
  * Database Connection Configuration
  */
 
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'kaja_db');
-define('DB_USER', 'root');
-define('DB_PASS', ''); // Default empty password for local development
+// Guarded so a caller that has already chosen a database — the test bootstrap
+// pointing at kaja_db_test, for one — is not overridden here.
+if (!defined('DB_HOST')) { define('DB_HOST', 'localhost'); }
+if (!defined('DB_NAME')) { define('DB_NAME', 'kaja_db'); }
+if (!defined('DB_USER')) { define('DB_USER', 'root'); }
+if (!defined('DB_PASS')) { define('DB_PASS', ''); } // Default empty password for local development
 
 function getDbConnection() {
     try {
