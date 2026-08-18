@@ -165,7 +165,13 @@ CREATE TABLE IF NOT EXISTS `clients` (
     `dob` DATE DEFAULT NULL,
     `concern` VARCHAR(100) DEFAULT NULL,
     -- 'pending' = created when a lead was confirmed, intake not yet returned.
-    `status` ENUM('pending','active','inactive','discharged') NOT NULL DEFAULT 'active',
+    -- 'review'  = intake submitted, awaiting a human look before bookable.
+    `status` ENUM('pending','review','active','inactive','discharged') NOT NULL DEFAULT 'active',
+    -- The intake answers, AES-256-GCM encrypted. Written and read only through
+    -- includes/intake-data.php, keyed by question id from intake_form_version.
+    `intake_data` LONGTEXT DEFAULT NULL,
+    `intake_form_version` INT DEFAULT NULL,
+    `intake_submitted_at` DATETIME DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 

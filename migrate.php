@@ -342,6 +342,31 @@ try {
         }
     );
 
+    // ---- 10. patient intake ----------------------------------------------
+
+    step("clients.status gains 'review'",
+        tableExists($db, 'clients') && !enumHasValue($db, 'clients', 'status', 'review'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `clients` MODIFY `status`
+                ENUM('pending','review','active','inactive','discharged')
+                NOT NULL DEFAULT 'active'
+            ");
+        }
+    );
+
+    step('clients intake columns',
+        tableExists($db, 'clients') && !columnExists($db, 'clients', 'intake_data'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `clients`
+                ADD COLUMN `intake_data` LONGTEXT DEFAULT NULL,
+                ADD COLUMN `intake_form_version` INT DEFAULT NULL,
+                ADD COLUMN `intake_submitted_at` DATETIME DEFAULT NULL
+            ");
+        }
+    );
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo "MIGRATION FAILED\n" . $e->getMessage() . "\n";
