@@ -96,3 +96,10 @@ function intakeLinkIsStale(array $link, $hours, $now = null) {
 
     return ($nowTs - $createdTs) > ((int) $hours * 3600);
 }
+
+/**
+ * Which wording of the consent text is currently shown. Bump this whenever the
+ * consent copy in patient-intake-form.html changes, so an old record still
+ * says which version that person actually agreed to.
+ */
+const INTAKE_CONSENT_VERSION = 1;

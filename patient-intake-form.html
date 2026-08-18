@@ -25,17 +25,20 @@
         <a href="index.html">Home</a>
         <a href="index.html#how-it-works">How it Works</a>
         <a href="about.html">About</a>
-        <a href="blogs.php">Blog</a>
+        <a href="blogs.html">Blog</a>
       </div>
 
       <div class="rw-nav-actions d-none d-lg-flex">
         <a href="appointment.html" class="rw-btn rw-btn-primary">Book Appointment</a>
-        <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank"
+          aria-label="Instagram"><i class="bi bi-instagram"></i></a>
         <a href="index.html" class="rw-social-icon" aria-label="Website"><i class="bi bi-globe2"></i></a>
-        <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i class="bi bi-envelope"></i></a>
+        <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i
+            class="bi bi-envelope"></i></a>
       </div>
 
-      <button class="navbar-toggler d-lg-none" type="button" style="border:none; background:transparent; font-size:24px;">
+      <button class="navbar-toggler d-lg-none" type="button"
+        style="border:none; background:transparent; font-size:24px;">
         <i class="bi bi-list"></i>
       </button>
     </div>
@@ -79,18 +82,20 @@
         <header class="rw-section-head rw-center" style="margin-bottom: 0;">
           <p class="rw-kicker">Patient Intake</p>
           <h2>Patient <span>Intake Form</span></h2>
-          <p class="rw-section-desc">Please fill out the information below. All details are kept confidential and will help us prepare for your first session.</p>
+          <p class="rw-section-desc">Please fill out the information below. All details are kept confidential and will
+            help us prepare for your first session.</p>
         </header>
       </div>
 
       <form class="ra-form-card rw-appointment-section mt-4" id="patientIntakeForm" novalidate>
         <input type="hidden" name="form_type" value="patient_intake" />
         <h3 class="ra-form-section-hdr"><span>Section 1: Personal Information</span></h3>
-        
+
         <div class="ra-form-row">
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-fname">First Name *</label>
-            <input class="ra-form-input" id="in-fname" name="first_name" type="text" placeholder="First Name" required />
+            <input class="ra-form-input" id="in-fname" name="first_name" type="text" placeholder="First Name"
+              required />
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-lname">Last Name *</label>
@@ -101,7 +106,8 @@
         <div class="ra-form-row">
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-email">Email *</label>
-            <input class="ra-form-input" id="in-email" name="email" type="email" placeholder="you@email.com" required autocomplete="email" />
+            <input class="ra-form-input" id="in-email" name="email" type="email" placeholder="you@email.com" required
+              autocomplete="email" />
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-phone">Phone Number *</label>
@@ -116,7 +122,8 @@
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-occupation">Occupation *</label>
-            <input class="ra-form-input" id="in-occupation" name="occupation" type="text" placeholder="Your Occupation" required />
+            <input class="ra-form-input" id="in-occupation" name="occupation" type="text" placeholder="Your Occupation"
+              required />
           </div>
         </div>
 
@@ -141,7 +148,7 @@
 
         <!-- Section 2: Preferences -->
         <h3 class="ra-form-section-hdr gap"><span>Section 2: Preferences</span></h3>
-        
+
         <div class="ra-form-group">
           <label class="ra-form-label" for="in-pref-consult">Would you prefer your consultation? *</label>
           <select class="ra-form-select" id="in-pref-consult" name="pref_consult" required>
@@ -155,395 +162,519 @@
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-pref-date">What is your preferred date? *</label>
             <input class="ra-form-input" id="in-pref-date" name="pref_date" type="date" required />
-            <small class="form-text text-muted" style="font-size: 0.72rem; opacity: 0.75; margin-top: 0.25rem; display: block;">Only today or future dates are allowed.</small>
+            <small class="form-text text-muted"
+              style="font-size: 0.72rem; opacity: 0.75; margin-top: 0.25rem; display: block;">Only today or future dates
+              are allowed.</small>
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-pref-time">What is your preferred time? *</label>
             <select class="ra-form-select" id="in-pref-time" name="pref_time" required disabled>
               <option value="" disabled selected hidden>Select a date first</option>
             </select>
-            <small class="form-text text-muted" id="in-time-help" style="font-size: 0.72rem; opacity: 0.75; margin-top: 0.25rem; display: block;">Choose a preferred date to load time slots.</small>
+            <small class="form-text text-muted" id="in-time-help"
+              style="font-size: 0.72rem; opacity: 0.75; margin-top: 0.25rem; display: block;">Choose a preferred date to
+              load time slots.</small>
           </div>
         </div>
 
         <!-- Section 3: Questionnaire 1 -->
         <h3 class="ra-form-section-hdr gap"><span>Section 3: Questionnaire 1</span></h3>
-        <p class="text-muted" style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">Please answer all questions honestly.</p>
-        
+        <p class="text-muted"
+          style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">Please
+          answer all questions honestly.</p>
+
         <div class="ra-questions-list mb-4">
           <!-- Question 1 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   1. Have you ever walked in your sleep during your adult life? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_1" id="q1_1_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_1_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_1" id="q1_1_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_1_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_1" id="q1_1_no" value="no" required />
-                  <label class="form-check-label" for="q1_1_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_1" id="q1_1_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_1_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 2 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  2. As a teenager did you feel comfortable expressing your feelings to one or both of your parents or friends? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  2. As a teenager did you feel comfortable expressing your feelings to one or both of your parents or
+                  friends? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_2" id="q1_2_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_2_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_2" id="q1_2_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_2_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_2" id="q1_2_no" value="no" required />
-                  <label class="form-check-label" for="q1_2_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_2" id="q1_2_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_2_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 3 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  3. Do you have a tendency to look directly into a person's eyes and /or move closely to them when discussing an interesting subject? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  3. Do you have a tendency to look directly into a person's eyes and /or move closely to them when
+                  discussing an interesting subject? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_3" id="q1_3_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_3_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_3" id="q1_3_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_3_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_3" id="q1_3_no" value="no" required />
-                  <label class="form-check-label" for="q1_3_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_3" id="q1_3_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_3_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 4 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   4. Do you feel that most people, when you first meet them, are uncritical of your appearance? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_4" id="q1_4_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_4_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_4" id="q1_4_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_4_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_4" id="q1_4_no" value="no" required />
-                  <label class="form-check-label" for="q1_4_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_4" id="q1_4_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_4_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 5 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  5. In a group situation, with people that you have just met, would you feel comfortable drawing attention to yourself by initiating a conversation? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  5. In a group situation, with people that you have just met, would you feel comfortable drawing
+                  attention to yourself by initiating a conversation? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_5" id="q1_5_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_5_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_5" id="q1_5_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_5_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_5" id="q1_5_no" value="no" required />
-                  <label class="form-check-label" for="q1_5_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_5" id="q1_5_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_5_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 6 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  6. Do you feel comfortable holding hands or hugging someone you are in a relationship with in front of other people? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  6. Do you feel comfortable holding hands or hugging someone you are in a relationship with in front of
+                  other people? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_6" id="q1_6_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_6_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_6" id="q1_6_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_6_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_6" id="q1_6_no" value="no" required />
-                  <label class="form-check-label" for="q1_6_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_6" id="q1_6_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_6_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 7 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   7. When someone talks about feeling warm physically, do you begin to feel warm also? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_7" id="q1_7_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_7_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_7" id="q1_7_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_7_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_7" id="q1_7_no" value="no" required />
-                  <label class="form-check-label" for="q1_7_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_7" id="q1_7_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_7_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 8 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  8. Do you tend to occasionally tune out when someone is talking to you because you are anxious to come up with your side, and at times not hear what the other person said? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  8. Do you tend to occasionally tune out when someone is talking to you because you are anxious to come
+                  up with your side, and at times not hear what the other person said? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_8" id="q1_8_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_8_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_8" id="q1_8_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_8_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_8" id="q1_8_no" value="no" required />
-                  <label class="form-check-label" for="q1_8_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_8" id="q1_8_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_8_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 9 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   9. Do you feel that you learn and comprehend better by seeing and/or reading than by hearing? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_9" id="q1_9_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_9_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_9" id="q1_9_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_9_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_9" id="q1_9_no" value="no" required />
-                  <label class="form-check-label" for="q1_9_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_9" id="q1_9_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_9_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 10 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  10. In a new class or lecture situation do you usually feel comfortable asking questions in front of the group? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  10. In a new class or lecture situation do you usually feel comfortable asking questions in front of
+                  the group? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_10" id="q1_10_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_10_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_10" id="q1_10_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_10_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_10" id="q1_10_no" value="no" required />
-                  <label class="form-check-label" for="q1_10_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_10" id="q1_10_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_10_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 11 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  11. When expressing your ideas do you find it important to relate all the details leading up to the subject so the other person can understand it completely. *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  11. When expressing your ideas do you find it important to relate all the details leading up to the
+                  subject so the other person can understand it completely. *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_11" id="q1_11_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_11_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_11" id="q1_11_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_11_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_11" id="q1_11_no" value="no" required />
-                  <label class="form-check-label" for="q1_11_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_11" id="q1_11_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_11_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 12 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   12. Do you enjoy relating to children? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_12" id="q1_12_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_12_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_12" id="q1_12_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_12_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_12" id="q1_12_no" value="no" required />
-                  <label class="form-check-label" for="q1_12_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_12" id="q1_12_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_12_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 13 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  13. Do you find it easy to be at ease and comfortable with your body movements, even when faced with unfamiliar people and circumstances? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  13. Do you find it easy to be at ease and comfortable with your body movements, even when faced with
+                  unfamiliar people and circumstances? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_13" id="q1_13_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_13_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_13" id="q1_13_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_13_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_13" id="q1_13_no" value="no" required />
-                  <label class="form-check-label" for="q1_13_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_13" id="q1_13_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_13_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 14 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   14. Do you prefer reading fiction rather than non-fiction? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_14" id="q1_14_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_14_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_14" id="q1_14_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_14_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_14" id="q1_14_no" value="no" required />
-                  <label class="form-check-label" for="q1_14_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_14" id="q1_14_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_14_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 15 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   15. If you were to imagine sucking on a sour, bitter, juicy, yellow lemon, would your mouth water? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_15" id="q1_15_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_15_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_15" id="q1_15_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_15_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_15" id="q1_15_no" value="no" required />
-                  <label class="form-check-label" for="q1_15_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_15" id="q1_15_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_15_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 16 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  16. If you feel that you deserve to be complimented for something well done, do you feel comfortable if the compliment is given to you in front of other people? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  16. If you feel that you deserve to be complimented for something well done, do you feel comfortable
+                  if the compliment is given to you in front of other people? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_16" id="q1_16_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_16_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_16" id="q1_16_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_16_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_16" id="q1_16_no" value="no" required />
-                  <label class="form-check-label" for="q1_16_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_16" id="q1_16_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_16_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 17 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   17. Do you feel that you are a good conversationalist? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_17" id="q1_17_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_17_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_17" id="q1_17_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_17_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_17" id="q1_17_no" value="no" required />
-                  <label class="form-check-label" for="q1_17_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_17" id="q1_17_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_17_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 18 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  18. Do you feel comfortable when complimentary attention is drawn to your physical body or appearance? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  18. Do you feel comfortable when complimentary attention is drawn to your physical body or appearance?
+                  *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_18" id="q1_18_yes" value="yes" required />
-                  <label class="form-check-label" for="q1_18_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_18" id="q1_18_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q1_18_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q1_18" id="q1_18_no" value="no" required />
-                  <label class="form-check-label" for="q1_18_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q1_18" id="q1_18_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q1_18_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
@@ -552,390 +683,531 @@
 
         <!-- Section 4: Questionnaire 2 -->
         <h3 class="ra-form-section-hdr gap"><span>Section 4: Questionnaire 2</span></h3>
-        <p class="text-muted" style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">Please answer all questions honestly.</p>
-        
+        <p class="text-muted"
+          style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">Please
+          answer all questions honestly.</p>
+
         <div class="ra-questions-list mb-4">
           <!-- Question 1 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  1. Have you ever awakened in the middle of the night and felt that you could not move your body and or talk? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  1. Have you ever awakened in the middle of the night and felt that you could not move your body and or
+                  talk? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_1" id="q2_1_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_1_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_1" id="q2_1_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_1_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_1" id="q2_1_no" value="no" required />
-                  <label class="form-check-label" for="q2_1_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_1" id="q2_1_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_1_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 2 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  2. As a child did you feel that you were more affected by the tone of voice of your parents than by what they actually said? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  2. As a child did you feel that you were more affected by the tone of voice of your parents than by
+                  what they actually said? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_2" id="q2_2_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_2_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_2" id="q2_2_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_2_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_2" id="q2_2_no" value="no" required />
-                  <label class="form-check-label" for="q2_2_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_2" id="q2_2_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_2_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 3 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  3. If someone you are associated with talks about a fear that you too have experienced, do you have a tendency to have an apprehensive or fearful feeling also? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  3. If someone you are associated with talks about a fear that you too have experienced, do you have a
+                  tendency to have an apprehensive or fearful feeling also? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_3" id="q2_3_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_3_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_3" id="q2_3_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_3_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_3" id="q2_3_no" value="no" required />
-                  <label class="form-check-label" for="q2_3_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_3" id="q2_3_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_3_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 4 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  4. After having an argument with someone, do you have a tendency to dwell on what you could or should have said? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  4. After having an argument with someone, do you have a tendency to dwell on what you could or should
+                  have said? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_4" id="q2_4_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_4_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_4" id="q2_4_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_4_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_4" id="q2_4_no" value="no" required />
-                  <label class="form-check-label" for="q2_4_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_4" id="q2_4_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_4_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 5 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  5. Do you tend to occasionally tune out when someone is talking to you and do not hear what was said because your mind drifts to something totally unrelated? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  5. Do you tend to occasionally tune out when someone is talking to you and do not hear what was said
+                  because your mind drifts to something totally unrelated? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_5" id="q2_5_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_5_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_5" id="q2_5_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_5_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_5" id="q2_5_no" value="no" required />
-                  <label class="form-check-label" for="q2_5_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_5" id="q2_5_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_5_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 6 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  6. Do you sometimes desire to be complimented for a job done well done, but feel embarrassed or uncomfortable when complimented? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  6. Do you sometimes desire to be complimented for a job done well done, but feel embarrassed or
+                  uncomfortable when complimented? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_6" id="q2_6_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_6_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_6" id="q2_6_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_6_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_6" id="q2_6_no" value="no" required />
-                  <label class="form-check-label" for="q2_6_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_6" id="q2_6_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_6_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 7 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  7. Do you often have a fear or dread of not being able to carry on a conversation with someone you just met? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  7. Do you often have a fear or dread of not being able to carry on a conversation with someone you
+                  just met? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_7" id="q2_7_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_7_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_7" id="q2_7_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_7_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_7" id="q2_7_no" value="no" required />
-                  <label class="form-check-label" for="q2_7_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_7" id="q2_7_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_7_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 8 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   8. Do you feel self conscious, when attention is drawn to your physical body or appearance? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_8" id="q2_8_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_8_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_8" id="q2_8_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_8_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_8" id="q2_8_no" value="no" required />
-                  <label class="form-check-label" for="q2_8_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_8" id="q2_8_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_8_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 9 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   9. If you have a choice, would you rather avoid being around children most of the time? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_9" id="q2_9_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_9_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_9" id="q2_9_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_9_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_9" id="q2_9_no" value="no" required />
-                  <label class="form-check-label" for="q2_9_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_9" id="q2_9_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_9_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 10 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  10. Do you feel that you are relaxed or loose in body movement, especially when faced with unfamiliar people or circumstances? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  10. Do you feel that you are relaxed or loose in body movement, especially when faced with unfamiliar
+                  people or circumstances? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_10" id="q2_10_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_10_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_10" id="q2_10_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_10_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_10" id="q2_10_no" value="no" required />
-                  <label class="form-check-label" for="q2_10_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_10" id="q2_10_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_10_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 11 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   11. Do you prefer reading non-fiction rather than fiction? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_11" id="q2_11_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_11_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_11" id="q2_11_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_11_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_11" id="q2_11_no" value="no" required />
-                  <label class="form-check-label" for="q2_11_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_11" id="q2_11_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_11_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 12 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  12. If someone describes a very bitter taste, do you have difficulty experiencing the physical feeling of it? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  12. If someone describes a very bitter taste, do you have difficulty experiencing the physical feeling
+                  of it? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_12" id="q2_12_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_12_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_12" id="q2_12_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_12_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_12" id="q2_12_no" value="no" required />
-                  <label class="form-check-label" for="q2_12_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_12" id="q2_12_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_12_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 13 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
                   13. Do you generally feel that you see yourself less favorably than others see you? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_13" id="q2_13_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_13_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_13" id="q2_13_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_13_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_13" id="q2_13_no" value="no" required />
-                  <label class="form-check-label" for="q2_13_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_13" id="q2_13_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_13_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 14 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  14. Do you tend to feel awkward or self- conscious initiating touch ( holding hands, kissing, etc.) with someone you are in relationship with in front of other people? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  14. Do you tend to feel awkward or self- conscious initiating touch ( holding hands, kissing, etc.)
+                  with someone you are in relationship with in front of other people? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_14" id="q2_14_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_14_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_14" id="q2_14_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_14_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_14" id="q2_14_no" value="no" required />
-                  <label class="form-check-label" for="q2_14_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_14" id="q2_14_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_14_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 15 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  15. In a new class or lecture situation do you usually feel comfortable asking questions in front of group even though you may desire further explanation? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  15. In a new class or lecture situation do you usually feel comfortable asking questions in front of
+                  group even though you may desire further explanation? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_15" id="q2_15_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_15_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_15" id="q2_15_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_15_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_15" id="q2_15_no" value="no" required />
-                  <label class="form-check-label" for="q2_15_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_15" id="q2_15_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_15_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 16 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  16. Do you feel uneasy if someone you have just met looks directly in the eyes when talking to you, especially if the conversation is all about you? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  16. Do you feel uneasy if someone you have just met looks directly in the eyes when talking to you,
+                  especially if the conversation is all about you? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_16" id="q2_16_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_16_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_16" id="q2_16_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_16_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_16" id="q2_16_no" value="no" required />
-                  <label class="form-check-label" for="q2_16_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_16" id="q2_16_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_16_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 17 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  17. In a group situation with people you have just met, would you feel uncomfortable drawing attention to yourself by initiating a conversation? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  17. In a group situation with people you have just met, would you feel uncomfortable drawing attention
+                  to yourself by initiating a conversation? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_17" id="q2_17_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_17_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_17" id="q2_17_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_17_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_17" id="q2_17_no" value="no" required />
-                  <label class="form-check-label" for="q2_17_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_17" id="q2_17_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_17_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Question 18 -->
-          <div class="ra-question-row py-3 border-bottom" style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
+          <div class="ra-question-row py-3 border-bottom"
+            style="border-bottom-color: rgba(0, 55, 62, 0.08) !important;">
             <div class="row align-items-center">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
-                <span class="ra-question-text" style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
-                  18. If you are in a relationship, or are very close to someone, do you find it difficult or embarrassing to verbalize your love for them? *
+                <span class="ra-question-text"
+                  style="font-family: var(--font-body); font-size: 0.95rem; color: var(--ra-brown); font-weight: 500;">
+                  18. If you are in a relationship, or are very close to someone, do you find it difficult or
+                  embarrassing to verbalize your love for them? *
                 </span>
               </div>
               <div class="col-12 col-md-3 d-flex justify-content-md-end gap-4">
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_18" id="q2_18_yes" value="yes" required />
-                  <label class="form-check-label" for="q2_18_yes" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_18" id="q2_18_yes" value="yes"
+                    required />
+                  <label class="form-check-label" for="q2_18_yes"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">Yes</label>
                 </div>
                 <div class="form-check form-check-inline mb-0">
-                  <input class="form-check-input custom-form-radio" type="radio" name="q2_18" id="q2_18_no" value="no" required />
-                  <label class="form-check-label" for="q2_18_no" style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
+                  <input class="form-check-input custom-form-radio" type="radio" name="q2_18" id="q2_18_no" value="no"
+                    required />
+                  <label class="form-check-label" for="q2_18_no"
+                    style="font-size: 0.9rem; color: var(--ra-brown); cursor: pointer;">No</label>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        <h3 class="ra-form-section-hdr gap"><span>Section 5: Consent</span></h3>
+
+        <div class="ra-form-group">
+          <p class="text-muted" style="font-size: 0.9rem; line-height: 1.65;">
+            I confirm that the information I have given is accurate to the best of my
+            knowledge. I understand that these responses will be used to prepare for my
+            sessions, are kept confidential, and are shared outside this practice only
+            where the law requires it. I understand that I may withdraw this consent at
+            any time by contacting the practice.
+          </p>
+          <label class="ra-form-label" style="display: flex; align-items: flex-start; gap: 0.6rem; font-weight: 400;">
+            <input type="checkbox" id="in-consent" name="consent_given" value="1" required />
+            <span>I have read and agree to the statement above. *</span>
+          </label>
+        </div>
+
         <p id="in-fb" class="ra-form-alert success" role="status" hidden></p>
-        <button type="submit" class="ra-btn-submit">Submit Form <span class="ra-btn-arrow" aria-hidden="true">→</span></button>
+        <button type="submit" class="ra-btn-submit">Submit Form <span class="ra-btn-arrow"
+            aria-hidden="true">→</span></button>
       </form>
     </section>
   </main>
@@ -1015,7 +1287,7 @@
           if (dateInput.value) {
             timeSelect.disabled = false;
             timeSelect.innerHTML = "";
-            
+
             // Add a placeholder option
             var defaultOpt = document.createElement("option");
             defaultOpt.value = "";
@@ -1048,11 +1320,11 @@
         f.querySelectorAll(".invalid-feedback-custom").forEach(function (el) {
           el.remove();
         });
-        
+
         var invalidFields = f.querySelectorAll(":invalid");
         invalidFields.forEach(function (field) {
           if (field.type === "hidden" || field.tagName === "BUTTON") return;
-          
+
           if (field.type === "radio") {
             var questionRow = field.closest(".ra-question-row");
             if (questionRow && !questionRow.querySelector(".invalid-feedback-custom")) {
@@ -1109,10 +1381,10 @@
       if (f && fb) {
         f.addEventListener("submit", function (e) {
           e.preventDefault();
-          
+
           if (!f.checkValidity()) {
             showFormValidationErrors();
-            
+
             // Find first invalid input and scroll to it
             var firstInvalid = f.querySelector(":invalid");
             if (firstInvalid) {
@@ -1121,49 +1393,49 @@
             }
             return;
           }
-          
+
           var formData = new FormData(f);
           fb.hidden = false;
           fb.className = "ra-form-alert";
           fb.style.backgroundColor = "rgba(0, 55, 62, 0.05)";
           fb.style.color = "#00373e";
           fb.textContent = "Submitting intake information...";
-          
+
           fetch("submit-form.php", {
             method: "POST",
             body: formData
           })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (data) {
-            fb.removeAttribute("style");
-            if (data.success) {
-              fb.className = "ra-form-alert success";
-              fb.textContent = data.message || "Thank you! Your intake information has been received successfully.";
-              f.reset();
-              f.classList.remove("was-validated");
-              f.querySelectorAll(".invalid-feedback-custom").forEach(function (el) {
-                el.remove();
-              });
-              if (timeSelect) {
-                timeSelect.disabled = true;
-                timeSelect.innerHTML = '<option value="" disabled selected hidden>Select a date first</option>';
-                timeHelp.textContent = "Choose a preferred date to load time slots.";
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (data) {
+              fb.removeAttribute("style");
+              if (data.success) {
+                fb.className = "ra-form-alert success";
+                fb.textContent = data.message || "Thank you! Your intake information has been received successfully.";
+                f.reset();
+                f.classList.remove("was-validated");
+                f.querySelectorAll(".invalid-feedback-custom").forEach(function (el) {
+                  el.remove();
+                });
+                if (timeSelect) {
+                  timeSelect.disabled = true;
+                  timeSelect.innerHTML = '<option value="" disabled selected hidden>Select a date first</option>';
+                  timeHelp.textContent = "Choose a preferred date to load time slots.";
+                }
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              } else {
+                fb.className = "ra-form-alert error";
+                fb.textContent = data.error || "An error occurred. Please try again.";
+                fb.scrollIntoView({ behavior: "smooth", block: "center" });
               }
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            } else {
+            })
+            .catch(function (err) {
+              fb.removeAttribute("style");
               fb.className = "ra-form-alert error";
-              fb.textContent = data.error || "An error occurred. Please try again.";
+              fb.textContent = "Network error. Please check your connection and try again.";
               fb.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-          })
-          .catch(function (err) {
-            fb.removeAttribute("style");
-            fb.className = "ra-form-alert error";
-            fb.textContent = "Network error. Please check your connection and try again.";
-            fb.scrollIntoView({ behavior: "smooth", block: "center" });
-          });
+            });
         });
       }
     })();
