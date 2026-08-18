@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../includes/intake-repo.php';
 require_once __DIR__ . '/../../includes/intake-status.php';
 require_once __DIR__ . '/../../includes/mail-queue.php';
 require_once __DIR__ . '/../../includes/intake-data.php';
+require_once __DIR__ . '/../../includes/session-repo.php';
 
 $db = getDbConnection();
 
@@ -23,6 +24,18 @@ $pendingLeads    = dashboardPendingLeads($db);
 $stalledIntakes  = staleIntakeLinks($db, getSettingInt('admin_reminder_hours', 48));
 $queuedMail      = queuedMailCount();
 $awaitingReview  = clientsAwaitingReview($db);
+
+$todaysSessions = sessionsBetween($db, date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
+
+// No-show rate is its own figure, not folded into cancellations. Measured
+// against sessions that actually reached an outcome: counting pending and
+// confirmed ones in the denominator would make the rate fall simply because
+// more sessions were booked.
+$outcomes = $db->query("SELECT `status`, COUNT(*) AS n FROM `sessions`
+                        WHERE `status` IN ('completed','no-show') GROUP BY `status`")
+               ->fetchAll(PDO::FETCH_KEY_PAIR);
+$finished   = array_sum($outcomes);
+$noShowRate = $finished > 0 ? round((($outcomes['no-show'] ?? 0) / $finished) * 100) : 0;
 $totalLeads      = $db->query("SELECT COUNT(*) FROM `leads`")->fetchColumn();
 $totalIntakes    = $db->query("SELECT COUNT(*) FROM `patient-intake`")->fetchColumn();
 $intakeRate      = $totalLeads > 0 ? round(($totalIntakes / $totalLeads) * 100) : 0;
@@ -87,10 +100,16 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <div class="kpi-sub">Last 30 days</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-icon-wrap blue"><i class="bi bi-clipboard2-check"></i></div>
-    <div class="kpi-label"><i class="bi bi-percent"></i> Intake Rate</div>
-    <div class="kpi-value"><?php echo $intakeRate; ?>%</div>
-    <div class="kpi-sub"><?php echo $totalIntakes; ?> of <?php echo $totalLeads; ?> leads</div>
+    <div class="kpi-icon-wrap blue"><i class="bi bi-calendar-day"></i></div>
+    <div class="kpi-label"><i class="bi bi-clock-history"></i> Today</div>
+    <div class="kpi-value"><?php echo count($todaysSessions); ?></div>
+    <div class="kpi-sub">Session<?php echo count($todaysSessions) === 1 ? '' : 's'; ?> today</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-icon-wrap amber"><i class="bi bi-person-x"></i></div>
+    <div class="kpi-label"><i class="bi bi-percent"></i> No-show rate</div>
+    <div class="kpi-value"><?php echo $noShowRate; ?>%</div>
+    <div class="kpi-sub">of <?php echo $finished; ?> finished session<?php echo $finished === 1 ? '' : 's'; ?></div>
   </div>
 </div>
 
@@ -201,6 +220,8 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               'intake_submitted' => ['bi-clipboard-check', 'green'],
               'intake_reviewed' => ['bi-clipboard-check', 'green'],
               'clients_merged' => ['bi-arrow-left-right', 'teal'],
+              'session_rescheduled' => ['bi-calendar-event', 'amber'],
+              'session_status_changed' => ['bi-calendar-check', 'teal'],
               'client_archived' => ['bi-archive', 'amber'],
               'document_uploaded' => ['bi-file-earmark-arrow-up', 'blue'],
               'document_downloaded' => ['bi-file-earmark-arrow-down', 'blue'],

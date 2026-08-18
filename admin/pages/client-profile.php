@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../includes/client-status.php';
 require_once __DIR__ . '/../../includes/client-notes.php';
 require_once __DIR__ . '/../../includes/client-payments.php';
 require_once __DIR__ . '/../../includes/client-documents.php';
+require_once __DIR__ . '/../../includes/session-repo.php';
 
 $db = getDbConnection();
 $clientId = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -37,6 +38,8 @@ $payments      = clientPayments($db, $clientId);
 $paymentTotal  = clientPaymentTotal($db, $clientId);
 
 // Other non-archived clients, for the merge picker.
+$noShowRun = consecutiveNoShows($db, $clientId);
+
 $mergeCandidates = array_values(array_filter(fetchClients($db, []), function ($o) use ($clientId) {
     return (int) $o['id'] !== (int) $clientId;
 }));
@@ -103,6 +106,15 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
     </div>
   </div>
 </div>
+
+<?php if ($noShowRun >= 2): ?>
+  <!-- A visibility nudge, never an automatic action. What to do about a run of
+       no-shows is a clinical judgement, not something a CRM should decide. -->
+  <div class="bulk-bar" style="background:var(--clr-danger-light); border-color:var(--clr-danger); color:var(--clr-danger);">
+    <i class="bi bi-person-x"></i>
+    <?php echo (int) $noShowRun; ?> sessions in a row marked no-show. Worth a conversation before booking the next one.
+  </div>
+<?php endif; ?>
 
 <?php if ($client['status'] === 'review'): ?>
   <div class="bulk-bar" style="background:var(--clr-warning-light); border-color:var(--clr-warning); color:#b45309;">
