@@ -55,6 +55,14 @@ function settingDefaults() {
             "Best regards,
 {{practice_name}}",
 
+        // Uploads. Shared with Patient Intake the day it gains a file
+        // question -- one setting, two consumers.
+        'upload_max_mb'         => '10',
+        'upload_allowed_types'  => 'pdf,jpg,jpeg,png,doc,docx',
+        // Blank = a sibling of the project directory. Never put this inside
+        // the web root: client documents are consent forms and ID proof.
+        'document_storage_path' => '',
+
         // Absolute base URL, e.g. "http://localhost/Kaja/".
         // Leave blank to auto-detect from the request; MUST be set for CLI
         // jobs, which have no HTTP_HOST to derive it from.
