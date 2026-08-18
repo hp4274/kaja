@@ -1,10 +1,17 @@
 <?php
+require_once __DIR__ . '/../../includes/lead-repo.php';
+require_once __DIR__ . '/../../includes/lead-status.php';
+
 $db = getDbConnection();
 
 // KPI Queries
 $totalClients    = $db->query("SELECT COUNT(*) FROM `clients` WHERE `status`='active'")->fetchColumn();
 $upcomingSessions= $db->query("SELECT COUNT(*) FROM `sessions` WHERE `session_date` >= CURDATE() AND `status`='scheduled'")->fetchColumn();
-$newLeads        = $db->query("SELECT COUNT(*) FROM `leads` WHERE `status`='new' AND `created_at` >= DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchColumn();
+// Every lead still at 'new', with no age cap. A lead ignored for five weeks
+// is more urgent than one that arrived today, not less; the old 30-day window
+// made it disappear from the number entirely.
+$newLeads        = (int) $db->query("SELECT COUNT(*) FROM `leads` WHERE `status`='new'")->fetchColumn();
+$pendingLeads    = dashboardPendingLeads($db);
 $totalLeads      = $db->query("SELECT COUNT(*) FROM `leads`")->fetchColumn();
 $totalIntakes    = $db->query("SELECT COUNT(*) FROM `patient-intake`")->fetchColumn();
 $intakeRate      = $totalLeads > 0 ? round(($totalIntakes / $totalLeads) * 100) : 0;
@@ -178,6 +185,8 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               'note_added' => ['bi-sticky', 'blue'],
               'fee_added' => ['bi-currency-rupee', 'amber'],
               'status_changed' => ['bi-arrow-repeat', 'teal'],
+              'lead_confirmed' => ['bi-send-check', 'teal'],
+              'intake_reminder_sent' => ['bi-bell', 'amber'],
             ];
             $ic = $iconMap[$act['action']] ?? ['bi-circle', 'teal'];
             $timeAgo = '';
@@ -200,6 +209,34 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     </div>
   </div>
 </div>
+
+<?php if (!empty($pendingLeads)): ?>
+<!-- Needs attention — new leads untouched past the aging threshold -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-exclamation-triangle" style="color:var(--clr-danger);"></i> Needs attention</div>
+    <a href="index.php?page=leads&status=new" class="btn btn-ghost btn-sm">View All <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="panel-body-flush">
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <tbody>
+          <?php foreach (array_slice($pendingLeads, 0, 5) as $p): ?>
+            <tr>
+              <td class="td-name"><?php echo htmlspecialchars($p['name']); ?></td>
+              <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($p['email']); ?>"><?php echo htmlspecialchars($p['email']); ?></a></td>
+              <td class="td-nowrap td-muted">waiting since <?php echo date('d M Y', strtotime($p['created_at'])); ?></td>
+              <td style="text-align:right;">
+                <a href="index.php?page=leads&status=new" class="btn btn-primary btn-sm">Review</a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <!-- Recent Leads -->
 <div class="panel">
@@ -232,7 +269,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
                 <td class="td-name"><?php echo htmlspecialchars($l['name']); ?></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a></td>
                 <td><span class="badge badge-<?php echo htmlspecialchars($l['preference'] ?? ''); ?>"><?php echo htmlspecialchars($l['preference'] ?? '-'); ?></span></td>
-                <td><span class="badge badge-<?php echo htmlspecialchars($l['status'] ?? 'new'); ?>"><?php echo htmlspecialchars($l['status'] ?? 'new'); ?></span></td>
+                <td><span class="badge <?php echo leadStatusBadgeClass($l['status'] ?? 'new'); ?>"><?php echo leadStatusLabel($l['status'] ?? 'new'); ?></span></td>
               </tr>
             <?php endforeach; ?>
           </tbody>

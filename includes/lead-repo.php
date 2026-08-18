@@ -112,6 +112,23 @@ function leadSources(PDO $db) {
 }
 
 /**
+ * The dashboard's pending-actions list: leads still at 'new' past the aging
+ * threshold. Oldest first — the point of the list is the one that has been
+ * waiting longest, not the one that arrived most recently.
+ */
+function dashboardPendingLeads(PDO $db) {
+    $stmt = $db->prepare('
+        SELECT * FROM `leads`
+        WHERE `status` = "new"
+          AND `created_at` < DATE_SUB(NOW(), INTERVAL :hours HOUR)
+        ORDER BY `created_at` ASC
+    ');
+    $stmt->bindValue(':hours', LEAD_AGING_HOURS, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
  * Move many leads at once. Each lead is checked against the pipeline
  * individually: a bulk action must not become a way to make a transition the
  * single-lead path would refuse. Returns what moved and what did not, so the
