@@ -208,12 +208,10 @@ try {
         }
     );
 
-    step('leads.reminder_sent',
-        tableExists($db, 'leads') && !columnExists($db, 'leads', 'reminder_sent'),
-        function (PDO $db) {
-            $db->exec("ALTER TABLE `leads` ADD COLUMN `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_existing_client`");
-        }
-    );
+    // NOTE: leads.reminder_sent was added here originally. The intake module
+    // moved the reminder gate onto intake_links, where a resent link earns its
+    // own reminder, so the column is dropped further down. Re-adding it here
+    // would make this migration ping-pong forever.
 
     step('leads.first_viewed_at',
         tableExists($db, 'leads') && !columnExists($db, 'leads', 'first_viewed_at'),
@@ -286,6 +284,60 @@ try {
                 ALTER TABLE `leads` MODIFY `status`
                 ENUM('new','contacted','confirmed','converted','rejected','spam')
                 NOT NULL DEFAULT 'new'
+            ");
+        }
+    );
+
+    // ---- 9. intake module ------------------------------------------------
+
+    step("intake_links.status gains 'filled'",
+        tableExists($db, 'intake_links') && !enumHasValue($db, 'intake_links', 'status', 'filled'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `intake_links` MODIFY `status`
+                ENUM('sent','opened','filled','submitted','expired')
+                NOT NULL DEFAULT 'sent'
+            ");
+        }
+    );
+
+    step('intake_links.filled_at',
+        tableExists($db, 'intake_links') && !columnExists($db, 'intake_links', 'filled_at'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `intake_links` ADD COLUMN `filled_at` DATETIME DEFAULT NULL AFTER `opened_at`");
+        }
+    );
+
+    step('intake_links.draft_answers',
+        tableExists($db, 'intake_links') && !columnExists($db, 'intake_links', 'draft_answers'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `intake_links` ADD COLUMN `draft_answers` JSON DEFAULT NULL AFTER `reminder_sent`");
+        }
+    );
+
+    step('leads.reminder_sent dropped (gate moved to intake_links)',
+        tableExists($db, 'leads') && columnExists($db, 'leads', 'reminder_sent'),
+        function (PDO $db) {
+            // Carry any flag already set across, so a lead reminded under the
+            // old per-lead scheme is not chased again under the per-link one.
+            $db->exec("
+                UPDATE `intake_links` il
+                JOIN `leads` l ON l.`id` = il.`lead_id`
+                SET il.`reminder_sent` = 1
+                WHERE l.`reminder_sent` = 1
+            ");
+            $db->exec("ALTER TABLE `leads` DROP COLUMN `reminder_sent`");
+        }
+    );
+
+    step('patient-intake consent columns',
+        tableExists($db, 'patient-intake') && !columnExists($db, 'patient-intake', 'consent_given'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `patient-intake`
+                ADD COLUMN `consent_given` TINYINT(1) NOT NULL DEFAULT 0,
+                ADD COLUMN `consent_at` DATETIME DEFAULT NULL,
+                ADD COLUMN `consent_version` INT NOT NULL DEFAULT 1
             ");
         }
     );

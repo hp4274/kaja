@@ -78,6 +78,12 @@ CREATE TABLE IF NOT EXISTS `patient-intake` (
     `client_id` INT DEFAULT NULL,
     `form_version` INT NOT NULL DEFAULT 1,
 
+    -- Consent as shown, not as assumed: the version records which wording the
+    -- person actually agreed to, so a later edit cannot rewrite what they saw.
+    `consent_given` TINYINT(1) NOT NULL DEFAULT 0,
+    `consent_at` DATETIME DEFAULT NULL,
+    `consent_version` INT NOT NULL DEFAULT 1,
+
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -119,8 +125,6 @@ CREATE TABLE IF NOT EXISTS `leads` (
     -- only: the submission is never blocked, the admin just sees a banner.
     `possible_duplicate_of` INT DEFAULT NULL,
     `is_existing_client` TINYINT(1) NOT NULL DEFAULT 0,
-    -- One stale-intake reminder per lead, ever. Set by cron/intake-reminders.php.
-    `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
     -- Stamped the first time the detail drawer is opened.
     `first_viewed_at` DATETIME DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -246,11 +250,18 @@ CREATE TABLE IF NOT EXISTS `intake_links` (
     `client_id` INT DEFAULT NULL,
     `token` CHAR(64) NOT NULL,
     `form_version` INT NOT NULL DEFAULT 1,
-    `status` ENUM('sent','opened','submitted','expired') NOT NULL DEFAULT 'sent',
+    `status` ENUM('sent','opened','filled','submitted','expired') NOT NULL DEFAULT 'sent',
     `expires_at` DATETIME NOT NULL,
     `opened_at` DATETIME DEFAULT NULL,
+    -- Stamped by the JS beacon on the first keystroke. It separates "opened
+    -- the link and walked away" from "started answering and got interrupted",
+    -- which need different follow-ups.
+    `filled_at` DATETIME DEFAULT NULL,
     `submitted_at` DATETIME DEFAULT NULL,
     `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
+    -- Partial answers, autosaved so a long questionnaire can be left and
+    -- resumed. Working state, not a record: cleared on successful submit.
+    `draft_answers` JSON DEFAULT NULL,
     `patient_intake_id` INT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY `uniq_token` (`token`),

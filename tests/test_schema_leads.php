@@ -23,7 +23,10 @@ test('leads.status no longer offers the old vocabulary', function () {
 });
 
 test('leads carries every field the spec lists', function () {
-    foreach (['source', 'assigned_staff_id', 'form_version_id', 'reminder_sent',
+    // reminder_sent is deliberately absent: the intake module moved that gate
+    // onto intake_links, so a resent link earns its own reminder instead of
+    // being silenced forever by a flag on the lead.
+    foreach (['source', 'assigned_staff_id', 'form_version_id',
               'possible_duplicate_of', 'first_viewed_at'] as $column) {
         assertTrue(leadsColumnType($column) !== false, 'leads should have a ' . $column . ' column');
     }
