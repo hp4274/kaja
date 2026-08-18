@@ -90,6 +90,20 @@ function leadsUrl(array $filters, array $overrides = []) {
   <a href="<?php echo leadsUrl(['status' => $statusFilter]); ?>" class="btn btn-ghost btn-sm">Clear</a>
 </form>
 
+<!-- Bulk action bar — only visible while something is selected -->
+<div class="bulk-bar" id="lead-bulk-bar" hidden>
+  <span id="lead-bulk-count">0 selected</span>
+  <select class="status-select" id="lead-bulk-status">
+    <option value="">Change status to...</option>
+    <?php foreach (leadStatuses() as $s): ?>
+      <option value="<?php echo $s; ?>"><?php echo leadStatusLabel($s); ?></option>
+    <?php endforeach; ?>
+  </select>
+  <button class="btn btn-primary btn-sm" id="lead-bulk-apply" type="button">Apply</button>
+  <button class="btn btn-ghost btn-sm" id="lead-bulk-export" type="button"><i class="bi bi-download"></i> Export CSV</button>
+  <button class="btn btn-ghost btn-sm" id="lead-bulk-clear" type="button">Clear</button>
+</div>
+
 <!-- Leads Table -->
 <div class="panel">
   <div class="panel-body-flush">
@@ -104,6 +118,7 @@ function leadsUrl(array $filters, array $overrides = []) {
         <table class="data-table">
           <thead>
             <tr>
+              <th style="width:36px;"><input type="checkbox" id="lead-select-all" title="Select all" /></th>
               <th>
                 <a href="<?php echo leadsUrl($filters, ['sort' => 'date', 'dir' => ($filters['sort'] === 'date' && $filters['dir'] === 'desc') ? 'asc' : 'desc']); ?>" class="th-sort">
                   Date <i class="bi bi-arrow-down-up"></i>
@@ -133,6 +148,7 @@ function leadsUrl(array $filters, array $overrides = []) {
               if ($hasClient) $ls = 'converted';
             ?>
               <tr id="lead-row-<?php echo $l['id']; ?>" class="lead-item" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
+                <td><input type="checkbox" class="lead-select" value="<?php echo $l['id']; ?>" /></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($l['created_at'])); ?></td>
                 <td class="td-name"><?php echo htmlspecialchars($l['name']); ?></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a></td>
@@ -174,14 +190,14 @@ function leadsUrl(array $filters, array $overrides = []) {
                 </td>
               </tr>
               <tr id="msg-row-<?php echo $l['id']; ?>" style="display:none;">
-                <td colspan="8" style="background:#f9fafb; padding:1rem 1.5rem;">
+                <td colspan="9" style="background:#f9fafb; padding:1rem 1.5rem;">
                   <strong style="font-size:0.78rem;color:var(--clr-text-muted);text-transform:uppercase;">Message</strong>
                   <p style="margin-top:0.25rem;font-size:0.88rem;"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
                 </td>
               </tr>
             <?php endforeach; ?>
             <tr id="leads-no-matches" style="display: none;">
-              <td colspan="8" style="text-align: center; padding: 2.5rem 1rem; color: var(--clr-text-muted);">
+              <td colspan="9" style="text-align: center; padding: 2.5rem 1rem; color: var(--clr-text-muted);">
                 <i class="bi bi-search" style="font-size: 1.75rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
                 <p style="margin: 0; font-size: 0.9rem;">No leads match your search criteria</p>
               </td>
@@ -439,6 +455,73 @@ function checkEmptyState() {
     location.reload();
   }
 }
+
+// Bulk selection
+(function() {
+  var bar       = document.getElementById('lead-bulk-bar');
+  var countEl   = document.getElementById('lead-bulk-count');
+  var selectAll = document.getElementById('lead-select-all');
+  if (!bar) return;
+
+  function selected() {
+    return Array.from(document.querySelectorAll('.lead-select:checked')).map(function(cb) { return cb.value; });
+  }
+
+  function refresh() {
+    var n = selected().length;
+    countEl.textContent = n + ' selected';
+    bar.hidden = (n === 0);
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target.classList && e.target.classList.contains('lead-select')) refresh();
+  });
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      document.querySelectorAll('.lead-select').forEach(function(cb) {
+        // Only rows still visible after a search should be swept in — a hidden
+        // row is not something the admin can see they are about to change.
+        var row = cb.closest('tr');
+        if (!row || row.style.display !== 'none') cb.checked = selectAll.checked;
+      });
+      refresh();
+    });
+  }
+
+  document.getElementById('lead-bulk-clear').addEventListener('click', function() {
+    document.querySelectorAll('.lead-select').forEach(function(cb) { cb.checked = false; });
+    if (selectAll) selectAll.checked = false;
+    refresh();
+  });
+
+  document.getElementById('lead-bulk-apply').addEventListener('click', function() {
+    var status = document.getElementById('lead-bulk-status').value;
+    var ids    = selected();
+    if (!status || !ids.length) return;
+    if (!confirm('Move ' + ids.length + ' lead(s) to ' + status + '?')) return;
+
+    var fd = new FormData();
+    fd.append('action', 'bulk_status');
+    fd.append('status', status);
+    ids.forEach(function(id) { fd.append('ids[]', id); });
+
+    fetch('api/leads.php', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) { showToast(data.error || 'Error', 'error'); return; }
+        var msg = data.updated + ' updated';
+        if (data.skipped.length) msg += ', ' + data.skipped.length + ' skipped';
+        showToast(msg);
+        setTimeout(function() { location.reload(); }, 700);
+      })
+      .catch(function() { showToast('Network error', 'error'); });
+  });
+
+  document.getElementById('lead-bulk-export').addEventListener('click', function() {
+    window.location = 'api/leads-export.php?ids=' + encodeURIComponent(selected().join(','));
+  });
+})();
 
 // Filter bar toggle
 (function() {

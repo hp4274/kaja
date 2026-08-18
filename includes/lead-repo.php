@@ -112,6 +112,87 @@ function leadSources(PDO $db) {
 }
 
 /**
+ * Move many leads at once. Each lead is checked against the pipeline
+ * individually: a bulk action must not become a way to make a transition the
+ * single-lead path would refuse. Returns what moved and what did not, so the
+ * UI can say "4 updated, 1 skipped" rather than claiming a clean sweep.
+ */
+function bulkUpdateLeadStatus(PDO $db, array $ids, $status) {
+    if (!isValidLeadStatus($status)) {
+        throw new InvalidArgumentException('Unknown lead status: ' . $status);
+    }
+
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if (!$ids) {
+        return ['updated' => 0, 'skipped' => []];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $db->prepare('SELECT `id`, `status` FROM `leads` WHERE `id` IN (' . $placeholders . ')');
+    $stmt->execute($ids);
+    $current = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $movable = [];
+    $skipped = [];
+    foreach ($current as $row) {
+        if (leadCanTransition($row['status'], $status)) {
+            $movable[] = (int) $row['id'];
+        } else {
+            $skipped[] = (int) $row['id'];
+        }
+    }
+
+    if ($movable) {
+        $ph  = implode(',', array_fill(0, count($movable), '?'));
+        $upd = $db->prepare('UPDATE `leads` SET `status` = ? WHERE `id` IN (' . $ph . ')');
+        $upd->execute(array_merge([$status], $movable));
+    }
+
+    return ['updated' => count($movable), 'skipped' => $skipped];
+}
+
+/**
+ * Render leads as CSV.
+ *
+ * Any value opening with = + - @ is prefixed with an apostrophe. Without it a
+ * lead whose name is "=cmd|..." becomes a live formula the moment the export
+ * is opened in Excel — a spreadsheet is an execution environment, not a
+ * document.
+ */
+function leadsCsv(array $leads) {
+    $columns = [
+        'id' => 'ID', 'created_at' => 'Date', 'name' => 'Name', 'email' => 'Email',
+        'phone' => 'Phone', 'source' => 'Source', 'status' => 'Status',
+        'preferred_date' => 'Preferred Date', 'preferred_time' => 'Preferred Time',
+        'preference' => 'Preference', 'message' => 'Message',
+    ];
+
+    $out = fopen('php://temp', 'r+');
+
+    // Escape character is explicitly empty. PHP's default backslash escaping
+    // is not CSV at all — it corrupts any value containing a backslash — and
+    // 8.4 deprecates leaving the argument off.
+    fputcsv($out, array_values($columns), ',', '"', '');
+
+    foreach ($leads as $lead) {
+        $row = [];
+        foreach (array_keys($columns) as $key) {
+            $value = isset($lead[$key]) ? (string) $lead[$key] : '';
+            if ($value !== '' && strpos('=+-@', $value[0]) !== false) {
+                $value = "'" . $value;
+            }
+            $row[] = $value;
+        }
+        fputcsv($out, $row, ',', '"', '');
+    }
+
+    rewind($out);
+    $csv = stream_get_contents($out);
+    fclose($out);
+    return $csv;
+}
+
+/**
  * Stamp the first time a lead's detail drawer was opened.
  * The WHERE clause carries the "only once" rule so two admins opening the same
  * lead at the same moment cannot race the stamp forward.

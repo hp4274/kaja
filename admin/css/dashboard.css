@@ -1426,3 +1426,21 @@ body.admin-body.admin-dark-theme {
 }
 .th-sort:hover { color: var(--clr-primary); }
 .th-sort i { font-size: 0.7rem; opacity: 0.5; }
+
+/* ═══════════════════════════════════════════
+   BULK ACTION BAR
+   ═══════════════════════════════════════════ */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  margin-bottom: 0.85rem;
+  background: var(--clr-primary-light);
+  border: 1px solid var(--clr-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--clr-primary);
+}
+.bulk-bar[hidden] { display: none; }

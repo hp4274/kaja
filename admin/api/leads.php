@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../db-config.php';
 require_once __DIR__ . '/../../includes/settings.php';
 require_once __DIR__ . '/../../includes/intake-token.php';
 require_once __DIR__ . '/../../includes/lead-status.php';
+require_once __DIR__ . '/../../includes/lead-repo.php';
 $db = getDbConnection();
 
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
@@ -54,6 +55,28 @@ try {
                ->execute([':d'=>$desc, ':rid'=>$id]);
 
             echo json_encode(['success'=>true,'status'=>$status]);
+            break;
+
+        case 'bulk_status':
+            $ids    = isset($_POST['ids']) && is_array($_POST['ids']) ? $_POST['ids'] : [];
+            $status = trim($_POST['status'] ?? '');
+
+            if (!isValidLeadStatus($status)) {
+                echo json_encode(['success'=>false,'error'=>'Invalid status']);
+                exit;
+            }
+
+            $result = bulkUpdateLeadStatus($db, $ids, $status);
+
+            $desc = $result['updated'] . ' lead(s) moved to ' . leadStatusLabel($status);
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('status_changed',:d,'lead',NULL)")
+               ->execute([':d'=>$desc]);
+
+            echo json_encode([
+                'success' => true,
+                'updated' => $result['updated'],
+                'skipped' => $result['skipped'],
+            ]);
             break;
 
         case 'convert':
