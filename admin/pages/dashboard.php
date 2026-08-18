@@ -1,6 +1,10 @@
 <?php
+require_once __DIR__ . '/../../includes/settings.php';
 require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-status.php';
+require_once __DIR__ . '/../../includes/intake-repo.php';
+require_once __DIR__ . '/../../includes/intake-status.php';
+require_once __DIR__ . '/../../includes/mail-queue.php';
 
 $db = getDbConnection();
 
@@ -12,6 +16,8 @@ $upcomingSessions= $db->query("SELECT COUNT(*) FROM `sessions` WHERE `session_da
 // made it disappear from the number entirely.
 $newLeads        = (int) $db->query("SELECT COUNT(*) FROM `leads` WHERE `status`='new'")->fetchColumn();
 $pendingLeads    = dashboardPendingLeads($db);
+$stalledIntakes  = staleIntakeLinks($db, getSettingInt('admin_reminder_hours', 48));
+$queuedMail      = queuedMailCount();
 $totalLeads      = $db->query("SELECT COUNT(*) FROM `leads`")->fetchColumn();
 $totalIntakes    = $db->query("SELECT COUNT(*) FROM `patient-intake`")->fetchColumn();
 $intakeRate      = $totalLeads > 0 ? round(($totalIntakes / $totalLeads) * 100) : 0;
@@ -187,6 +193,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               'status_changed' => ['bi-arrow-repeat', 'teal'],
               'lead_confirmed' => ['bi-send-check', 'teal'],
               'intake_reminder_sent' => ['bi-bell', 'amber'],
+              'intake_submitted' => ['bi-clipboard-check', 'green'],
             ];
             $ic = $iconMap[$act['action']] ?? ['bi-circle', 'teal'];
             $timeAgo = '';
@@ -209,6 +216,39 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     </div>
   </div>
 </div>
+
+<?php if ($queuedMail > 0): ?>
+  <!-- A refused send is the one failure nobody notices: the database is
+       correct, the screen said success, and the person never hears from us. -->
+  <div class="bulk-bar" style="background:var(--clr-danger-light); border-color:var(--clr-danger); color:var(--clr-danger);">
+    <i class="bi bi-envelope-exclamation"></i>
+    <?php echo (int) $queuedMail; ?> email(s) failed to send and are waiting for the hourly job to retry them.
+  </div>
+<?php endif; ?>
+
+<?php if (!empty($stalledIntakes)): ?>
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-hourglass-split" style="color:var(--clr-warning);"></i> Intake forms not finished</div>
+    <a href="index.php?page=intake&link_status=sent" class="btn btn-ghost btn-sm">View All <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="panel-body-flush">
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <tbody>
+          <?php foreach (array_slice($stalledIntakes, 0, 5) as $si): ?>
+            <tr>
+              <td class="td-name"><?php echo htmlspecialchars($si['name']); ?></td>
+              <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($si['email']); ?>"><?php echo htmlspecialchars($si['email']); ?></a></td>
+              <td class="td-nowrap td-muted">expires <?php echo date('d M Y', strtotime($si['expires_at'])); ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($pendingLeads)): ?>
 <!-- Needs attention — new leads untouched past the aging threshold -->

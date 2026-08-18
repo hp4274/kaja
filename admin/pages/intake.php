@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . "/../../includes/settings.php";
 require_once __DIR__ . "/../../includes/intake-token.php";
+require_once __DIR__ . "/../../includes/intake-repo.php";
+require_once __DIR__ . "/../../includes/intake-status.php";
 
 $db = getDbConnection();
 $successMsg = '';
@@ -197,3 +199,57 @@ $intakes = $stmtIntake->fetchAll(PDO::FETCH_ASSOC);
   });
 })();
 </script>
+
+<?php
+// The token is deliberately absent from this table. It is the credential for
+// someone's private form; a glance over a shoulder should not be enough to
+// open it. Status, timing and expiry are what the therapist actually needs.
+$linkStatus = isset($_GET['link_status']) ? trim($_GET['link_status']) : '';
+$links      = intakeLinksList($db, $linkStatus);
+?>
+
+<div class="toolbar" style="margin-top:1.5rem;">
+  <div class="toolbar-left">
+    <a href="index.php?page=intake&link_status=all" class="filter-btn <?php echo ($linkStatus === 'all' || $linkStatus === '') ? 'active' : ''; ?>">All</a>
+    <?php foreach (intakeStatuses() as $st): ?>
+      <a href="index.php?page=intake&link_status=<?php echo $st; ?>" class="filter-btn <?php echo $linkStatus === $st ? 'active' : ''; ?>"><?php echo intakeStatusLabel($st); ?></a>
+    <?php endforeach; ?>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header"><div class="panel-title">Intake links</div></div>
+  <div class="panel-body-flush">
+    <?php if (empty($links)): ?>
+      <div class="empty-state">
+        <i class="bi bi-link-45deg"></i>
+        <p>No intake links yet</p>
+        <p style="font-size:0.78rem;">Links appear here when a lead is confirmed, or when you send one above.</p>
+      </div>
+    <?php else: ?>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Sent</th><th>Name</th><th>Email</th>
+              <th>Status</th><th>Opened</th><th>Started</th><th>Expires</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($links as $il): ?>
+              <tr>
+                <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($il['created_at'])); ?></td>
+                <td class="td-name"><?php echo htmlspecialchars($il['name']); ?></td>
+                <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($il['email']); ?>"><?php echo htmlspecialchars($il['email']); ?></a></td>
+                <td><span class="badge <?php echo intakeStatusBadgeClass($il['status']); ?>"><?php echo intakeStatusLabel($il['status']); ?></span></td>
+                <td class="td-nowrap td-muted"><?php echo $il['opened_at'] ? date('d M, H:i', strtotime($il['opened_at'])) : '—'; ?></td>
+                <td class="td-nowrap td-muted"><?php echo $il['filled_at'] ? date('d M, H:i', strtotime($il['filled_at'])) : '—'; ?></td>
+                <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($il['expires_at'])); ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </div>
+</div>
