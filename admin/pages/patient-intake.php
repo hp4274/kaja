@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../includes/lead-status.php';
+
 $db = getDbConnection();
 $stmtPI = $db->query("
     SELECT pi.*, 
@@ -89,13 +91,9 @@ function scoreClass($score, $max = 18) {
                 </td>
                 <td>
                   <select class="status-select" onchange="updateIntakeStatus('<?php echo htmlspecialchars($pi['email'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($pi['phone'], ENT_QUOTES); ?>', this.value)" <?php echo $lstatus === 'converted' ? 'disabled' : ''; ?>>
-                    <?php if ($lstatus === 'converted'): ?>
-                      <option value="converted" selected>Converted</option>
-                    <?php else: ?>
-                      <option value="new" <?php echo $lstatus === 'new' ? 'selected' : ''; ?>>New</option>
-                      <option value="accepted" <?php echo $lstatus === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
-                      <option value="declined" <?php echo $lstatus === 'declined' ? 'selected' : ''; ?>>Declined</option>
-                    <?php endif; ?>
+                    <?php foreach (leadStatuses() as $optS): ?>
+                      <option value="<?php echo $optS; ?>" <?php echo $lstatus === $optS ? 'selected' : ''; ?>><?php echo leadStatusLabel($optS); ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </td>
                 <td style="text-align:right; white-space:nowrap;">
@@ -170,13 +168,9 @@ function scoreClass($score, $max = 18) {
                   <i class="bi bi-flag"></i>
                   <span style="font-size:0.8rem; font-weight:500; color:var(--clr-text-secondary); margin-right: 0.35rem;">Status:</span>
                   <select class="status-select" onchange="updateIntakeStatus('<?php echo htmlspecialchars($pi['email'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($pi['phone'], ENT_QUOTES); ?>', this.value)" <?php echo $lstatus === 'converted' ? 'disabled' : ''; ?>>
-                    <?php if ($lstatus === 'converted'): ?>
-                      <option value="converted" selected>Converted</option>
-                    <?php else: ?>
-                      <option value="new" <?php echo $lstatus === 'new' ? 'selected' : ''; ?>>New</option>
-                      <option value="accepted" <?php echo $lstatus === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
-                      <option value="declined" <?php echo $lstatus === 'declined' ? 'selected' : ''; ?>>Declined</option>
-                    <?php endif; ?>
+                    <?php foreach (leadStatuses() as $optS): ?>
+                      <option value="<?php echo $optS; ?>" <?php echo $lstatus === $optS ? 'selected' : ''; ?>><?php echo leadStatusLabel($optS); ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </div>
               </div>

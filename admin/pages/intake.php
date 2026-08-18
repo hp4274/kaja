@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . "/../../includes/settings.php";
+require_once __DIR__ . "/../../includes/intake-token.php";
+
 $db = getDbConnection();
 $successMsg = '';
 $errorMsg = '';
@@ -9,64 +12,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errorMsg = 'Please enter a valid email address.';
     } else {
-        // 1. Check if lead already exists
-        $checkLead = $db->prepare("SELECT * FROM `leads` WHERE `email` = :email LIMIT 1");
+        // Find or create the lead this link belongs to, then mint a token.
+        // The link that goes out is personal to this address: intake.php refuses
+        // to render without one, so a forwarded or guessed URL gets nowhere.
+        $checkLead = $db->prepare("SELECT `id`, `name` FROM `leads` WHERE `email` = :email ORDER BY `id` ASC LIMIT 1");
         $checkLead->execute([':email' => $email]);
         $existingLead = $checkLead->fetch(PDO::FETCH_ASSOC);
-        
-        $name = $existingLead ? $existingLead['name'] : 'Valued Client';
-        
-        if (!$existingLead) {
-            // Create a new lead/contact from this email
-            $ins = $db->prepare("
-                INSERT INTO `leads` (`name`, `email`, `phone`, `source_page`, `status`)
-                VALUES (:name, :email, '', 'Short Intake Contact', 'new')
-            ");
-            $ins->execute([
-                ':name' => $name,
-                ':email' => $email
-            ]);
-            $leadId = $db->lastInsertId();
-        } else {
-            $leadId = $existingLead['id'];
+
+        try {
+            $db->beginTransaction();
+
+            if ($existingLead) {
+                $leadId   = (int) $existingLead['id'];
+                $leadName = $existingLead['name'];
+            } else {
+                $ins = $db->prepare("
+                    INSERT INTO `leads` (`name`, `email`, `phone`, `source`, `status`)
+                    VALUES ('Valued Client', :email, '', 'Short Intake Contact', 'new')
+                ");
+                $ins->execute([':email' => $email]);
+                $leadId   = (int) $db->lastInsertId();
+                $leadName = '';
+            }
+
+            // No client row yet: we know only an email address. submit_intake.php
+            // creates the client when the questionnaire actually arrives.
+            $issued = issueIntakeToken($db, $leadId, null);
+
+            $desc = "Intake link issued to {$email} (expires " . date('d M Y', strtotime($issued['expires_at'])) . ")";
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('intake_link_sent',:d,'lead',:rid)")
+               ->execute([':d' => $desc, ':rid' => $leadId]);
+
+            $db->commit();
+        } catch (PDOException $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $issued = null;
+            $errorMsg = 'Could not create the intake link. Please try again.';
+            error_log('[admin/intake] ' . $e->getMessage());
         }
 
-        // Log activity
-        $desc = "Sent patient intake form email to {$email}";
-        $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('lead_created',:d,'lead',:rid)")
-           ->execute([':d'=>$desc, ':rid'=>$leadId]);
-
-        // 2. Generate form URL dynamically
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'];
-        
-        // Extract project subfolder (e.g., /Kaja/) from Request URI
-        $requestUri = $_SERVER['REQUEST_URI'];
-        $projectPath = '/';
-        if (strpos($requestUri, '/admin/') !== false) {
-            $projectPath = substr($requestUri, 0, strpos($requestUri, '/admin/') + 1);
-        }
-        
-        $formUrl = $protocol . "://" . $host . $projectPath . "patient-intake-form.html";
-
-        // 3. Email details
-        $to = $email;
-        $subject = "Complete Your Patient Intake Form — Rewire With Kajal";
-        $emailMessage = "Hello,\n\n";
-        $emailMessage .= "Thank you for reaching out to us. Please take a few moments to complete our official patient intake questionnaire by clicking the link below:\n\n";
-        $emailMessage .= $formUrl . "\n\n";
-        $emailMessage .= "Once submitted, we will review your responses and reach out to schedule your first session.\n\n";
-        $emailMessage .= "Best regards,\nRewire With Kajal Mental Health Consultancy";
-
-        $headers = "From: hello@rewirewithkajal.com\r\n";
-        $headers .= "Reply-To: hello@rewirewithkajal.com\r\n";
-        $headers .= "X-Mailer: PHP/" . phpversion();
-
-        if (@mail($to, $subject, $emailMessage, $headers)) {
-            $successMsg = "Intake form link email sent to " . htmlspecialchars($email) . " successfully!";
-        } else {
-            // Handle offline local mail systems (e.g., XAMPP mailtodisk) gracefully
-            $successMsg = "Intake form link email sent successfully! (Local mail delivery simulated to " . htmlspecialchars($email) . ")";
+        // Mail only after the commit: a mail failure must not undo a valid token.
+        if ($issued) {
+            if (sendIntakeLinkEmail($email, $leadName, $issued['url'], $issued['expires_at'])) {
+                $successMsg = "Personal intake link sent to " . htmlspecialchars($email) . " successfully!";
+            } else {
+                // XAMPP has no real MTA; the link is live regardless, so surface
+                // it rather than pretending it was delivered.
+                $successMsg = "Intake link created for " . htmlspecialchars($email)
+                    . " (local mail not delivered). Share this link directly: " . htmlspecialchars($issued['url']);
+            }
         }
     }
 }
