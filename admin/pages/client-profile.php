@@ -382,6 +382,28 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
         <div class="form-row">
           <div class="form-group"><label class="form-label">Duration (min)</label><input type="number" class="form-input" name="duration" value="60" min="15" step="15" /></div>
           <div class="form-group"><label class="form-label">Type</label><select class="form-select" name="session_type"><option value="online">Online</option><option value="inperson">In-Person</option></select></div>
+          <div class="form-group">
+            <label class="form-label">Repeat</label>
+            <select class="form-select" name="repeat" id="repeat-select-prof">
+              <option value="none">Does not repeat</option>
+              <option value="weekly">Weekly</option>
+              <option value="fortnightly">Fortnightly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="form-group" id="repeat-end-prof" hidden>
+            <label class="form-label">Until</label>
+            <div style="display:flex;gap:0.5rem;">
+              <select class="form-select" name="repeat_end_type" style="flex:1;">
+                <option value="count">After N sessions</option>
+                <option value="date">On a date</option>
+                <option value="open">Keep going (I will stop it)</option>
+              </select>
+              <input class="form-input" name="repeat_end_value" value="4" style="flex:1;" />
+            </div>
+            <small style="color:var(--clr-text-muted);">Occurrences that clash with an existing session are skipped, not booked.</small>
+          </div>
+
         </div>
         <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" name="notes" placeholder="Session notes..."></textarea></div>
       </div>
@@ -658,6 +680,18 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
 </div>
 
 <!-- Reschedule Session Modal -->
+<?php
+// session id -> series id for this client's sessions, so the tab knows which
+// ones need the scope question.
+$seriesMap = [];
+$smStmt = $db->prepare('SELECT `id`, `recurring_series_id` FROM `sessions`
+                        WHERE `client_id` = :c AND `recurring_series_id` IS NOT NULL');
+$smStmt->execute([':c' => $clientId]);
+foreach ($smStmt as $srow) {
+    $seriesMap[(int) $srow['id']] = (int) $srow['recurring_series_id'];
+}
+?>
+<script>window.SESSION_SERIES = <?php echo json_encode($seriesMap); ?>;</script>
 <div class="modal-overlay" id="rescheduleSessionModal">
   <div class="modal-box" style="max-width: 400px;">
     <div class="modal-header">
@@ -676,6 +710,16 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
           <input type="time" class="form-input" name="session_time" id="reschedule_session_time" required />
         </div>
       </div>
+        <div class="form-group" id="reschedule_scope_row" hidden>
+          <label class="form-label">This session repeats. What should move?</label>
+          <label style="display:flex;gap:0.5rem;align-items:center;font-weight:400;">
+            <input type="radio" name="scope" value="one" /> Only this occurrence
+          </label>
+          <label style="display:flex;gap:0.5rem;align-items:center;font-weight:400;">
+            <input type="radio" name="scope" value="future" /> This one and every later one
+          </label>
+          <small style="color:var(--clr-text-muted);">Nothing is preselected on purpose — choosing for you is how the wrong sessions get moved.</small>
+        </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="document.getElementById('rescheduleSessionModal').classList.remove('open')">Cancel</button>
         <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -687,10 +731,39 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
 <script>
 var clientId = <?php echo $clientId; ?>;
 
+// ─── Series scope ────────────────────────────────────────────────────────
+//
+// Whenever a session belongs to a recurring series, the admin is asked whether
+// an action applies to this occurrence or to this and every later one.
+// Guessing is the defining bug of recurring appointments, and both wrong
+// answers stay invisible until somebody turns up to an appointment that was
+// cancelled without them.
+//
+// SESSION_SERIES maps session id -> series id, emitted by the page.
+function seriesScopeFor(id, verb) {
+  if (!window.SESSION_SERIES || !SESSION_SERIES[id]) {
+    return 'one';   // not part of a series: nothing to ask
+  }
+  var answer = window.prompt(
+    'This session repeats.\n\n' +
+    'Type "one" to ' + verb + ' only this occurrence,\n' +
+    'or "future" to ' + verb + ' this one and every later one in the series.',
+    'one'
+  );
+  if (answer === null) return null;              // cancelled the prompt
+  answer = answer.trim().toLowerCase();
+  return (answer === 'one' || answer === 'future') ? answer : null;
+}
+
 function openRescheduleModal(id, date, time) {
   document.getElementById('reschedule_session_id').value = id;
   document.getElementById('reschedule_session_date').value = date;
   document.getElementById('reschedule_session_time').value = time;
+
+  var scopeRow = document.getElementById('reschedule_scope_row');
+  if (scopeRow) {
+    scopeRow.hidden = !(window.SESSION_SERIES && SESSION_SERIES[id]);
+  }
   document.getElementById('rescheduleSessionModal').classList.add('open');
 }
 
@@ -698,11 +771,21 @@ function submitReschedule(e) {
   e.preventDefault();
   var fd = new FormData(e.target);
   fd.append('action', 'reschedule_session');
+
+  var id = document.getElementById('reschedule_session_id').value;
+  if (window.SESSION_SERIES && SESSION_SERIES[id]) {
+    var chosen = document.querySelector('input[name="scope"]:checked');
+    if (!chosen) { showToast('Choose whether this applies to one session or the whole series', 'error'); return; }
+    fd.set('scope', chosen.value);
+  } else {
+    fd.set('scope', 'one');
+  }
+
   fetch('api/sessions.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if(d.success) {
-        showToast('Session rescheduled successfully');
+      if (d.success) {
+        showToast(d.moved > 1 ? (d.moved + ' sessions rescheduled') : 'Session rescheduled');
         setTimeout(function(){ location.reload(); }, 600);
       } else {
         showToast(d.error || 'Error', 'error');
@@ -712,15 +795,32 @@ function submitReschedule(e) {
 }
 
 function updateSessionStatus(id, status) {
+  var scope = seriesScopeFor(id, status === 'cancelled' ? 'cancel' : 'change');
+  if (scope === null) { location.reload(); return; }   // abandoned; undo the select
+
+  var reason = '';
+  if (status === 'cancelled') {
+    // A cancellation with no reason is a mystery six months later, and the
+    // repo refuses one anyway.
+    reason = window.prompt('Why is this session being cancelled?', '');
+    if (reason === null || reason.trim() === '') { location.reload(); return; }
+  }
+
   var fd = new FormData();
   fd.append('action', 'update_status');
   fd.append('session_id', id);
   fd.append('status', status);
+  fd.append('scope', scope);
+  fd.append('cancelled_reason', reason);
+
   fetch('api/sessions.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if(d.success) {
-        showToast('Session status updated');
+      if (d.success) {
+        var msg = 'Session status updated';
+        if (d.changed > 1) msg = d.changed + ' sessions updated';
+        if (d.skipped && d.skipped.length) msg += ', ' + d.skipped.length + ' skipped';
+        showToast(msg);
         setTimeout(function(){ location.reload(); }, 600);
       } else {
         showToast(d.error || 'Error', 'error');
@@ -906,4 +1006,11 @@ document.querySelectorAll('.modal-overlay').forEach(function(m) {
     if (e.target === m) m.classList.remove('open');
   });
 });
+
+(function() {
+  var sel = document.getElementById('repeat-select-prof');
+  var end = document.getElementById('repeat-end-prof');
+  if (!sel || !end) return;
+  sel.addEventListener('change', function() { end.hidden = (sel.value === 'none'); });
+})();
 </script>
