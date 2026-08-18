@@ -35,6 +35,9 @@ require_once __DIR__ . '/includes/settings.php';
 require_once __DIR__ . '/includes/intake-token.php';
 require_once __DIR__ . '/includes/intake-status.php';
 require_once __DIR__ . '/includes/intake-repo.php';
+require_once __DIR__ . '/includes/intake-schema.php';
+require_once __DIR__ . '/includes/intake-data.php';
+require_once __DIR__ . '/includes/mail-queue.php';
 
 function intakeFail($error, $code = 400) {
     http_response_code($code);
@@ -75,62 +78,38 @@ if ($token !== '') {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Validate. Same field contract the form has always posted.
+// 2. Validate, against the schema for this form version.
 // ---------------------------------------------------------------------------
 
-$personal = [
-    'first_name' => 'First name',
-    'last_name'  => 'Last name',
-    'email'      => 'Email',
-    'phone'      => 'Phone',
-    'city'       => 'City',
-    'occupation' => 'Occupation',
-    'dob'        => 'Date of birth',
-    'concern'    => 'Primary concern',
-];
-$prefs = [
-    'pref_consult' => 'Consultation preference',
-    'pref_date'    => 'Preferred date',
-    'pref_time'    => 'Preferred time',
-];
+// Version is resolved first because it decides what is required. Pinned from
+// the link when there is one, otherwise whatever is live now (admin entry).
+$formVersion = $link ? (int) $link['form_version'] : max(1, getSettingInt('intake_form_version'));
 
+$schemaFields = intakeSchemaFields($formVersion);
+
+// Take every field this version knows about, then ask the schema what is
+// actually required given the answers in hand. A conditional field that was
+// never revealed is not required -- see intakeRequiredFields().
 $values = [];
+foreach ($schemaFields as $id => $field) {
+    $values[$id] = isset($_POST[$id]) ? trim((string) $_POST[$id]) : '';
+}
 
-foreach ($personal + $prefs as $field => $label) {
-    $value = isset($_POST[$field]) ? trim($_POST[$field]) : '';
-    if ($value === '') {
-        intakeFail("{$label} is required.");
+// Checked here as well as in the markup. A required attribute is a
+// convenience for whoever is filling the form, not a control: anything can
+// POST straight to this endpoint.
+foreach (intakeRequiredFields($formVersion, $values) as $id) {
+    if ($values[$id] === '') {
+        intakeFail($schemaFields[$id]['label'] . ' is required.');
     }
-    $values[$field] = $value;
 }
 
 if (!filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
     intakeFail('Please provide a valid email address.');
 }
 
-foreach ([1, 2] as $set) {
-    for ($i = 1; $i <= 18; $i++) {
-        $field = "q{$set}_{$i}";
-        $value = isset($_POST[$field]) ? trim($_POST[$field]) : '';
-        if ($value === '') {
-            intakeFail("Questionnaire {$set}, question {$i} must be answered.");
-        }
-        $values[$field] = $value;
-    }
-}
-
-// Consent is checked here as well as in the markup. A required attribute is a
-// convenience for the person filling the form, not a control: anything can
-// POST straight to this endpoint.
-if (empty($_POST['consent_given'])) {
-    intakeFail('Please confirm the consent statement before submitting.');
-}
-$values['consent_given']   = 1;
 $values['consent_version'] = INTAKE_CONSENT_VERSION;
 
-// Version recorded against the answers: pinned from the link when there is one,
-// otherwise whatever is live now (admin filling the form by hand).
-$formVersion = $link ? (int) $link['form_version'] : max(1, getSettingInt('intake_form_version'));
 
 // ---------------------------------------------------------------------------
 // 3. Write. One transaction.
@@ -153,15 +132,25 @@ try {
         $link = $locked;
     }
 
-    // 3.2 The questionnaire itself.
-    $columns = array_keys($values);
-    $columns[] = 'form_version';
-    $values['form_version'] = $formVersion;
+    // 3.2 The archive row.
+    //
+    // `patient-intake` only ever had columns for the version 1 field set, so
+    // it is written from that subset and nothing else. The canonical copy is
+    // the encrypted JSON on the client, written further down; this table is
+    // kept as a legacy archive rather than extended for every new question.
+    $archive = [];
+    foreach (intakeSchemaFields(1) as $id => $field) {
+        $archive[$id] = isset($values[$id]) ? $values[$id] : '';
+    }
+    $archive['consent_given']   = $values['consent_given'] !== '' ? 1 : 0;
+    $archive['consent_version'] = $values['consent_version'];
+    $archive['form_version']    = $formVersion;
 
     if ($link) {
-        $columns[] = 'intake_link_id';
-        $values['intake_link_id'] = $link['id'];
+        $archive['intake_link_id'] = $link['id'];
     }
+
+    $columns = array_keys($archive);
 
     // consent_at is stamped by MySQL rather than PHP. The two clocks disagree
     // on this install, and every other timestamp on the row already comes from
@@ -171,7 +160,7 @@ try {
 
     $params = [];
     foreach ($columns as $c) {
-        $params[":{$c}"] = $values[$c];
+        $params[":{$c}"] = $archive[$c];
     }
 
     $db->prepare("INSERT INTO `patient-intake` ({$columnSql}) VALUES ({$placeholderSql})")
@@ -192,7 +181,7 @@ try {
             UPDATE `clients` SET
                 `first_name` = :fn, `last_name` = :ln, `email` = :em, `phone` = :ph,
                 `city` = :ci, `occupation` = :oc, `dob` = :dob, `concern` = :co,
-                `patient_intake_id` = :piid, `status` = 'active'
+                `patient_intake_id` = :piid, `status` = 'review'
             WHERE `id` = :id
         ")->execute([
             ':fn' => $values['first_name'], ':ln' => $values['last_name'],
@@ -206,7 +195,7 @@ try {
             INSERT INTO `clients`
                 (`lead_id`, `patient_intake_id`, `first_name`, `last_name`, `email`,
                  `phone`, `city`, `occupation`, `dob`, `concern`, `status`)
-            VALUES (:lid, :piid, :fn, :ln, :em, :ph, :ci, :oc, :dob, :co, 'active')
+            VALUES (:lid, :piid, :fn, :ln, :em, :ph, :ci, :oc, :dob, :co, 'review')
         ")->execute([
             ':lid' => $link ? $link['lead_id'] : null,
             ':piid' => $intakeId,
@@ -220,6 +209,10 @@ try {
 
     $db->prepare("UPDATE `patient-intake` SET `client_id` = :cid WHERE `id` = :id")
        ->execute([':cid' => $clientId, ':id' => $intakeId]);
+
+    // The canonical answers: everything the person typed, keyed by question id
+    // and encrypted at rest. The archive above is a subset by design.
+    saveClientIntakeData($db, $clientId, $values, $formVersion);
 
     // 3.4 Close the link out. Same commit as the client write, by design.
     if ($link) {
@@ -259,6 +252,41 @@ try {
         'error'   => 'We could not save your responses just now. Please try again in a moment.',
     ]);
     exit;
+}
+
+// ---------------------------------------------------------------------------
+// 4. Tell the therapist. After the commit, never inside it -- the same rule
+//    the confirm email follows. A dead mail server must not undo a submission.
+// ---------------------------------------------------------------------------
+
+$who      = trim($values['first_name'] . ' ' . $values['last_name']);
+$notifyTo = getSetting('practice_email');
+
+if ($notifyTo) {
+    $reviewUrl = siteBaseUrl() . 'admin/index.php?page=client-profile&id=' . $clientId;
+    $subject   = 'Intake ready for review - ' . $who;
+    $body      = $who . " has submitted their intake form.
+
+"
+               . "They are held at 'review' and are not bookable until you mark them reviewed:
+"
+               . $reviewUrl . "
+";
+    $headers   = 'From: ' . $notifyTo . "
+Content-Type: text/plain; charset=UTF-8
+";
+
+    if (!@mail($notifyTo, $subject, $body, $headers)) {
+        // Queued rather than dropped: a submitted intake nobody hears about is
+        // a client sitting unreviewed with nothing on screen to explain why.
+        queueFailedMail([
+            'to'      => $notifyTo,
+            'name'    => $who,
+            'url'     => $reviewUrl,
+            'expires' => '',
+            'kind'    => 'intake_review',
+        ], 'mail() returned false');
+    }
 }
 
 echo json_encode([

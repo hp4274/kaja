@@ -36,6 +36,16 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
     $db = getDbConnection();
 
     $drained = drainQueuedMail(function (array $payload) {
+        if (($payload['kind'] ?? '') === 'intake_review') {
+            return @mail(
+                $payload['to'],
+                'Intake ready for review - ' . $payload['name'],
+                'Review: ' . $payload['url'] . PHP_EOL,
+                'From: ' . $payload['to'] . "
+Content-Type: text/plain; charset=UTF-8
+"
+            );
+        }
         if (($payload['kind'] ?? '') === 'intake_reminder') {
             return sendIntakeReminderEmail($payload['to'], $payload['name'], $payload['url'], $payload['expires']);
         }
