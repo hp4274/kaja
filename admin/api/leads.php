@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../includes/settings.php';
 require_once __DIR__ . '/../../includes/intake-token.php';
 require_once __DIR__ . '/../../includes/lead-status.php';
 require_once __DIR__ . '/../../includes/lead-repo.php';
+require_once __DIR__ . '/../../includes/lead-notes.php';
 $db = getDbConnection();
 
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
@@ -55,6 +56,21 @@ try {
                ->execute([':d'=>$desc, ':rid'=>$id]);
 
             echo json_encode(['success'=>true,'status'=>$status]);
+            break;
+
+        case 'add_note':
+            $id      = intval($_POST['id'] ?? 0);
+            $content = trim($_POST['content'] ?? '');
+
+            if (!$id || $content === '') {
+                echo json_encode(['success'=>false,'error'=>'A note cannot be empty']);
+                exit;
+            }
+
+            $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+            $noteId = addLeadNote($db, $id, $userId, $content);
+
+            echo json_encode(['success'=>true,'note_id'=>$noteId,'notes'=>leadNotes($db, $id)]);
             break;
 
         case 'bulk_status':

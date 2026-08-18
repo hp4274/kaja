@@ -130,6 +130,23 @@ CREATE TABLE IF NOT EXISTS `leads` (
         FOREIGN KEY (`assigned_staff_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- Lead Notes Table
+-- Free-text thread on a lead, attributed to the acting user. user_id is
+-- nullable so a note written by a background job reads as "System" rather
+-- than pretending a person wrote it.
+CREATE TABLE IF NOT EXISTS `lead_notes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `lead_id` INT NOT NULL,
+    `user_id` INT DEFAULT NULL,
+    `content` TEXT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_lead` (`lead_id`),
+    CONSTRAINT `fk_lead_notes_lead`
+        FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_lead_notes_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- 5. Clients Table (converted from leads or patient intakes)
 CREATE TABLE IF NOT EXISTS `clients` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,

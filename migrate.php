@@ -232,6 +232,26 @@ try {
         }
     );
 
+    step('lead_notes table',
+        !tableExists($db, 'lead_notes'),
+        function (PDO $db) {
+            $db->exec("
+                CREATE TABLE `lead_notes` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `lead_id` INT NOT NULL,
+                    `user_id` INT DEFAULT NULL,
+                    `content` TEXT NOT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    KEY `idx_lead` (`lead_id`),
+                    CONSTRAINT `fk_lead_notes_lead`
+                        FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
+                    CONSTRAINT `fk_lead_notes_user`
+                        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+                ) ENGINE=InnoDB
+            ");
+        }
+    );
+
     // ---- 8. lead module: status vocabulary --------------------------------
     // Three steps, in this order. The first widens the enum so both
     // vocabularies are legal at once; the UPDATEs then move the rows; the
