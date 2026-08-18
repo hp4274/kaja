@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-status.php';
 
 $db = getDbConnection();
@@ -8,73 +9,86 @@ $db = getDbConnection();
 // which left them counted under the wrong tab.
 $db->exec("UPDATE `leads` SET `status`='converted' WHERE `client_id` IS NOT NULL AND `client_id` > 0 AND `status` <> 'converted'");
 
-// Counts per status
-$counts = [];
-foreach (leadStatuses() as $s) {
-    $cStmt = $db->prepare("SELECT COUNT(*) FROM `leads` WHERE `status`=:s");
-    $cStmt->execute([':s' => $s]);
-    $counts[$s] = (int) $cStmt->fetchColumn();
-}
-$counts['all'] = array_sum($counts);
+$counts  = leadStatusCounts($db);
+$sources = leadSources($db);
 
-// Handle status filter
-$statusFilter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$filters = [
+    'q'         => isset($_GET['q']) ? trim($_GET['q']) : '',
+    'status'    => isset($_GET['status']) ? trim($_GET['status']) : '',
+    'source'    => isset($_GET['source']) ? trim($_GET['source']) : '',
+    'date_from' => isset($_GET['date_from']) ? trim($_GET['date_from']) : '',
+    'date_to'   => isset($_GET['date_to']) ? trim($_GET['date_to']) : '',
+    'sort'      => (isset($_GET['sort']) && $_GET['sort'] === 'status') ? 'status' : 'date',
+    'dir'       => (isset($_GET['dir']) && strtolower($_GET['dir']) === 'asc') ? 'asc' : 'desc',
+];
 
-// Auto-select "New" if status filter not specified and new count > 0
-if (!isset($_GET['status']) && !isset($_GET['q'])) {
-    if ($counts['new'] > 0) {
-        $statusFilter = 'new';
-    } else {
-        $statusFilter = 'all';
-    }
+// Land on New when there is anything new and the admin has not chosen a tab.
+if (!isset($_GET['status']) && !isset($_GET['q']) && $counts['new'] > 0) {
+    $filters['status'] = 'new';
 }
 
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
+$statusFilter = $filters['status'];
+$search       = $filters['q'];
+$leads        = fetchLeads($db, $filters);
 
-$sql = "SELECT * FROM `leads`";
-$params = [];
-$where = [];
-
-if ($statusFilter && $statusFilter !== 'all' && isValidLeadStatus($statusFilter)) {
-    $where[] = "`status` = :status";
-    $params[':status'] = $statusFilter;
+/** Rebuild the current query string with one key changed — used by the tabs and sort links. */
+function leadsUrl(array $filters, array $overrides = []) {
+    $params = array_merge(['page' => 'leads'], $filters, $overrides);
+    $params = array_filter($params, function ($v) { return $v !== '' && $v !== null; });
+    return 'index.php?' . http_build_query($params);
 }
-if ($search) {
-    $where[] = "(`name` LIKE :q OR `email` LIKE :q2)";
-    $params[':q'] = "%{$search}%";
-    $params[':q2'] = "%{$search}%";
-}
-
-if (!empty($where)) {
-    $sql .= " WHERE " . implode(' AND ', $where);
-}
-$sql .= " ORDER BY `created_at` DESC";
-
-$stmt = $db->prepare($sql);
-$stmt->execute($params);
-$leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!-- Toolbar -->
 <div class="toolbar">
   <div class="toolbar-left">
-    <a href="index.php?page=leads&status=all" class="filter-btn <?php echo $statusFilter==='all' || !$statusFilter ? 'active' : ''; ?>">All (<span id="count-all"><?php echo $counts['all']; ?></span>)</a>
+    <a href="<?php echo leadsUrl($filters, ['status' => 'all']); ?>" class="filter-btn <?php echo ($statusFilter === 'all' || $statusFilter === '') ? 'active' : ''; ?>">All (<span id="count-all"><?php echo $counts['all']; ?></span>)</a>
     <?php foreach (leadStatuses() as $s): ?>
-      <a href="index.php?page=leads&status=<?php echo $s; ?>" class="filter-btn <?php echo $statusFilter === $s ? 'active' : ''; ?>"><?php echo leadStatusLabel($s); ?> (<span id="count-<?php echo $s; ?>"><?php echo $counts[$s]; ?></span>)</a>
+      <a href="<?php echo leadsUrl($filters, ['status' => $s]); ?>" class="filter-btn <?php echo $statusFilter === $s ? 'active' : ''; ?>"><?php echo leadStatusLabel($s); ?> (<span id="count-<?php echo $s; ?>"><?php echo $counts[$s]; ?></span>)</a>
     <?php endforeach; ?>
   </div>
   <div class="toolbar-right">
     <form method="get" action="index.php" class="search-bar">
       <input type="hidden" name="page" value="leads" />
       <i class="bi bi-search"></i>
-      <input type="text" name="q" placeholder="Search leads..." value="<?php echo htmlspecialchars($search); ?>" />
+      <input type="text" name="q" placeholder="Search name, email or phone..." value="<?php echo htmlspecialchars($search); ?>" />
     </form>
+    <button class="btn btn-ghost btn-sm" id="toggle-lead-filters" type="button" style="margin-left:0.5rem;">
+      <i class="bi bi-funnel"></i> Filters
+    </button>
     <div class="view-toggle" data-page="leads" style="margin-left: 0.5rem;">
       <button class="view-toggle-btn" data-view="list" title="List View"><i class="bi bi-list-ul"></i></button>
       <button class="view-toggle-btn" data-view="grid" title="Grid View"><i class="bi bi-grid"></i></button>
     </div>
   </div>
 </div>
+
+<!-- Filter bar — open by default when a filter is already applied, so a
+     reloaded page never hides the reason it is showing fewer rows. -->
+<form method="get" action="index.php" class="lead-filter-bar" id="lead-filter-bar" <?php echo ($filters['source'] === '' && $filters['date_from'] === '' && $filters['date_to'] === '') ? 'hidden' : ''; ?>>
+  <input type="hidden" name="page" value="leads" />
+  <input type="hidden" name="status" value="<?php echo htmlspecialchars($statusFilter); ?>" />
+  <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>" />
+  <label class="lead-filter-field">
+    <span>Source</span>
+    <select name="source" class="status-select">
+      <option value="">All sources</option>
+      <?php foreach ($sources as $src): ?>
+        <option value="<?php echo htmlspecialchars($src); ?>" <?php echo $filters['source'] === $src ? 'selected' : ''; ?>><?php echo htmlspecialchars($src); ?></option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+  <label class="lead-filter-field">
+    <span>From</span>
+    <input type="date" name="date_from" class="status-select" value="<?php echo htmlspecialchars($filters['date_from']); ?>" />
+  </label>
+  <label class="lead-filter-field">
+    <span>To</span>
+    <input type="date" name="date_to" class="status-select" value="<?php echo htmlspecialchars($filters['date_to']); ?>" />
+  </label>
+  <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  <a href="<?php echo leadsUrl(['status' => $statusFilter]); ?>" class="btn btn-ghost btn-sm">Clear</a>
+</form>
 
 <!-- Leads Table -->
 <div class="panel">
@@ -90,13 +104,21 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <table class="data-table">
           <thead>
             <tr>
-              <th>Date</th>
+              <th>
+                <a href="<?php echo leadsUrl($filters, ['sort' => 'date', 'dir' => ($filters['sort'] === 'date' && $filters['dir'] === 'desc') ? 'asc' : 'desc']); ?>" class="th-sort">
+                  Date <i class="bi bi-arrow-down-up"></i>
+                </a>
+              </th>
               <th>Name</th>
               <th>Email</th>
               <th>Phone</th>
               <th>Pref. Date & Time</th>
               <th>Preference</th>
-              <th>Status</th>
+              <th>
+                <a href="<?php echo leadsUrl($filters, ['sort' => 'status', 'dir' => ($filters['sort'] === 'status' && $filters['dir'] === 'asc') ? 'desc' : 'asc']); ?>" class="th-sort">
+                  Status <i class="bi bi-arrow-down-up"></i>
+                </a>
+              </th>
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
@@ -123,7 +145,10 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </td>
                 <td><span class="badge badge-<?php echo htmlspecialchars($l['preference'] ?? ''); ?>"><?php echo htmlspecialchars($l['preference'] ?? '-'); ?></span></td>
                 <td>
-                  <span class="badge badge-<?php echo htmlspecialchars($ls); ?>" data-lead-badge="<?php echo $l['id']; ?>"><?php echo htmlspecialchars($ls); ?></span>
+                  <span class="badge <?php echo leadStatusBadgeClass($ls); ?>" data-lead-badge="<?php echo $l['id']; ?>"><?php echo leadStatusLabel($ls); ?></span>
+                  <?php if (leadIsAging($l)): ?>
+                    <span class="badge badge-aging" title="Untouched for more than <?php echo LEAD_AGING_HOURS; ?> hours"><i class="bi bi-exclamation-triangle-fill"></i> Aging</span>
+                  <?php endif; ?>
                 </td>
                 <td style="text-align:right; white-space:nowrap;">
                   <div style="display:inline-flex; align-items:center; gap:0.5rem; justify-content:flex-end;">
@@ -208,7 +233,10 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="grid-card-item" style="margin-top: 0.25rem;">
                   <i class="bi bi-flag"></i>
                   <span style="font-size:0.8rem; font-weight:500; color:var(--clr-text-secondary); margin-right: 0.35rem;">Status:</span>
-                  <span class="badge badge-<?php echo htmlspecialchars($ls); ?>" data-lead-badge="<?php echo $l['id']; ?>"><?php echo htmlspecialchars($ls); ?></span>
+                  <span class="badge <?php echo leadStatusBadgeClass($ls); ?>" data-lead-badge="<?php echo $l['id']; ?>"><?php echo leadStatusLabel($ls); ?></span>
+                  <?php if (leadIsAging($l)): ?>
+                    <span class="badge badge-aging" title="Untouched for more than <?php echo LEAD_AGING_HOURS; ?> hours"><i class="bi bi-exclamation-triangle-fill"></i> Aging</span>
+                  <?php endif; ?>
                 </div>
                 
                 <!-- Card Message Collapsible -->
@@ -411,6 +439,15 @@ function checkEmptyState() {
     location.reload();
   }
 }
+
+// Filter bar toggle
+(function() {
+  var toggle = document.getElementById('toggle-lead-filters');
+  var bar    = document.getElementById('lead-filter-bar');
+  if (toggle && bar) {
+    toggle.addEventListener('click', function() { bar.hidden = !bar.hidden; });
+  }
+})();
 
 // View Mode Toggle Configuration
 (function() {
