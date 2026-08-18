@@ -60,6 +60,9 @@ $newLeadCount = $db->query("SELECT COUNT(*) FROM `leads` WHERE `status`='new'")-
       </a>
     </li>
     <li>
+      <a class="sidebar-link <?php echo $currentPage === 'forms' ? 'active' : ''; ?>" href="index.php?page=forms">
+        <i class="bi bi-ui-checks"></i> Intake Form
+      </a>
       <a class="sidebar-link <?php echo $currentPage === 'settings' ? 'active' : ''; ?>" href="index.php?page=settings">
         <i class="bi bi-gear"></i> Settings
       </a>

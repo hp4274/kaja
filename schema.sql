@@ -20,7 +20,8 @@ USE `kaja_db`;
 --  11  activity_log       the audit trail every module writes to
 --  12  blogs              public site content
 --  13  settings           key/value configuration
---  14  intake_links       tokenised, single-use intake invitations
+--  14  form_questions     the editable intake question set, per version
+--  15  intake_links       tokenised, single-use intake invitations
 
 -- 1. Short Intakes Table (Intake)
 CREATE TABLE IF NOT EXISTS `intake` (
@@ -323,7 +324,33 @@ CREATE TABLE IF NOT EXISTS `settings` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 14. Intake Links Table (tokenised, single-use intake invitations)
+-- 14. Form Questions Table
+-- The editable question set, seeded from includes/intake-schema.php the first
+-- time a version is opened in the admin. Versions are append-only: publishing
+-- edits mints N+1 and leaves earlier versions alone, because a link already
+-- sent and an answer already given were both against a specific set of
+-- questions.
+CREATE TABLE IF NOT EXISTS `form_questions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `form_version` INT NOT NULL,
+    `field_id` VARCHAR(60) NOT NULL,
+    `section` VARCHAR(120) NOT NULL,
+    `label` VARCHAR(500) NOT NULL,
+    `field_type` ENUM('text','tel','date','textarea','select','yesno','checkbox') NOT NULL DEFAULT 'text',
+    `is_required` TINYINT(1) NOT NULL DEFAULT 1,
+    `options` JSON DEFAULT NULL,
+    -- A question that only appears once another was answered a certain way.
+    `reveal_field` VARCHAR(60) DEFAULT NULL,
+    `reveal_value` VARCHAR(120) DEFAULT NULL,
+    -- Gaps of ten, so a question can be moved between two others without
+    -- renumbering the whole set.
+    `sort_order` INT NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_version_field` (`form_version`, `field_id`),
+    KEY `idx_version` (`form_version`)
+) ENGINE=InnoDB;
+
+-- 15. Intake Links Table (tokenised, single-use intake invitations)
 -- expires_at and form_version are PINNED at send time: changing the matching
 -- setting later must not alter links already sitting in someone's inbox.
 -- client_id is nullable because the short-intake path knows only an email
@@ -358,20 +385,37 @@ CREATE TABLE IF NOT EXISTS `intake_links` (
         FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- Seed default settings. These mirror settingDefaults() in includes/settings.php,
--- which the app falls back to when a key is absent.
+-- Seed default settings.
+-- Generated from settingDefaults() in includes/settings.php, which is the
+-- authority. tests/test_settings_seed.php asserts the two stay in step, because
+-- a fresh install silently missing a key is the kind of drift nobody notices
+-- until an email goes out with an unrendered placeholder in it.
 INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
     ('intake_token_expiry_days', '14'),
-    ('intake_form_version',      '1'),
-    ('admin_reminder_hours',     '48'),
+    ('intake_form_version', '2'),
+    ('admin_reminder_hours', '48'),
     ('default_session_duration', '60'),
-    ('buffer_minutes',           '0'),
-    ('min_notice_hours',         '24'),
-    ('max_advance_days',         '60'),
-    ('practice_name',            'Rewire With Kajal'),
-    ('practice_email',           'hello@rewirewithkajal.com'),
-    -- Blank = auto-detect from the request. MUST be set for CLI jobs.
-    ('site_base_url',            '')
+    ('buffer_minutes', '0'),
+    ('min_notice_hours', '24'),
+    ('max_advance_days', '60'),
+    ('practice_name', 'Rewire With Kajal'),
+    ('practice_email', 'hello@rewirewithkajal.com'),
+    ('notify_lead_confirmed_subject', 'Complete your intake form - {{practice_name}}'),
+    ('notify_lead_confirmed_body', 'Hello {{name}},\n\nThank you for getting in touch. Please take a few moments to complete your intake questionnaire using your personal link below:\n\n{{intake_link}}\n\nThis link is unique to you, so please do not forward it. It stays active until {{expires}}.\n\nBest regards,\n{{practice_name}}'),
+    ('auto_confirm_sessions', '0'),
+    ('practice_video_link', ''),
+    ('session_reminder_hours', '24'),
+    ('practice_timezone', 'Asia/Kolkata'),
+    ('notify_session_confirmed_subject', 'Your session on {{session_time}} - {{practice_name}}'),
+    ('notify_session_confirmed_body', 'Hello {{client_name}},\n\nYour session is confirmed for {{session_time}}.\n\nFormat: {{session_type}}\nJoining link: {{video_link}}\n\nIf you need to change or cancel it, just reply to this email.\n\nBest regards,\n{{practice_name}}'),
+    ('notify_session_cancelled_subject', 'Your session on {{session_time}} has been cancelled'),
+    ('notify_session_cancelled_body', 'Hello {{client_name}},\n\nYour session on {{session_time}} has been cancelled.\n\n{{cancel_reason}}\n\nReply to this email and we will find another time.\n\nBest regards,\n{{practice_name}}'),
+    ('notify_session_reminder_subject', 'Reminder: your session on {{session_time}}'),
+    ('notify_session_reminder_body', 'Hello {{client_name}},\n\nThis is a reminder of your session on {{session_time}}.\n\nFormat: {{session_type}}\nJoining link: {{video_link}}\n\nBest regards,\n{{practice_name}}'),
+    ('upload_max_mb', '10'),
+    ('upload_allowed_types', 'pdf,jpg,jpeg,png,doc,docx'),
+    ('document_storage_path', ''),
+    ('site_base_url', '')
 ON DUPLICATE KEY UPDATE `setting_value`=VALUES(`setting_value`);
 
 -- Seed default admin user (Username: admin, Password: admin123)

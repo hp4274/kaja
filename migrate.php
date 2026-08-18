@@ -542,6 +542,32 @@ try {
         }
     );
 
+    // ---- 13. form module -------------------------------------------------
+
+    step('form_questions table',
+        !tableExists($db, 'form_questions'),
+        function (PDO $db) {
+            $db->exec("
+                CREATE TABLE `form_questions` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `form_version` INT NOT NULL,
+                    `field_id` VARCHAR(60) NOT NULL,
+                    `section` VARCHAR(120) NOT NULL,
+                    `label` VARCHAR(500) NOT NULL,
+                    `field_type` ENUM('text','tel','date','textarea','select','yesno','checkbox') NOT NULL DEFAULT 'text',
+                    `is_required` TINYINT(1) NOT NULL DEFAULT 1,
+                    `options` JSON DEFAULT NULL,
+                    `reveal_field` VARCHAR(60) DEFAULT NULL,
+                    `reveal_value` VARCHAR(120) DEFAULT NULL,
+                    `sort_order` INT NOT NULL DEFAULT 0,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY `uniq_version_field` (`form_version`, `field_id`),
+                    KEY `idx_version` (`form_version`)
+                ) ENGINE=InnoDB
+            ");
+        }
+    );
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo "MIGRATION FAILED\n" . $e->getMessage() . "\n";

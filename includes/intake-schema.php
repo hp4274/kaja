@@ -66,8 +66,49 @@ function intakeConsentSection() {
     ];
 }
 
+/**
+ * The database wins when the form module has a copy of this version.
+ *
+ * Seeding is what puts it there, so an untouched install keeps running off the
+ * PHP map below and nothing changes until someone opens the form module.
+ *
+ * Cached per request: intakeSchema() is called once per section per render and
+ * the answer cannot change mid-request.
+ */
+function intakeSchemaOverride($version) {
+    static $cache = [];
+    $version = (int) $version;
+
+    if (array_key_exists($version, $cache)) {
+        return $cache[$version];
+    }
+    $cache[$version] = null;
+
+    // A missing table means the migration has not run; fall back rather than
+    // taking the public intake form down over an admin feature.
+    try {
+        require_once __DIR__ . '/../db-config.php';
+        $db = getDbConnection();
+        $stmt = $db->prepare('SELECT COUNT(*) FROM `form_questions` WHERE `form_version` = :v');
+        $stmt->execute([':v' => $version]);
+        if ((int) $stmt->fetchColumn() > 0) {
+            require_once __DIR__ . '/form-builder.php';
+            $cache[$version] = formSchemaFromDb($db, $version);
+        }
+    } catch (Throwable $e) {
+        $cache[$version] = null;
+    }
+
+    return $cache[$version];
+}
+
 function intakeSchema($version) {
     $version = (int) $version;
+
+    $override = intakeSchemaOverride($version);
+    if ($override !== null && $override !== []) {
+        return $override;
+    }
 
     if ($version === 1) {
         return [

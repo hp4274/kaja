@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'dashboard';
-$allowedPages = ['dashboard','leads','intake','patient-intake','clients','client-profile','sessions','reports','settings','blogs'];
+$allowedPages = ['dashboard','leads','intake','patient-intake','clients','client-profile','sessions','reports','settings','blogs','forms'];
 
 if (!in_array($page, $allowedPages)) {
     $page = 'dashboard';
@@ -20,6 +20,7 @@ $pageTitles = [
     'client-profile' => 'Client Profile',
     'sessions'       => 'Sessions & Calendar',
     'reports'        => 'Reports & Analytics',
+    'forms'          => 'Intake Form Builder',
     'settings'       => 'Settings',
     'blogs'          => 'Blog Manager',
 ];
