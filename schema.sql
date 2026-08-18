@@ -3,22 +3,8 @@ DROP DATABASE IF EXISTS `kaja_db`;
 CREATE DATABASE `kaja_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `kaja_db`;
 
--- 1. Leads Table (from index.html & appointment.html forms)
-CREATE TABLE IF NOT EXISTS `leads` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `name` VARCHAR(255) NOT NULL,
-    `email` VARCHAR(255) NOT NULL,
-    `country_code` VARCHAR(10) DEFAULT '+1',
-    `phone` VARCHAR(50) DEFAULT NULL,
-    `preferred_date` DATE DEFAULT NULL,
-    `preferred_time` TIME DEFAULT NULL,
-    `preference` VARCHAR(50) DEFAULT NULL,
-    `message` TEXT DEFAULT NULL,
-    `source_page` VARCHAR(50) NOT NULL,
-    `status` ENUM('new','accepted','converted','declined') DEFAULT 'new',
-    `client_id` INT DEFAULT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+-- NOTE: the `leads` table is defined further down, after `users`. It carries a
+-- foreign key to users(id), so it cannot be created before that table exists.
 
 -- 2. Short Intakes Table (Intake)
 CREATE TABLE IF NOT EXISTS `intake` (
@@ -85,7 +71,13 @@ CREATE TABLE IF NOT EXISTS `patient-intake` (
     `q2_16` VARCHAR(10) NOT NULL,
     `q2_17` VARCHAR(10) NOT NULL,
     `q2_18` VARCHAR(10) NOT NULL,
-    
+
+    -- Which intake link produced this, which client it belongs to, and which
+    -- version of the questionnaire the answers were given against.
+    `intake_link_id` INT DEFAULT NULL,
+    `client_id` INT DEFAULT NULL,
+    `form_version` INT NOT NULL DEFAULT 1,
+
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -96,6 +88,46 @@ CREATE TABLE IF NOT EXISTS `users` (
     `password` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NOT NULL UNIQUE,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 1. Leads Table (from index.html & appointment.html forms)
+-- Defined after `users` because assigned_staff_id references it.
+CREATE TABLE IF NOT EXISTS `leads` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `country_code` VARCHAR(10) DEFAULT '+1',
+    `phone` VARCHAR(50) DEFAULT NULL,
+    `preferred_date` DATE DEFAULT NULL,
+    `preferred_time` TIME DEFAULT NULL,
+    `preference` VARCHAR(50) DEFAULT NULL,
+    `message` TEXT DEFAULT NULL,
+    -- Which public form produced this lead: 'home', 'appointment', 'intake'.
+    `source` VARCHAR(50) NOT NULL,
+    -- new -> contacted -> confirmed -> converted, with rejected/spam as
+    -- terminal side-exits reachable from any state. Only Confirm advances a
+    -- lead automatically; every other move is a manual admin action.
+    `status` ENUM('new','contacted','confirmed','converted','rejected','spam') NOT NULL DEFAULT 'new',
+    `client_id` INT DEFAULT NULL,
+    -- No staff table exists; this is here so attribution has somewhere to go
+    -- the day a second user is added.
+    `assigned_staff_id` INT DEFAULT NULL,
+    -- Pinned at submit time. The detail drawer renders the answers against
+    -- this version's field map, never against the live form.
+    `form_version_id` INT NOT NULL DEFAULT 1,
+    -- Set at submit time when the same email/phone already exists. Advisory
+    -- only: the submission is never blocked, the admin just sees a banner.
+    `possible_duplicate_of` INT DEFAULT NULL,
+    `is_existing_client` TINYINT(1) NOT NULL DEFAULT 0,
+    -- One stale-intake reminder per lead, ever. Set by cron/intake-reminders.php.
+    `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
+    -- Stamped the first time the detail drawer is opened.
+    `first_viewed_at` DATETIME DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_status` (`status`),
+    KEY `idx_created` (`created_at`),
+    CONSTRAINT `fk_leads_staff`
+        FOREIGN KEY (`assigned_staff_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- 5. Clients Table (converted from leads or patient intakes)
@@ -111,7 +143,8 @@ CREATE TABLE IF NOT EXISTS `clients` (
     `occupation` VARCHAR(100) DEFAULT NULL,
     `dob` DATE DEFAULT NULL,
     `concern` VARCHAR(100) DEFAULT NULL,
-    `status` ENUM('active','inactive','discharged') DEFAULT 'active',
+    -- 'pending' = created when a lead was confirmed, intake not yet returned.
+    `status` ENUM('pending','active','inactive','discharged') NOT NULL DEFAULT 'active',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -175,6 +208,59 @@ CREATE TABLE IF NOT EXISTS `blogs` (
     `status` ENUM('draft', 'published') DEFAULT 'draft',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+-- 11. Settings Table
+-- Upstream of every module. Written via setSetting(), which uses
+-- INSERT ... ON DUPLICATE KEY UPDATE so new keys never need a migration.
+CREATE TABLE IF NOT EXISTS `settings` (
+    `setting_key` VARCHAR(100) NOT NULL PRIMARY KEY,
+    `setting_value` TEXT DEFAULT NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 12. Intake Links Table (tokenized, single-use intake invitations)
+-- expires_at and form_version are PINNED at send time: changing the matching
+-- setting later must not alter links already sitting in someone's inbox.
+-- client_id is nullable because the short-intake path knows only an email
+-- address; the client row is created when the questionnaire comes back.
+CREATE TABLE IF NOT EXISTS `intake_links` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `lead_id` INT NOT NULL,
+    `client_id` INT DEFAULT NULL,
+    `token` CHAR(64) NOT NULL,
+    `form_version` INT NOT NULL DEFAULT 1,
+    `status` ENUM('sent','opened','submitted','expired') NOT NULL DEFAULT 'sent',
+    `expires_at` DATETIME NOT NULL,
+    `opened_at` DATETIME DEFAULT NULL,
+    `submitted_at` DATETIME DEFAULT NULL,
+    `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
+    `patient_intake_id` INT DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_token` (`token`),
+    KEY `idx_lead` (`lead_id`),
+    KEY `idx_client` (`client_id`),
+    KEY `idx_status` (`status`),
+    CONSTRAINT `fk_intake_links_lead`
+        FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_intake_links_client`
+        FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Seed default settings. These mirror settingDefaults() in includes/settings.php,
+-- which the app falls back to when a key is absent.
+INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
+    ('intake_token_expiry_days', '14'),
+    ('intake_form_version',      '1'),
+    ('admin_reminder_hours',     '48'),
+    ('default_session_duration', '60'),
+    ('buffer_minutes',           '0'),
+    ('min_notice_hours',         '24'),
+    ('max_advance_days',         '60'),
+    ('practice_name',            'Rewire With Kajal'),
+    ('practice_email',           'hello@rewirewithkajal.com'),
+    -- Blank = auto-detect from the request. MUST be set for CLI jobs.
+    ('site_base_url',            '')
+ON DUPLICATE KEY UPDATE `setting_value`=VALUES(`setting_value`);
 
 -- Seed default admin user (Username: admin, Password: admin123)
 INSERT INTO `users` (`username`, `password`, `email`)
