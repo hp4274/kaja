@@ -55,6 +55,16 @@ function settingDefaults() {
             "Best regards,
 {{practice_name}}",
 
+        // Sessions
+        // Off by default: a booking someone has not confirmed should say so
+        // rather than claim to be locked in.
+        'auto_confirm_sessions'    => '0',
+        // One static practice room, reused every session. A per-session room
+        // is a real API integration and only worth it when a client needs
+        // session isolation.
+        'practice_video_link'      => '',
+        'session_reminder_hours'   => '24',
+
         // Uploads. Shared with Patient Intake the day it gains a file
         // question -- one setting, two consumers.
         'upload_max_mb'         => '10',
