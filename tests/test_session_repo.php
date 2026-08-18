@@ -1,21 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/session-repo.php';
 
-function sessionClient($name = 'Anita', $email = 'a@example.com') {
-    $leadId = insertTestLead(['email' => $email, 'status' => 'confirmed']);
-    testDb()->prepare('INSERT INTO `clients` (`lead_id`,`first_name`,`last_name`,`email`,`status`)
-                       VALUES (:l,:f,"Rao",:e,"active")')
-            ->execute([':l' => $leadId, ':f' => $name, ':e' => $email]);
-    return (int) testDb()->lastInsertId();
-}
-
-function freshSessions() {
-    resetTestTables(['client_notes', 'sessions', 'clients', 'leads']);
-    setSetting('buffer_minutes', '0');
-    setSetting('auto_confirm_sessions', '0');
-    setSetting('practice_video_link', '');
-}
-
 test('a booking lands with a real end time derived from the duration', function () {
     freshSessions();
     $c  = sessionClient();

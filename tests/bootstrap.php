@@ -66,3 +66,24 @@ function insertTestLead(array $overrides = []) {
     ]);
     return (int) $db->lastInsertId();
 }
+
+/**
+ * A client with a lead behind it, for the session and calendar tests.
+ * Kept here rather than in one test file so any test file can use it.
+ */
+function sessionClient($name = 'Anita', $email = 'a@example.com') {
+    $leadId = insertTestLead(['email' => $email, 'status' => 'confirmed']);
+    testDb()->prepare('INSERT INTO `clients` (`lead_id`,`first_name`,`last_name`,`email`,`status`)
+                       VALUES (:l,:f,"Rao",:e,"active")')
+            ->execute([':l' => $leadId, ':f' => $name, ':e' => $email]);
+    return (int) testDb()->lastInsertId();
+}
+
+/** Empty the session tables and reset the settings they read. */
+function freshSessions() {
+    require_once __DIR__ . '/../includes/settings.php';
+    resetTestTables(['client_notes', 'sessions', 'clients', 'leads']);
+    setSetting('buffer_minutes', '0');
+    setSetting('auto_confirm_sessions', '0');
+    setSetting('practice_video_link', '');
+}
