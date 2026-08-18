@@ -4,11 +4,6 @@ require_once __DIR__ . '/../../includes/lead-status.php';
 
 $db = getDbConnection();
 
-// Self-heal: a lead that already produced a client is converted, whatever the
-// status column says. Older convert flows parked these rows short of the end,
-// which left them counted under the wrong tab.
-$db->exec("UPDATE `leads` SET `status`='converted' WHERE `client_id` IS NOT NULL AND `client_id` > 0 AND `status` <> 'converted'");
-
 $counts  = leadStatusCounts($db);
 $sources = leadSources($db);
 
@@ -141,11 +136,10 @@ function leadsUrl(array $filters, array $overrides = []) {
             <?php
             foreach ($leads as $l):
               $ls = ($l['status'] ?? '') ?: 'new';
-              // A lead carrying a client_id is done, whatever the status column
-              // says — older rows were left mid-pipeline after converting.
+              // A confirmed lead already has a client — pending, awaiting its
+              // questionnaire — so client_id is no longer a proxy for 'done'.
               $hasClient = !empty($l['client_id']);
-              $isDone    = ($ls === 'converted' || $hasClient);
-              if ($hasClient) $ls = 'converted';
+              $isClosed  = (leadStatusIsTerminal($ls) || $ls === 'converted');
             ?>
               <tr id="lead-row-<?php echo $l['id']; ?>" class="lead-item" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
                 <td><input type="checkbox" class="lead-select" value="<?php echo $l['id']; ?>" /></td>
@@ -168,19 +162,18 @@ function leadsUrl(array $filters, array $overrides = []) {
                 </td>
                 <td style="text-align:right; white-space:nowrap;">
                   <div style="display:inline-flex; align-items:center; gap:0.5rem; justify-content:flex-end;">
-                    <?php if ($isDone): ?>
-                      <?php if ($hasClient): ?>
-                        <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
-                      <?php endif; ?>
-                    <?php else: ?>
+                    <?php if ($hasClient): ?>
+                      <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
+                    <?php endif; ?>
+                    <?php if (!$isClosed): ?>
                       <button class="btn btn-success btn-sm" data-lead-contact="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'contacted')" title="Mark as contacted" <?php echo $ls === 'new' ? '' : 'hidden'; ?>>
                         <i class="bi bi-telephone"></i> Contact
                       </button>
                       <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted') ? 'hidden' : ''; ?>>
                         <i class="bi bi-x-lg"></i> Reject
                       </button>
-                      <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="convertLead(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($l['email']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($l['phone'] ?? ''), ENT_QUOTES); ?>')" <?php echo $ls === 'contacted' ? '' : 'hidden'; ?>>
-                        <i class="bi bi-person-plus"></i> Convert
+                      <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo $ls === 'contacted' ? '' : 'hidden'; ?>>
+                        <i class="bi bi-send-check"></i> Confirm
                       </button>
                     <?php endif; ?>
                     <button class="btn btn-icon btn-sm" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message" style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--clr-border); background:var(--clr-surface); cursor:pointer; color:var(--clr-text-muted); border-radius:var(--radius-sm);">
@@ -214,8 +207,7 @@ function leadsUrl(array $filters, array $overrides = []) {
           $preference = htmlspecialchars($l['preference'] ?? '');
           $ls = ($l['status'] ?? '') ?: 'new';
           $hasClient = !empty($l['client_id']);
-          if ($hasClient) $ls = 'converted';
-          $isConverted = ($ls === 'converted' || $hasClient);
+          $isClosed  = (leadStatusIsTerminal($ls) || $ls === 'converted');
         ?>
           <div class="grid-card lead-item" id="lead-card-<?php echo $l['id']; ?>" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
             <div style="flex: 1; display: flex; flex-direction: column;">
@@ -266,11 +258,10 @@ function leadsUrl(array $filters, array $overrides = []) {
               <button class="btn btn-icon btn-sm" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message" style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--clr-border); background:var(--clr-surface); cursor:pointer; color:var(--clr-text-muted); border-radius:var(--radius-sm);">
                 <i class="bi bi-chat-text"></i>
               </button>
-              <?php if ($isConverted): ?>
-                <?php if ($hasClient): ?>
-                  <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
-                <?php endif; ?>
-              <?php else: ?>
+              <?php if ($hasClient): ?>
+                <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
+              <?php endif; ?>
+              <?php if (!$isClosed): ?>
                 <div style="display:inline-flex; align-items:center; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
                   <button class="btn btn-success btn-sm" data-lead-contact="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'contacted')" title="Mark as contacted" <?php echo $ls === 'new' ? '' : 'hidden'; ?>>
                     <i class="bi bi-telephone"></i> Contact
@@ -278,8 +269,8 @@ function leadsUrl(array $filters, array $overrides = []) {
                   <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted') ? 'hidden' : ''; ?>>
                     <i class="bi bi-x-lg"></i> Reject
                   </button>
-                  <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="convertLead(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($l['email']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($l['phone'] ?? ''), ENT_QUOTES); ?>')" <?php echo $ls === 'contacted' ? '' : 'hidden'; ?>>
-                    <i class="bi bi-person-plus"></i> Convert
+                  <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo $ls === 'contacted' ? '' : 'hidden'; ?>>
+                    <i class="bi bi-send-check"></i> Confirm
                   </button>
                 </div>
               <?php endif; ?>
@@ -401,14 +392,13 @@ function updateLeadStatus(id, status) {
     });
 }
 
-function convertLead(id, name, email, phone) {
-  if (!confirm('Convert "' + name + '" to a client?')) return;
+// Named confirmLeadAction, not confirmLead: window.confirm is what the dialog
+// below calls, and shadowing it would break every other confirm on the page.
+function confirmLeadAction(id, name) {
+  if (!confirm('Confirm "' + name + '" and send the intake link?')) return;
   var fd = new FormData();
-  fd.append('action', 'convert');
+  fd.append('action', 'confirm');
   fd.append('id', id);
-  fd.append('name', name);
-  fd.append('email', email);
-  fd.append('phone', phone);
   
   // Fade out row/card immediately to feel fast
   const row = document.getElementById('lead-row-' + id);
@@ -427,12 +417,12 @@ function convertLead(id, name, email, phone) {
     .then(function(data) {
       if (data.success) {
         if (data.already) {
-          showToast('Lead was already converted');
+          showToast('Lead was already confirmed');
         } else if (data.intake_link_sent === false) {
-          // Client and lead are correct; only the email failed.
-          showToast('Converted, but the intake email could not be sent', 'error');
+          // Client, token and lead are all correct; only the email failed.
+          showToast('Confirmed, but the intake email could not be sent', 'error');
         } else {
-          showToast('Lead converted to client!');
+          showToast('Lead confirmed — intake link sent');
         }
         setTimeout(function() { location.reload(); }, 800);
       } else {

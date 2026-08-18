@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../includes/intake-token.php';
 require_once __DIR__ . '/../../includes/lead-status.php';
 require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-notes.php';
+require_once __DIR__ . '/../../includes/lead-confirm.php';
 $db = getDbConnection();
 
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
@@ -95,132 +96,43 @@ try {
             ]);
             break;
 
-        case 'convert':
-            $id    = intval($_POST['id'] ?? 0);
-            $name  = trim($_POST['name'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $phone = trim($_POST['phone'] ?? '');
-
-            if (!$id || !$name) {
+        case 'confirm':
+            $id = intval($_POST['id'] ?? 0);
+            if (!$id) {
                 echo json_encode(['success'=>false,'error'=>'Invalid parameters']);
                 exit;
             }
 
-            // A stale page or a double click must not mint a second client for
-            // the same lead. Already converted -> hand back the client we have.
-            $leadStmt = $db->prepare("SELECT `status`,`client_id` FROM `leads` WHERE `id`=:id");
-            $leadStmt->execute([':id'=>$id]);
-            $leadRow = $leadStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$leadRow) {
+            $lead = fetchLead($db, $id);
+            if ($lead === null) {
                 echo json_encode(['success'=>false,'error'=>'Lead not found']);
                 exit;
             }
-            if (!empty($leadRow['client_id'])) {
-                // Repairs rows the older convert flow left short of 'converted'.
-                if ($leadRow['status'] !== 'converted') {
-                    $db->prepare("UPDATE `leads` SET `status`='converted' WHERE `id`=:id")
-                       ->execute([':id'=>$id]);
-                }
-                echo json_encode([
-                    'success'   => true,
-                    'client_id' => (int) $leadRow['client_id'],
-                    'already'   => true
-                ]);
+
+            try {
+                $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+                $result = confirmLead($db, $id, $userId);
+            } catch (Throwable $e) {
+                echo json_encode(['success'=>false,'error'=>$e->getMessage()]);
                 exit;
             }
 
-            // Has this person already completed the questionnaire? If so there is
-            // nothing to send: promote them straight to an active client using the
-            // richer intake data, exactly as before.
-            $piStmt = $db->prepare("SELECT * FROM `patient-intake` WHERE `email`=:e AND `phone`=:p ORDER BY `created_at` DESC LIMIT 1");
-            $piStmt->execute([':e'=>$email, ':p'=>$phone]);
-            $piRow = $piStmt->fetch(PDO::FETCH_ASSOC);
-
-            // Seed first/last from the lead name so the NOT NULL columns hold
-            // even when the client row is created before any intake data exists.
-            $parts     = explode(' ', $name, 2);
-            $firstName = $parts[0];
-            $lastName  = isset($parts[1]) ? $parts[1] : '';
-
-            $issued = null;
-
-            // One transaction: client + token + lead status move together.
-            // A token issued against a lead that failed to update would leave the
-            // dashboard permanently wrong.
-            $db->beginTransaction();
-            try {
-                if ($piRow) {
-                    $stmt = $db->prepare("
-                        INSERT INTO `clients` (`lead_id`,`patient_intake_id`,`first_name`,`last_name`,`email`,`phone`,`city`,`occupation`,`dob`,`concern`,`status`)
-                        VALUES (:lid,:piid,:fn,:ln,:em,:ph,:ci,:oc,:dob,:co,'active')
-                    ");
-                    $stmt->execute([
-                        ':lid'=>$id, ':piid'=>$piRow['id'],
-                        ':fn'=>$piRow['first_name'], ':ln'=>$piRow['last_name'],
-                        ':em'=>$piRow['email'],      ':ph'=>$piRow['phone'],
-                        ':ci'=>$piRow['city'],       ':oc'=>$piRow['occupation'],
-                        ':dob'=>$piRow['dob'],       ':co'=>$piRow['concern']
-                    ]);
-                    $clientId  = (int) $db->lastInsertId();
-                    $firstName = $piRow['first_name'];
-                    $lastName  = $piRow['last_name'];
-
-                    $db->prepare("UPDATE `leads` SET `status`='converted', `client_id`=:cid WHERE `id`=:id")
-                       ->execute([':cid'=>$clientId, ':id'=>$id]);
-
-                    $logAction = 'client_converted';
-                    $logDesc   = "{$firstName} {$lastName} converted from lead to client";
-                } else {
-                    // No questionnaire yet. Create the client as 'pending' and
-                    // issue the intake link; submit_intake.php fills the rest in
-                    // and flips the client to 'active' when it comes back.
-                    $stmt = $db->prepare("
-                        INSERT INTO `clients` (`lead_id`,`first_name`,`last_name`,`email`,`phone`,`status`)
-                        VALUES (:lid,:fn,:ln,:em,:ph,'pending')
-                    ");
-                    $stmt->execute([
-                        ':lid'=>$id, ':fn'=>$firstName, ':ln'=>$lastName,
-                        ':em'=>$email, ':ph'=>$phone
-                    ]);
-                    $clientId = (int) $db->lastInsertId();
-
-                    $issued = issueIntakeToken($db, $id, $clientId);
-
-                    // The lead is done the moment a client exists for it — the
-                    // outstanding questionnaire is tracked by the client being
-                    // 'pending', not by holding the lead back.
-                    $db->prepare("UPDATE `leads` SET `status`='converted', `client_id`=:cid WHERE `id`=:id")
-                       ->execute([':cid'=>$clientId, ':id'=>$id]);
-
-                    $logAction = 'intake_link_sent';
-                    $logDesc   = "Intake link issued to {$name} (expires " . date('d M Y', strtotime($issued['expires_at'])) . ")";
-                }
-
-                $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES (:a,:d,'client',:rid)")
-                   ->execute([':a'=>$logAction, ':d'=>$logDesc, ':rid'=>$clientId]);
-
-                $db->commit();
-            } catch (PDOException $e) {
-                if ($db->inTransaction()) {
-                    $db->rollBack();
-                }
-                throw $e;
-            }
-
-            // Mail is sent AFTER the commit. An SMTP hiccup must not roll back
-            // correct database state; the URL is returned either way so the
+            // After the commit, never inside it. A dead SMTP server must not
+            // undo a correct confirm; the URL comes back either way so the
             // therapist can pass it on by hand.
             $mailed = null;
-            if ($issued && $email !== '') {
-                $mailed = sendIntakeLinkEmail($email, $name, $issued['url'], $issued['expires_at']);
+            if (!$result['already'] && $lead['email'] !== '') {
+                $mailed = sendIntakeLinkEmail(
+                    $lead['email'], $lead['name'], $result['intake_url'], $result['expires_at']
+                );
             }
 
             echo json_encode([
                 'success'          => true,
-                'client_id'        => $clientId,
+                'client_id'        => $result['client_id'],
+                'already'          => $result['already'],
                 'intake_link_sent' => $mailed,
-                'intake_url'       => $issued ? $issued['url'] : null
+                'intake_url'       => $result['intake_url']
             ]);
             break;
 
