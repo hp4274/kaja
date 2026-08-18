@@ -163,6 +163,34 @@
     });
   }
 
+  // ---- Conditional fields -------------------------------------------------
+  var conditionals = Array.prototype.slice.call(form.querySelectorAll('[data-reveal-when]'));
+
+  function applyConditionals() {
+    conditionals.forEach(function (group) {
+      var name    = group.getAttribute('data-reveal-when');
+      var equals  = group.getAttribute('data-reveal-equals');
+      var checked = form.querySelector('[name="' + name + '"]:checked');
+      var visible = !!checked && checked.value === equals;
+
+      group.hidden = !visible;
+
+      // Required tracks visibility. A required field the browser cannot focus
+      // blocks submission with an error nobody can see or fix.
+      Array.prototype.forEach.call(group.querySelectorAll('input, textarea, select'), function (f) {
+        if (visible) {
+          f.setAttribute('required', 'required');
+        } else {
+          f.removeAttribute('required');
+          f.value = '';
+        }
+      });
+    });
+  }
+
+  form.addEventListener('change', applyConditionals);
+  applyConditionals();
+
   // Clearing the draft is the server's job on submit; the page does not need
   // to know whether the POST succeeded.
   show(0);

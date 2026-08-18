@@ -19,7 +19,9 @@ function settingDefaults() {
     return [
         // Intake tokens
         'intake_token_expiry_days' => '14',
-        'intake_form_version'      => '1',
+        // Version 2 adds the emergency contact, presenting concern and
+        // conditional background block. Links already sent keep their own.
+        'intake_form_version'      => '2',
         'admin_reminder_hours'     => '48',
 
         // Calendar

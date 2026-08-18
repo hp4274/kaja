@@ -146,8 +146,101 @@
           </div>
         </div>
 
-        <!-- Section 2: Preferences -->
-        <h3 class="ra-form-section-hdr gap"><span>Section 2: Preferences</span></h3>
+        <h3 class="ra-form-section-hdr gap"><span>Section 2: Emergency Contact</span></h3>
+        <p class="text-muted"
+          style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">
+          Someone we can contact if we become concerned for your safety.
+        </p>
+
+        <div class="ra-form-row">
+          <div class="ra-form-group">
+            <label class="ra-form-label" for="in-em-name">Full Name *</label>
+            <input class="ra-form-input" id="in-em-name" name="emergency_name" type="text" required />
+          </div>
+          <div class="ra-form-group">
+            <label class="ra-form-label" for="in-em-phone">Phone Number *</label>
+            <input class="ra-form-input" id="in-em-phone" name="emergency_phone" type="tel" required />
+          </div>
+        </div>
+        <div class="ra-form-group">
+          <label class="ra-form-label" for="in-em-rel">Relationship to You *</label>
+          <input class="ra-form-input" id="in-em-rel" name="emergency_relation" type="text" required />
+        </div>
+
+        <h3 class="ra-form-section-hdr gap"><span>Section 3: Why You Are Here</span></h3>
+
+        <div class="ra-form-group">
+          <label class="ra-form-label" for="in-concern-long">What brings you to therapy? *</label>
+          <textarea class="ra-form-input" id="in-concern-long" name="presenting_concern" rows="5" required
+            placeholder="In your own words. There is no right answer."></textarea>
+        </div>
+        <div class="ra-form-group">
+          <label class="ra-form-label" for="in-referral">How did you hear about us?</label>
+          <select class="ra-form-select" id="in-referral" name="referral_source">
+            <option value="">Prefer not to say</option>
+            <option value="search">Search engine</option>
+            <option value="social">Social media</option>
+            <option value="friend">Friend or family</option>
+            <option value="doctor">Doctor or another professional</option>
+            <option value="other">Somewhere else</option>
+          </select>
+        </div>
+
+        <h3 class="ra-form-section-hdr gap"><span>Section 4: Background</span></h3>
+        <p class="text-muted"
+          style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">
+          Answer what you are comfortable answering.
+        </p>
+
+        <div class="ra-form-group">
+          <label class="ra-form-label">Have you seen a therapist before? *</label>
+          <div class="d-flex gap-4">
+            <div class="form-check form-check-inline mb-0">
+              <input class="form-check-input custom-form-radio" type="radio" name="seen_therapist_before"
+                id="seen-yes" value="yes" required />
+              <label class="form-check-label" for="seen-yes">Yes</label>
+            </div>
+            <div class="form-check form-check-inline mb-0">
+              <input class="form-check-input custom-form-radio" type="radio" name="seen_therapist_before"
+                id="seen-no" value="no" required />
+              <label class="form-check-label" for="seen-no">No</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="ra-form-group" data-reveal-when="seen_therapist_before" data-reveal-equals="yes" hidden>
+          <label class="ra-form-label" for="in-prev-therapist">Who did you see?</label>
+          <input class="ra-form-input" id="in-prev-therapist" name="previous_therapist" type="text" />
+        </div>
+        <div class="ra-form-group" data-reveal-when="seen_therapist_before" data-reveal-equals="yes" hidden>
+          <label class="ra-form-label" for="in-reason-stopped">What led you to stop?</label>
+          <textarea class="ra-form-input" id="in-reason-stopped" name="reason_stopped" rows="3"></textarea>
+        </div>
+
+        <div class="ra-form-group">
+          <label class="ra-form-label">Are you currently taking any medication? *</label>
+          <div class="d-flex gap-4">
+            <div class="form-check form-check-inline mb-0">
+              <input class="form-check-input custom-form-radio" type="radio" name="on_medication"
+                id="med-yes" value="yes" required />
+              <label class="form-check-label" for="med-yes">Yes</label>
+            </div>
+            <div class="form-check form-check-inline mb-0">
+              <input class="form-check-input custom-form-radio" type="radio" name="on_medication"
+                id="med-no" value="no" required />
+              <label class="form-check-label" for="med-no">No</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="ra-form-group" data-reveal-when="on_medication" data-reveal-equals="yes" hidden>
+          <label class="ra-form-label" for="in-medication">Which medication?</label>
+          <textarea class="ra-form-input" id="in-medication" name="medication_list" rows="3"
+            placeholder="Name and dose, if you know it."></textarea>
+        </div>
+
+        <!-- Section 5: Preferences -->
+        <h3 class="ra-form-section-hdr gap"><span>Section 5: Preferences</span></h3>
 
         <div class="ra-form-group">
           <label class="ra-form-label" for="in-pref-consult">Would you prefer your consultation? *</label>
@@ -178,7 +271,7 @@
         </div>
 
         <!-- Section 3: Questionnaire 1 -->
-        <h3 class="ra-form-section-hdr gap"><span>Section 3: Questionnaire 1</span></h3>
+        <h3 class="ra-form-section-hdr gap"><span>Section 6: Questionnaire 1</span></h3>
         <p class="text-muted"
           style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">Please
           answer all questions honestly.</p>
@@ -682,7 +775,7 @@
         </div>
 
         <!-- Section 4: Questionnaire 2 -->
-        <h3 class="ra-form-section-hdr gap"><span>Section 4: Questionnaire 2</span></h3>
+        <h3 class="ra-form-section-hdr gap"><span>Section 7: Questionnaire 2</span></h3>
         <p class="text-muted"
           style="font-size: 0.85rem; margin-top: -1.2rem; margin-bottom: 1.5rem; font-family: var(--font-body);">Please
           answer all questions honestly.</p>
@@ -1189,7 +1282,7 @@
           </div>
         </div>
 
-        <h3 class="ra-form-section-hdr gap"><span>Section 5: Consent</span></h3>
+        <h3 class="ra-form-section-hdr gap"><span>Section 8: Consent</span></h3>
 
         <div class="ra-form-group">
           <p class="text-muted" style="font-size: 0.9rem; line-height: 1.65;">
