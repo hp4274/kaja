@@ -9,7 +9,23 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 require_once __DIR__ . '/../../db-config.php';
-$db = getDbConnection();
+require_once __DIR__ . '/../../includes/client-repo.php';
+require_once __DIR__ . '/../../includes/client-status.php';
+require_once __DIR__ . '/../../includes/client-notes.php';
+require_once __DIR__ . '/../../includes/client-payments.php';
+require_once __DIR__ . '/../../includes/client-documents.php';
+require_once __DIR__ . '/../../includes/client-merge.php';
+
+$db     = getDbConnection();
+$userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+
+/** Everything below logs against a name, not a bare id. */
+function clientLabel(PDO $db, $clientId) {
+    $stmt = $db->prepare('SELECT `first_name`,`last_name` FROM `clients` WHERE `id` = :id');
+    $stmt->execute([':id' => (int) $clientId]);
+    $c = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $c ? trim($c['first_name'] . ' ' . $c['last_name']) : 'Client #' . (int) $clientId;
+}
 
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
 
@@ -62,34 +78,115 @@ try {
 
         case 'add_note':
             $clientId = intval($_POST['client_id'] ?? 0);
-            $noteType = trim($_POST['note_type'] ?? 'general');
-            $content = trim($_POST['content'] ?? '');
+            $content  = trim($_POST['content'] ?? '');
+            $kind     = trim($_POST['note_kind'] ?? 'session');
+            $corrects = isset($_POST['corrects_note_id']) && $_POST['corrects_note_id'] !== ''
+                      ? (int) $_POST['corrects_note_id'] : null;
 
-            if (!$clientId || empty($content) || !in_array($noteType, ['session', 'general', 'clinical'])) {
-                echo json_encode(['success' => false, 'error' => 'Missing or invalid fields']);
+            if (!$clientId || $content === '') {
+                echo json_encode(['success' => false, 'error' => 'A note cannot be empty']);
                 exit;
             }
 
-            $stmt = $db->prepare("INSERT INTO `client_notes` (`client_id`, `note_type`, `content`) VALUES (:cid, :nt, :c)");
-            $stmt->execute([
-                ':cid' => $clientId,
-                ':nt' => $noteType,
-                ':c' => $content
+            try {
+                $noteId = addClientNote($db, $clientId, $userId, $content, $kind, $corrects);
+            } catch (InvalidArgumentException $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            $what = $corrects === null ? 'note' : 'correction';
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('note_added',:d,'client',:rid)")
+               ->execute([':d' => 'Added a ' . $what . ' for ' . clientLabel($db, $clientId), ':rid' => $clientId]);
+
+            echo json_encode([
+                'success' => true,
+                'note_id' => $noteId,
+                'notes'   => clientNotes($db, $clientId),
+                'corrected' => correctedNoteIds($db, $clientId),
             ]);
-            $noteId = $db->lastInsertId();
+            break;
 
-            // Get client name for logging
-            $cStmt = $db->prepare("SELECT `first_name`, `last_name` FROM `clients` WHERE `id` = :id");
-            $cStmt->execute([':id' => $clientId]);
-            $client = $cStmt->fetch(PDO::FETCH_ASSOC);
-            $name = $client ? "{$client['first_name']} {$client['last_name']}" : "Client #{$clientId}";
+        case 'update_profile':
+            $clientId = intval($_POST['client_id'] ?? 0);
+            if (!$clientId || fetchClient($db, $clientId) === null) {
+                echo json_encode(['success' => false, 'error' => 'Client not found']);
+                exit;
+            }
 
-            // Log activity
-            $desc = "Added a new {$noteType} note for client {$name}";
-            $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('note_added', :d, 'client', :rid)")
-               ->execute([':d' => $desc, ':rid' => $clientId]);
+            $fields = [];
+            foreach (['first_name','last_name','email','phone','city','occupation','dob','concern'] as $f) {
+                if (array_key_exists($f, $_POST)) {
+                    $fields[$f] = trim($_POST[$f]);
+                }
+            }
+            if (isset($fields['email']) && $fields['email'] !== ''
+                && !filter_var($fields['email'], FILTER_VALIDATE_EMAIL)) {
+                echo json_encode(['success' => false, 'error' => 'Please provide a valid email address']);
+                exit;
+            }
 
-            echo json_encode(['success' => true, 'note_id' => $noteId]);
+            // updateClientProfile whitelists columns, so status and archived_at
+            // cannot be moved through this form even if they are posted.
+            updateClientProfile($db, $clientId, $fields);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'archive':
+            $clientId = intval($_POST['client_id'] ?? 0);
+            if (!$clientId || fetchClient($db, $clientId) === null) {
+                echo json_encode(['success' => false, 'error' => 'Client not found']);
+                exit;
+            }
+
+            $name = clientLabel($db, $clientId);
+            archiveClient($db, $clientId);
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('client_archived',:d,'client',:rid)")
+               ->execute([':d' => $name . ' was archived', ':rid' => $clientId]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'merge':
+            $survivorId = intval($_POST['survivor_id'] ?? 0);
+            $loserId    = intval($_POST['loser_id'] ?? 0);
+
+            try {
+                $moved = mergeClients($db, $survivorId, $loserId, $userId);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            echo json_encode(['success' => true, 'moved' => $moved]);
+            break;
+
+        case 'add_payment':
+            $clientId  = intval($_POST['client_id'] ?? 0);
+            $amount    = trim($_POST['amount'] ?? '');
+            $method    = trim($_POST['method'] ?? 'cash');
+            $date      = trim($_POST['fee_date'] ?? '');
+            $reference = trim($_POST['reference'] ?? '');
+
+            if (!$clientId) {
+                echo json_encode(['success' => false, 'error' => 'Client not found']);
+                exit;
+            }
+
+            try {
+                addClientPayment($db, $clientId, $amount, $method, $date, $reference);
+            } catch (InvalidArgumentException $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            echo json_encode([
+                'success'  => true,
+                'payments' => clientPayments($db, $clientId),
+                'total'    => clientPaymentTotal($db, $clientId),
+            ]);
             break;
 
         case 'add_fee':

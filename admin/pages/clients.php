@@ -1,39 +1,35 @@
 <?php
-$db = getDbConnection();
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
-$statusFilter = isset($_GET['status']) ? trim($_GET['status']) : '';
+require_once __DIR__ . '/../../includes/client-repo.php';
+require_once __DIR__ . '/../../includes/client-status.php';
 
-$sql = "SELECT c.*, 
-               (SELECT COUNT(*) FROM `sessions` WHERE `client_id`=c.`id`) as session_count,
-               (SELECT pi.`concern` FROM `patient-intake` pi WHERE pi.`email` = c.`email` AND pi.`phone` = c.`phone` ORDER BY pi.`created_at` DESC LIMIT 1) as matched_concern 
-        FROM `clients` c";
-$params = [];
-$where = [];
+$db      = getDbConnection();
+$counts  = clientStatusCounts($db);
 
-if ($statusFilter && in_array($statusFilter, ['pending','review','active','inactive','completed'])) {
-    $where[] = "c.`status` = :status";
-    $params[':status'] = $statusFilter;
+$filters = [
+    'q'      => isset($_GET['q']) ? trim($_GET['q']) : '',
+    'status' => isset($_GET['status']) ? trim($_GET['status']) : '',
+    'sort'   => (isset($_GET['sort']) && $_GET['sort'] === 'name') ? 'name' : 'activity',
+    'dir'    => (isset($_GET['dir']) && strtolower($_GET['dir']) === 'asc') ? 'asc' : 'desc',
+];
+
+$search       = $filters['q'];
+$statusFilter = $filters['status'];
+$clients      = fetchClients($db, $filters);
+
+/** Rebuild the query string with one key changed, for the tabs and sort links. */
+function clientsUrl(array $filters, array $overrides = []) {
+    $params = array_merge(['page' => 'clients'], $filters, $overrides);
+    $params = array_filter($params, function ($v) { return $v !== '' && $v !== null; });
+    return 'index.php?' . http_build_query($params);
 }
-if ($search) {
-    $where[] = "(c.`first_name` LIKE :q OR c.`last_name` LIKE :q2 OR c.`email` LIKE :q3)";
-    $params[':q'] = "%{$search}%";
-    $params[':q2'] = "%{$search}%";
-    $params[':q3'] = "%{$search}%";
-}
-if (!empty($where)) $sql .= " WHERE " . implode(' AND ', $where);
-$sql .= " ORDER BY c.`created_at` DESC";
-
-$stmt = $db->prepare($sql);
-$stmt->execute($params);
-$clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="toolbar">
   <div class="toolbar-left">
-    <a href="index.php?page=clients" class="filter-btn <?php echo !$statusFilter ? 'active' : ''; ?>">All</a>
-    <a href="index.php?page=clients&status=active" class="filter-btn <?php echo $statusFilter==='active' ? 'active' : ''; ?>">Active</a>
-    <a href="index.php?page=clients&status=inactive" class="filter-btn <?php echo $statusFilter==='inactive' ? 'active' : ''; ?>">Inactive</a>
-    <a href="index.php?page=clients&status=completed" class="filter-btn <?php echo $statusFilter==='completed' ? 'active' : ''; ?>">Completed</a>
+    <a href="<?php echo clientsUrl($filters, ['status' => '']); ?>" class="filter-btn <?php echo !$statusFilter ? 'active' : ''; ?>">All (<?php echo $counts['all']; ?>)</a>
+    <?php foreach (clientStatuses() as $cs): ?>
+      <a href="<?php echo clientsUrl($filters, ['status' => $cs]); ?>" class="filter-btn <?php echo $statusFilter === $cs ? 'active' : ''; ?>"><?php echo clientStatusLabel($cs); ?> (<?php echo $counts[$cs]; ?>)</a>
+    <?php endforeach; ?>
   </div>
   <div class="toolbar-right">
     <form method="get" action="index.php" class="search-bar">
@@ -61,12 +57,21 @@ $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <table class="data-table">
           <thead>
             <tr>
-              <th>Client</th>
+              <th>
+                <a href="<?php echo clientsUrl($filters, ['sort' => 'name', 'dir' => ($filters['sort'] === 'name' && $filters['dir'] === 'asc') ? 'desc' : 'asc']); ?>" class="th-sort">
+                  Client <i class="bi bi-arrow-down-up"></i>
+                </a>
+              </th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Concern</th>
-              <th>Sessions</th>
+              <th>Next appointment</th>
+              <th>Intake</th>
               <th>Status</th>
+              <th>
+                <a href="<?php echo clientsUrl($filters, ['sort' => 'activity', 'dir' => ($filters['sort'] === 'activity' && $filters['dir'] === 'desc') ? 'asc' : 'desc']); ?>" class="th-sort">
+                  Last activity <i class="bi bi-arrow-down-up"></i>
+                </a>
+              </th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -81,16 +86,25 @@ $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($c['email']); ?>"><?php echo htmlspecialchars($c['email']); ?></a></td>
                 <td class="td-nowrap"><?php echo htmlspecialchars($c['phone'] ?? '-'); ?></td>
-                <td><?php echo htmlspecialchars($c['concern'] ?: ($c['matched_concern'] ?? '-')); ?></td>
-                <td><?php echo $c['session_count']; ?></td>
-                <td><span class="badge badge-<?php echo $c['status']; ?>"><?php echo $c['status']; ?></span></td>
+                <td class="td-nowrap td-muted"><?php echo $c['next_appointment'] ? date('d M Y', strtotime($c['next_appointment'])) : '—'; ?></td>
+                <td class="td-nowrap"><?php echo $c['intake_submitted_at']
+                    ? '<span class="badge badge-intake-submitted">Submitted</span>'
+                    : '<span class="badge badge-intake-sent">Not yet</span>'; ?></td>
+                <td><span class="badge <?php echo clientStatusBadgeClass($c['status']); ?>"><?php echo clientStatusLabel($c['status']); ?></span></td>
+                <td class="td-nowrap td-muted"><?php
+                    $lastActivity = max(
+                        strtotime($c['last_note_at'] ?: $c['created_at']),
+                        strtotime($c['updated_at'] ?: $c['created_at'])
+                    );
+                    echo date('d M Y', $lastActivity);
+                ?></td>
                 <td>
                   <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
                 </td>
               </tr>
             <?php endforeach; ?>
             <tr id="clients-no-matches" style="display: none;">
-              <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: var(--clr-text-muted);">
+              <td colspan="8" style="text-align: center; padding: 2.5rem 1rem; color: var(--clr-text-muted);">
                 <i class="bi bi-search" style="font-size: 1.75rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
                 <p style="margin: 0; font-size: 0.9rem;">No clients match your search criteria</p>
               </td>
@@ -103,7 +117,7 @@ $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <?php foreach ($clients as $c): 
           $initials = strtoupper(substr($c['first_name'],0,1) . substr($c['last_name'],0,1));
           $fullName = htmlspecialchars($c['first_name'] . ' ' . $c['last_name']);
-          $concernText = htmlspecialchars($c['concern'] ?: ($c['matched_concern'] ?? '-'));
+          $concernText = htmlspecialchars($c['concern'] ?: '-');
         ?>
           <div class="grid-card client-item" data-name="<?php echo htmlspecialchars(strtolower($c['first_name'] . ' ' . $c['last_name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($c['email'])); ?>">
             <div style="flex:1; display:flex; flex-direction:column;">
@@ -112,7 +126,7 @@ $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                   <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.75rem;margin-right:0.25rem;"><?php echo $initials; ?></div>
                   <span><?php echo $fullName; ?></span>
                 </div>
-                <span class="badge badge-<?php echo $c['status']; ?>"><?php echo $c['status']; ?></span>
+                <span class="badge <?php echo clientStatusBadgeClass($c['status']); ?>"><?php echo clientStatusLabel($c['status']); ?></span>
               </div>
               <div class="grid-card-body" style="margin-top:0.5rem;">
                 <div class="grid-card-item" title="Email" style="margin-bottom:0.25rem;">

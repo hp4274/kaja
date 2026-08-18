@@ -10,7 +10,10 @@ require_once __DIR__ . '/../../includes/intake-data.php';
 $db = getDbConnection();
 
 // KPI Queries
-$totalClients    = $db->query("SELECT COUNT(*) FROM `clients` WHERE `status`='active'")->fetchColumn();
+// Archived clients are excluded everywhere, including here. A soft-deleted
+// client still counted on the dashboard is the failure soft delete exists to
+// prevent.
+$totalClients    = $db->query("SELECT COUNT(*) FROM `clients` WHERE `status`='active' AND `archived_at` IS NULL")->fetchColumn();
 $upcomingSessions= $db->query("SELECT COUNT(*) FROM `sessions` WHERE `session_date` >= CURDATE() AND `status`='scheduled'")->fetchColumn();
 // Every lead still at 'new', with no age cap. A lead ignored for five weeks
 // is more urgent than one that arrived today, not less; the old 30-day window
@@ -197,6 +200,11 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               'intake_reminder_sent' => ['bi-bell', 'amber'],
               'intake_submitted' => ['bi-clipboard-check', 'green'],
               'intake_reviewed' => ['bi-clipboard-check', 'green'],
+              'clients_merged' => ['bi-arrow-left-right', 'teal'],
+              'client_archived' => ['bi-archive', 'amber'],
+              'document_uploaded' => ['bi-file-earmark-arrow-up', 'blue'],
+              'document_downloaded' => ['bi-file-earmark-arrow-down', 'blue'],
+              'document_archived' => ['bi-file-earmark-x', 'amber'],
             ];
             $ic = $iconMap[$act['action']] ?? ['bi-circle', 'teal'];
             $timeAgo = '';
