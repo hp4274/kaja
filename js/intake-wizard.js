@@ -163,6 +163,49 @@
     });
   }
 
+  // ---- Submitting from the wrong step -------------------------------------
+  //
+  // The form's own submit handler finds the first :invalid control and calls
+  // focus() on it. Once the wizard is paginating, every step but the current
+  // one is hidden, and a hidden control cannot be focused or scrolled to — so
+  // an unanswered question three steps back makes the Submit button look
+  // broken: nothing moves, nothing is highlighted, nothing is explained.
+  //
+  // Capture phase, so this runs before the page's own bubbling handler and the
+  // offending step is already visible by the time it looks for the field.
+  form.addEventListener('submit', function (e) {
+    if (form.checkValidity()) {
+      return;
+    }
+
+    var invalid = form.querySelector(':invalid');
+    if (!invalid) {
+      return;
+    }
+
+    var owner = invalid.closest('.intake-step');
+    if (!owner) {
+      return;
+    }
+
+    var index = steps.findIndex(function (s) { return s.el === owner; });
+    if (index === -1 || index === current) {
+      return;   // already looking at it; the page's own handler can cope
+    }
+
+    // Stop the submit here: the page handler would focus a control the person
+    // still cannot see, because the step swap below has not painted yet.
+    e.preventDefault();
+    e.stopPropagation();
+
+    show(index);
+    if (typeof invalid.reportValidity === 'function') {
+      invalid.reportValidity();
+    } else {
+      invalid.focus();
+    }
+  }, true);
+
   // ---- Conditional fields -------------------------------------------------
   var conditionals = Array.prototype.slice.call(form.querySelectorAll('[data-reveal-when]'));
 
