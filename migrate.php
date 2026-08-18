@@ -449,6 +449,85 @@ try {
         }
     );
 
+    // ---- 12. sessions module ---------------------------------------------
+
+    step('sessions.start_time and end_time',
+        tableExists($db, 'sessions') && !columnExists($db, 'sessions', 'start_time'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `sessions`
+                ADD COLUMN `start_time` DATETIME NULL AFTER `client_id`,
+                ADD COLUMN `end_time` DATETIME NULL AFTER `start_time`
+            ");
+            // Backfill from the columns being retired. duration_minutes may be
+            // null on old rows; 60 was the historical default.
+            $db->exec("
+                UPDATE `sessions`
+                SET `start_time` = TIMESTAMP(`session_date`, `session_time`),
+                    `end_time`   = TIMESTAMP(`session_date`, `session_time`)
+                                 + INTERVAL COALESCE(`duration_minutes`, 60) MINUTE
+                WHERE `start_time` IS NULL
+            ");
+            $db->exec("ALTER TABLE `sessions` MODIFY `start_time` DATETIME NOT NULL");
+            $db->exec("ALTER TABLE `sessions` MODIFY `end_time` DATETIME NOT NULL");
+        }
+    );
+
+    step('sessions record fields',
+        tableExists($db, 'sessions') && !columnExists($db, 'sessions', 'rescheduled_count'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `sessions`
+                ADD COLUMN `video_link` VARCHAR(500) DEFAULT NULL,
+                ADD COLUMN `recurring_series_id` INT DEFAULT NULL,
+                ADD COLUMN `cancelled_reason` VARCHAR(500) DEFAULT NULL,
+                ADD COLUMN `rescheduled_count` INT NOT NULL DEFAULT 0,
+                ADD COLUMN `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
+                ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ");
+        }
+    );
+
+    step('sessions indexes for range and series lookups',
+        tableExists($db, 'sessions') && !indexExists($db, 'sessions', 'idx_start'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `sessions` ADD INDEX `idx_start` (`start_time`)");
+            if (!indexExists($db, 'sessions', 'idx_series')) {
+                $db->exec("ALTER TABLE `sessions` ADD INDEX `idx_series` (`recurring_series_id`)");
+            }
+            if (!indexExists($db, 'sessions', 'idx_client_start')) {
+                $db->exec("ALTER TABLE `sessions` ADD INDEX `idx_client_start` (`client_id`, `start_time`)");
+            }
+        }
+    );
+
+    step('sessions.status: scheduled becomes confirmed',
+        tableExists($db, 'sessions') && !enumHasValue($db, 'sessions', 'status', 'confirmed'),
+        function (PDO $db) {
+            $db->exec("
+                ALTER TABLE `sessions` MODIFY `status`
+                ENUM('scheduled','pending','confirmed','completed','cancelled','no-show')
+                NOT NULL DEFAULT 'pending'
+            ");
+            // Existing rows were already treated as locked in, so they become
+            // confirmed. Demoting them to pending would silently un-confirm
+            // real appointments people are expecting to attend.
+            $db->exec("UPDATE `sessions` SET `status`='confirmed' WHERE `status`='scheduled'");
+            $db->exec("
+                ALTER TABLE `sessions` MODIFY `status`
+                ENUM('pending','confirmed','completed','cancelled','no-show')
+                NOT NULL DEFAULT 'pending'
+            ");
+        }
+    );
+
+    step('client_notes.session_id',
+        tableExists($db, 'client_notes') && !columnExists($db, 'client_notes', 'session_id'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `client_notes` ADD COLUMN `session_id` INT DEFAULT NULL");
+        }
+    );
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo "MIGRATION FAILED\n" . $e->getMessage() . "\n";

@@ -62,10 +62,10 @@ test('sort by name is alphabetical', function () {
 
 test('the next appointment is the soonest future scheduled session', function () {
     $ids = seedClients();
-    foreach ([['2020-01-01','scheduled'], ['2030-06-01','scheduled'], ['2027-01-01','cancelled']] as $s) {
-        testDb()->prepare('INSERT INTO `sessions` (`client_id`,`session_date`,`session_time`,`status`)
-                           VALUES (:c,:d,"10:00:00",:st)')
-            ->execute([':c'=>$ids['anita'], ':d'=>$s[0], ':st'=>$s[1]]);
+    foreach ([['2020-01-01','confirmed'], ['2030-06-01','confirmed'], ['2027-01-01','cancelled']] as $s) {
+        testDb()->prepare('INSERT INTO `sessions` (`client_id`,`start_time`,`end_time`,`status`)
+                           VALUES (:c, CONCAT(:d," 10:00:00"), CONCAT(:d2," 11:00:00"), :st)')
+            ->execute([':c'=>$ids['anita'], ':d'=>$s[0], ':d2'=>$s[0], ':st'=>$s[1]]);
     }
     $rows = fetchClients(testDb(), ['q' => 'anita']);
     assertSame('2030-06-01', $rows[0]['next_appointment'],

@@ -185,16 +185,36 @@ CREATE TABLE IF NOT EXISTS `clients` (
 ) ENGINE=InnoDB;
 
 -- 6. Sessions Table
+-- start_time/end_time are real DATETIMEs, not a DATE plus a TIME plus a
+-- duration. Overlap becomes a range comparison; deriving the end from a
+-- duration made it string arithmetic that could not cross midnight.
 CREATE TABLE IF NOT EXISTS `sessions` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `client_id` INT NOT NULL,
-    `session_date` DATE NOT NULL,
-    `session_time` TIME NOT NULL,
-    `duration_minutes` INT DEFAULT 60,
+    `start_time` DATETIME NOT NULL,
+    `end_time` DATETIME NOT NULL,
     `session_type` ENUM('online','inperson') DEFAULT 'online',
-    `status` ENUM('scheduled','completed','cancelled','no-show') DEFAULT 'scheduled',
+    -- pending -> confirmed -> completed, with cancelled and no-show as exits.
+    -- no-show is deliberately not a flavour of cancelled: no advance notice,
+    -- different follow-up, and its own line on the dashboard.
+    `status` ENUM('pending','confirmed','completed','cancelled','no-show') NOT NULL DEFAULT 'pending',
+    -- One static practice room, copied in at booking so the record keeps the
+    -- link it was actually sent with.
+    `video_link` VARCHAR(500) DEFAULT NULL,
+    -- Groups the rows generated from one recurrence. Real rows, not a rule:
+    -- editing a single occurrence is then an ordinary update.
+    `recurring_series_id` INT DEFAULT NULL,
+    `cancelled_reason` VARCHAR(500) DEFAULT NULL,
+    -- A cheap signal that a slot keeps moving, without full history logging.
+    `rescheduled_count` INT NOT NULL DEFAULT 0,
+    -- Set once by the reminder pass so a session is never chased twice.
+    `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
     `notes` TEXT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_start` (`start_time`),
+    KEY `idx_series` (`recurring_series_id`),
+    KEY `idx_client_start` (`client_id`, `start_time`),
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -209,6 +229,9 @@ CREATE TABLE IF NOT EXISTS `client_notes` (
     -- A correction is a NEW note pointing at the one it corrects. Nothing is
     -- ever overwritten, so the original stays readable beside the fix.
     `corrects_note_id` INT DEFAULT NULL,
+    -- Nullable: a note about a specific session says which; a general or
+    -- administrative note is about the client, not an appointment.
+    `session_id` INT DEFAULT NULL,
     `content` TEXT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE

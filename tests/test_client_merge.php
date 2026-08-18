@@ -26,8 +26,8 @@ function mergePair() {
 test('everything the loser owned moves to the survivor', function () {
     $ids = mergePair();
 
-    testDb()->prepare('INSERT INTO `sessions` (`client_id`,`session_date`,`session_time`)
-                       VALUES (:c,"2026-09-01","10:00:00")')->execute([':c' => $ids['dupe']]);
+    testDb()->prepare('INSERT INTO `sessions` (`client_id`,`start_time`,`end_time`)
+                       VALUES (:c,"2026-09-01 10:00:00","2026-09-01 11:00:00")')->execute([':c' => $ids['dupe']]);
     testDb()->prepare('INSERT INTO `client_notes` (`client_id`,`content`)
                        VALUES (:c,"note on the duplicate")')->execute([':c' => $ids['dupe']]);
     testDb()->prepare('INSERT INTO `client_fees` (`client_id`,`amount`,`fee_date`)

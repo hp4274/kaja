@@ -16,10 +16,10 @@ function clientListSql(array $filters) {
     // would silently be wrong.
     $sql = '
         SELECT c.*,
-               (SELECT MIN(s.`session_date`) FROM `sessions` s
+               (SELECT MIN(DATE(s.`start_time`)) FROM `sessions` s
                  WHERE s.`client_id` = c.`id`
-                   AND s.`status` = "scheduled"
-                   AND s.`session_date` >= CURDATE())            AS `next_appointment`,
+                   AND s.`status` IN ("pending","confirmed")
+                   AND s.`start_time` >= NOW())                  AS `next_appointment`,
                (SELECT MAX(n.`created_at`) FROM `client_notes` n
                  WHERE n.`client_id` = c.`id`)                   AS `last_note_at`,
                (SELECT COUNT(*) FROM `sessions` s2
