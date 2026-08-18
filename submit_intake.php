@@ -38,6 +38,7 @@ require_once __DIR__ . '/includes/intake-repo.php';
 require_once __DIR__ . '/includes/intake-schema.php';
 require_once __DIR__ . '/includes/intake-data.php';
 require_once __DIR__ . '/includes/mail-queue.php';
+require_once __DIR__ . '/includes/mailer.php';
 
 function intakeFail($error, $code = 400) {
     http_response_code($code);
@@ -272,11 +273,7 @@ if ($notifyTo) {
 "
                . $reviewUrl . "
 ";
-    $headers   = 'From: ' . $notifyTo . "
-Content-Type: text/plain; charset=UTF-8
-";
-
-    if (!@mail($notifyTo, $subject, $body, $headers)) {
+    if (!sendMail($notifyTo, $subject, $body)) {
         // Queued rather than dropped: a submitted intake nobody hears about is
         // a client sitting unreviewed with nothing on screen to explain why.
         queueFailedMail([

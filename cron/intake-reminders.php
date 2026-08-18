@@ -26,6 +26,7 @@ require_once __DIR__ . '/../includes/settings.php';
 require_once __DIR__ . '/../includes/intake-token.php';
 require_once __DIR__ . '/../includes/intake-repo.php';
 require_once __DIR__ . '/../includes/mail-queue.php';
+require_once __DIR__ . '/../includes/mailer.php';
 require_once __DIR__ . '/../includes/session-mail.php';
 
 define('INTAKE_REMINDERS_LOADED', true);
@@ -41,20 +42,12 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
 
     $drained = drainQueuedMail(function (array $payload) {
         if (($payload['kind'] ?? '') === 'session_mail') {
-            return @mail($payload['to'], $payload['subject'], $payload['body'],
-                'From: ' . getSetting('practice_email') . "
-Content-Type: text/plain; charset=UTF-8
-");
+            return sendMail($payload['to'], $payload['subject'], $payload['body']);
         }
         if (($payload['kind'] ?? '') === 'intake_review') {
-            return @mail(
-                $payload['to'],
+            return sendMail($payload['to'],
                 'Intake ready for review - ' . $payload['name'],
-                'Review: ' . $payload['url'] . PHP_EOL,
-                'From: ' . $payload['to'] . "
-Content-Type: text/plain; charset=UTF-8
-"
-            );
+                'Review: ' . $payload['url'] . PHP_EOL);
         }
         if (($payload['kind'] ?? '') === 'intake_reminder') {
             return sendIntakeReminderEmail($payload['to'], $payload['name'], $payload['url'], $payload['expires']);

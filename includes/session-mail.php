@@ -11,6 +11,7 @@
 require_once __DIR__ . '/../db-config.php';
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/mail-queue.php';
+require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/session-repo.php';
 
 /** The variables every session template can use. */
@@ -63,11 +64,8 @@ function sendSessionMail(PDO $db, $sessionId, $kind) {
 
     $subject = renderNotificationTemplate(getSetting($keys[$kind][0]), $payload['vars']);
     $body    = renderNotificationTemplate(getSetting($keys[$kind][1]), $payload['vars']);
-    $from    = getSetting('practice_email');
-    $headers = 'From: ' . $from . "\r\nReply-To: " . $from
-             . "\r\nContent-Type: text/plain; charset=UTF-8\r\n";
 
-    if (@mail($payload['to'], $subject, $body, $headers)) {
+    if (sendMail($payload['to'], $subject, $body)) {
         return true;
     }
 

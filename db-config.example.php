@@ -22,6 +22,17 @@ if (!defined('INTAKE_ENCRYPTION_KEY')) {
     define('INTAKE_ENCRYPTION_KEY', '');
 }
 
+// Outbound SMTP. Kept here rather than in the settings table on purpose: a
+// password that round-trips through a web form and a database has two more
+// places to leak from. This file is gitignored.
+//
+// For Gmail this must be an App Password, not the account password:
+// https://myaccount.google.com/apppasswords
+if (!defined('SMTP_HOST')) { define('SMTP_HOST', 'smtp.gmail.com'); }
+if (!defined('SMTP_PORT')) { define('SMTP_PORT', 587); }
+if (!defined('SMTP_USER')) { define('SMTP_USER', ''); }
+if (!defined('SMTP_PASS')) { define('SMTP_PASS', ''); }
+
 function getDbConnection() {
     try {
         $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";

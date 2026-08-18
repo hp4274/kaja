@@ -17,6 +17,7 @@
  */
 
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/mailer.php';
 
 /**
  * Absolute base URL of the install, with trailing slash.
@@ -180,12 +181,9 @@ function sendIntakeLinkEmail($toEmail, $recipientName, $url, $expiresAt) {
     $subject = renderNotificationTemplate(getSetting('notify_lead_confirmed_subject'), $vars);
     $body    = renderNotificationTemplate(getSetting('notify_lead_confirmed_body'), $vars);
 
-    $headers  = "From: {$practiceEmail}\r\n";
-    $headers .= "Reply-To: {$practiceEmail}\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-
-    return @mail($toEmail, $subject, $body, $headers);
+    // Headers are the mailer's job now; it has to set From to the
+    // authenticated account regardless, because Gmail rewrites it anyway.
+    return sendMail($toEmail, $subject, $body, $practiceEmail);
 }
 
 /**
@@ -210,10 +208,7 @@ function sendIntakeReminderEmail($toEmail, $recipientName, $url, $expiresAt) {
     $body .= "If you no longer need an appointment, you can ignore this message.\n\n";
     $body .= "Best regards,\n{$practiceName}";
 
-    $headers  = "From: {$practiceEmail}\r\n";
-    $headers .= "Reply-To: {$practiceEmail}\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-
-    return @mail($toEmail, $subject, $body, $headers);
+    // Headers are the mailer's job now; it has to set From to the
+    // authenticated account regardless, because Gmail rewrites it anyway.
+    return sendMail($toEmail, $subject, $body, $practiceEmail);
 }
