@@ -1538,3 +1538,7 @@ body.admin-body.admin-dark-theme {
   padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--clr-border-light);
 }
+
+/* Client lifecycle: 'completed' means treatment finished, distinct from a
+   completed session, so it reads teal rather than green. */
+.badge-client-completed { background: var(--clr-primary-light); color: var(--clr-primary); }
