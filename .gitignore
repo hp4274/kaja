@@ -1,0 +1,10 @@
+# Holds the database credentials AND the intake encryption key.
+# Copy db-config.example.php to db-config.php on each install, then run
+# `php tools/generate-key.php` once and paste the key in.
+/db-config.php
+
+# Queued leads and failed mail. Both contain personal data.
+/storage/queue/
+
+# Local scratch
+/_backup_pre_formfix/
