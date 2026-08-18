@@ -3,10 +3,26 @@ DROP DATABASE IF EXISTS `kaja_db`;
 CREATE DATABASE `kaja_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `kaja_db`;
 
--- NOTE: the `leads` table is defined further down, after `users`. It carries a
--- foreign key to users(id), so it cannot be created before that table exists.
+-- Tables are created in dependency order, so a foreign key never points at a
+-- table that does not exist yet. That is why `users` comes before `leads`,
+-- and `clients` before everything that hangs off it.
+--
+--   1  intake             short contact-form messages
+--   2  patient-intake     the questionnaire archive (legacy; see clients.intake_data)
+--   3  users              admin logins
+--   4  leads              public form submissions
+--   5  lead_notes         append-only notes on a lead
+--   6  clients            the people in treatment
+--   7  sessions           appointments
+--   8  client_notes       append-only clinical and administrative notes
+--   9  client_fees        the manual payment ledger
+--  10  client_documents   metadata only; the files live outside the project
+--  11  activity_log       the audit trail every module writes to
+--  12  blogs              public site content
+--  13  settings           key/value configuration
+--  14  intake_links       tokenised, single-use intake invitations
 
--- 2. Short Intakes Table (Intake)
+-- 1. Short Intakes Table (Intake)
 CREATE TABLE IF NOT EXISTS `intake` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `email` VARCHAR(255) NOT NULL,
@@ -14,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `intake` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 3. Patient Intakes Table (Patient-Intake)
+-- 2. Patient Intakes Table (Patient-Intake)
 CREATE TABLE IF NOT EXISTS `patient-intake` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     -- Personal Information
@@ -87,7 +103,7 @@ CREATE TABLE IF NOT EXISTS `patient-intake` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 4. Users Table (Admin / Therapist)
+-- 3. Users Table (Admin / Therapist)
 CREATE TABLE IF NOT EXISTS `users` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `username` VARCHAR(100) NOT NULL UNIQUE,
@@ -96,7 +112,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 1. Leads Table (from index.html & appointment.html forms)
+-- 4. Leads Table (from index.html & appointment.html forms)
 -- Defined after `users` because assigned_staff_id references it.
 CREATE TABLE IF NOT EXISTS `leads` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -134,7 +150,7 @@ CREATE TABLE IF NOT EXISTS `leads` (
         FOREIGN KEY (`assigned_staff_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- Lead Notes Table
+-- 5. Lead Notes Table
 -- Free-text thread on a lead, attributed to the acting user. user_id is
 -- nullable so a note written by a background job reads as "System" rather
 -- than pretending a person wrote it.
@@ -151,7 +167,7 @@ CREATE TABLE IF NOT EXISTS `lead_notes` (
         FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 5. Clients Table (converted from leads or patient intakes)
+-- 6. Clients Table (converted from leads or patient intakes)
 CREATE TABLE IF NOT EXISTS `clients` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `lead_id` INT DEFAULT NULL,
@@ -184,7 +200,7 @@ CREATE TABLE IF NOT EXISTS `clients` (
     `merged_into_id` INT DEFAULT NULL
 ) ENGINE=InnoDB;
 
--- 6. Sessions Table
+-- 7. Sessions Table
 -- start_time/end_time are real DATETIMEs, not a DATE plus a TIME plus a
 -- duration. Overlap becomes a range comparison; deriving the end from a
 -- duration made it string arithmetic that could not cross midnight.
@@ -218,7 +234,7 @@ CREATE TABLE IF NOT EXISTS `sessions` (
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 7. Client Notes Table
+-- 8. Client Notes Table
 CREATE TABLE IF NOT EXISTS `client_notes` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `client_id` INT NOT NULL,
@@ -237,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `client_notes` (
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 8. Client Fees Table
+-- 9. Client Fees Table
 CREATE TABLE IF NOT EXISTS `client_fees` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `client_id` INT NOT NULL,
@@ -252,7 +268,7 @@ CREATE TABLE IF NOT EXISTS `client_fees` (
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Client Documents
+-- 10. Client Documents Table
 -- The file itself lives outside the project at document_storage_path. Only its
 -- metadata is here, and stored_name is generated: an uploaded filename is
 -- attacker-controlled and must never become a path.
@@ -274,7 +290,7 @@ CREATE TABLE IF NOT EXISTS `client_documents` (
         FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 9. Activity Log Table
+-- 11. Activity Log Table
 CREATE TABLE IF NOT EXISTS `activity_log` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `action` VARCHAR(100) NOT NULL,
@@ -284,7 +300,7 @@ CREATE TABLE IF NOT EXISTS `activity_log` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 10. Blogs Table
+-- 12. Blogs Table
 CREATE TABLE IF NOT EXISTS `blogs` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `title` VARCHAR(255) NOT NULL,
@@ -298,7 +314,7 @@ CREATE TABLE IF NOT EXISTS `blogs` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 11. Settings Table
+-- 13. Settings Table
 -- Upstream of every module. Written via setSetting(), which uses
 -- INSERT ... ON DUPLICATE KEY UPDATE so new keys never need a migration.
 CREATE TABLE IF NOT EXISTS `settings` (
@@ -307,7 +323,7 @@ CREATE TABLE IF NOT EXISTS `settings` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 12. Intake Links Table (tokenized, single-use intake invitations)
+-- 14. Intake Links Table (tokenised, single-use intake invitations)
 -- expires_at and form_version are PINNED at send time: changing the matching
 -- setting later must not alter links already sitting in someone's inbox.
 -- client_id is nullable because the short-intake path knows only an email
