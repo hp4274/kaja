@@ -65,6 +65,66 @@ function settingDefaults() {
         'practice_video_link'      => '',
         'session_reminder_hours'   => '24',
 
+        // PHP defaults to UTC on this install while MySQL runs on local time.
+        // Left alone, a session written with PHP's clock and compared against
+        // MySQL's NOW() is hours out: the sweep completes future sessions and
+        // reminders never fire. Every request aligns PHP to this.
+        'practice_timezone'        => 'Asia/Kolkata',
+
+        // Session mail. {{client_name}}, {{session_time}}, {{session_type}},
+        // {{video_link}}, {{cancel_reason}} and {{practice_name}} substitute.
+        'notify_session_confirmed_subject' => 'Your session on {{session_time}} - {{practice_name}}',
+        'notify_session_confirmed_body'    =>
+            "Hello {{client_name}},
+
+" .
+            "Your session is confirmed for {{session_time}}.
+
+" .
+            "Format: {{session_type}}
+" .
+            "Joining link: {{video_link}}
+
+" .
+            "If you need to change or cancel it, just reply to this email.
+
+" .
+            "Best regards,
+{{practice_name}}",
+
+        'notify_session_cancelled_subject' => 'Your session on {{session_time}} has been cancelled',
+        'notify_session_cancelled_body'    =>
+            "Hello {{client_name}},
+
+" .
+            "Your session on {{session_time}} has been cancelled.
+
+" .
+            "{{cancel_reason}}
+
+" .
+            "Reply to this email and we will find another time.
+
+" .
+            "Best regards,
+{{practice_name}}",
+
+        'notify_session_reminder_subject'  => 'Reminder: your session on {{session_time}}',
+        'notify_session_reminder_body'     =>
+            "Hello {{client_name}},
+
+" .
+            "This is a reminder of your session on {{session_time}}.
+
+" .
+            "Format: {{session_type}}
+" .
+            "Joining link: {{video_link}}
+
+" .
+            "Best regards,
+{{practice_name}}",
+
         // Uploads. Shared with Patient Intake the day it gains a file
         // question -- one setting, two consumers.
         'upload_max_mb'         => '10',
@@ -168,3 +228,29 @@ function renderNotificationTemplate($template, array $vars) {
     }
     return strtr((string) $template, $map);
 }
+
+/**
+ * Put PHP on the same clock as the database.
+ *
+ * MySQL runs on the server's local time; PHP defaults to UTC unless
+ * date.timezone is set in php.ini, which it is not here. That gap silently
+ * breaks every comparison between a time PHP wrote and a time MySQL evaluates
+ * — a session booked for an hour from now reads as hours in the past.
+ *
+ * Called once per request from this file, so anything that requires settings
+ * gets it for free.
+ */
+function applyPracticeTimezone() {
+    static $applied = false;
+    if ($applied) {
+        return;
+    }
+    $applied = true;
+
+    $tz = getSetting('practice_timezone', 'Asia/Kolkata');
+    if ($tz && in_array($tz, timezone_identifiers_list(), true)) {
+        date_default_timezone_set($tz);
+    }
+}
+
+applyPracticeTimezone();

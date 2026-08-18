@@ -4,6 +4,9 @@
  *
  *   php cron/intake-reminders.php
  *
+ * Despite the name this is the practice's single hourly job: it also sweeps
+ * finished sessions to completed and sends session reminders.
+ *
  * Three passes, in order: retry queued mail, expire overdue links, then chase
  * the stale ones. Retrying first clears a transient outage before we decide
  * who else to chase; expiring second means nobody is chased with a link that
@@ -23,6 +26,7 @@ require_once __DIR__ . '/../includes/settings.php';
 require_once __DIR__ . '/../includes/intake-token.php';
 require_once __DIR__ . '/../includes/intake-repo.php';
 require_once __DIR__ . '/../includes/mail-queue.php';
+require_once __DIR__ . '/../includes/session-mail.php';
 
 define('INTAKE_REMINDERS_LOADED', true);
 
@@ -36,6 +40,12 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
     $db = getDbConnection();
 
     $drained = drainQueuedMail(function (array $payload) {
+        if (($payload['kind'] ?? '') === 'session_mail') {
+            return @mail($payload['to'], $payload['subject'], $payload['body'],
+                'From: ' . getSetting('practice_email') . "
+Content-Type: text/plain; charset=UTF-8
+");
+        }
         if (($payload['kind'] ?? '') === 'intake_review') {
             return @mail(
                 $payload['to'],
@@ -55,6 +65,25 @@ Content-Type: text/plain; charset=UTF-8
 
     $expired = expireOverdueIntakeLinks($db);
     echo $expired . ' link(s) expired' . PHP_EOL;
+
+    // Sessions whose end time has passed become completed. Only confirmed
+    // ones: a session nobody confirmed should not silently become one that
+    // happened.
+    $swept = sweepCompletedSessions($db);
+    echo $swept . ' session(s) marked completed' . PHP_EOL;
+
+    // Session reminders, one per session ever.
+    $reminderHours = getSettingInt('session_reminder_hours', 24);
+    $due = sessionsDueReminder($db, $reminderHours);
+    echo count($due) . ' session reminder(s) due inside ' . $reminderHours . 'h' . PHP_EOL;
+
+    foreach ($due as $sid) {
+        $sent = sendSessionMail($db, $sid, 'reminder');
+        // The flag is set either way: a mail server down for an hour must not
+        // become the same client reminded every hour after it recovers.
+        markSessionReminded($db, $sid);
+        echo '  session #' . $sid . ' ' . ($sent ? 'reminded' : 'MAIL FAILED (queued)') . PHP_EOL;
+    }
 
     $hours = getSettingInt('admin_reminder_hours', 48);
     $stale = staleIntakeLinks($db, $hours);

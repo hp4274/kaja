@@ -23,6 +23,7 @@ require_once __DIR__ . '/../../db-config.php';
 require_once __DIR__ . '/../../includes/settings.php';
 require_once __DIR__ . '/../../includes/session-repo.php';
 require_once __DIR__ . '/../../includes/session-recurring.php';
+require_once __DIR__ . '/../../includes/session-mail.php';
 
 $db     = getDbConnection();
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
@@ -99,7 +100,15 @@ try {
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_scheduled',:d,'client',:rid)")
                ->execute([':d' => $booked . ' session(s) booked for ' . sessionLabel($db, $sessionId), ':rid' => $clientId]);
 
-            echo json_encode(['success' => true, 'session_id' => $sessionId, 'booked' => $booked]);
+            // After the write, never inside it. A dead mail server must not
+            // undo a booking that is already correct.
+            $mailed = null;
+            if (fetchSession($db, $sessionId)['status'] === 'confirmed') {
+                $mailed = sendSessionMail($db, $sessionId, 'confirmation');
+            }
+
+            echo json_encode(['success' => true, 'session_id' => $sessionId,
+                              'booked' => $booked, 'mail_sent' => $mailed]);
             break;
 
         case 'update_status':
@@ -144,6 +153,17 @@ try {
             if ($changed === 0) {
                 echo json_encode(['success' => false, 'error' => 'Nothing could be changed']);
                 exit;
+            }
+
+            // Mail goes out per session that actually moved, after the writes.
+            if ($status === 'confirmed' || $status === 'cancelled') {
+                $kind = ($status === 'confirmed') ? 'confirmation' : 'cancellation';
+                foreach ($targets as $tid) {
+                    if (in_array((int) $tid, $skipped, true)) {
+                        continue;
+                    }
+                    sendSessionMail($db, $tid, $kind);
+                }
             }
 
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_status_changed',:d,'session',:rid)")
