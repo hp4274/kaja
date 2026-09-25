@@ -32,7 +32,7 @@ $_local = [
     'SMTP_HOST'             => 'smtp.gmail.com',
     'SMTP_PORT'             => 587,
     'SMTP_USER'             => 'harshlpatel.4274@gmail.com',
-    'SMTP_PASS'             => 'ttkb isjs vgah pcem',',
+    'SMTP_PASS'             => 'ttkbisjsvghapcem',
 ];
 
 // Environment wins over this file. Guarded so a caller that already chose a

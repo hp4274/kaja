@@ -48,8 +48,9 @@ function sendMail($to, $subject, $body, $replyTo = null, $background = '') {
     $port    = defined('SMTP_PORT') ? (int) SMTP_PORT : 587;
     $user    = SMTP_USER;
     // Google prints app passwords in groups of four. The spaces are display
-    // only and must not be sent.
-    $pass    = str_replace(' ', '', SMTP_PASS);
+    // only and must not be sent. Copied from the web page they are often
+    // non-breaking spaces, hence \s with /u rather than a plain ' '.
+    $pass    = preg_replace('/\s+/u', '', SMTP_PASS);
     $timeout = 20;
 
     $fromName = getSetting('practice_name', 'Rewire With Kajal');
