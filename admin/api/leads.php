@@ -16,6 +16,7 @@ require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-notes.php';
 require_once __DIR__ . '/../../includes/lead-confirm.php';
 require_once __DIR__ . '/../../includes/mail-queue.php';
+require_once __DIR__ . '/../../includes/respond-first.php';
 require_once __DIR__ . '/../../includes/lead-form-map.php';
 require_once __DIR__ . '/../../includes/lead-timeline.php';
 $db = getDbConnection();
@@ -167,16 +168,29 @@ try {
                 exit;
             }
 
-            // After the commit, never inside it. A dead SMTP server must not
-            // undo a correct confirm; the URL comes back either way so the
-            // therapist can pass it on by hand.
-            $mailed = null;
-            if (!$result['already'] && $lead['email'] !== '') {
+            // The write is done and correct. The email takes about four
+            // seconds of SMTP, and the admin has no reason to watch it: answer
+            // now, send after the connection is closed.
+            $sending = (!$result['already'] && $lead['email'] !== '');
+
+            respondAndContinue([
+                'success'          => true,
+                'client_id'        => $result['client_id'],
+                'already'          => $result['already'],
+                'intake_link_sent' => $sending ? null : false,
+                'intake_sending'   => $sending,
+                'intake_url'       => $result['intake_url'],
+            ]);
+
+            // Nothing below here can reach the browser. A failure has to be
+            // recorded where the admin will actually see it, which is the mail
+            // queue -- the dashboard already counts what is sitting in it.
+            if ($sending) {
                 $mailed = sendIntakeLinkEmail(
                     $lead['email'], $lead['name'], $result['intake_url'], $result['expires_at']
                 );
                 if (!$mailed) {
-                    // The confirm itself is committed and correct. Losing the
+                    // The accept itself is committed and correct. Losing the
                     // email silently would leave someone waiting for a link
                     // that never arrives, with nothing anywhere to say so.
                     queueFailedMail([
@@ -185,66 +199,10 @@ try {
                         'url'     => $result['intake_url'],
                         'expires' => $result['expires_at'],
                         'kind'    => 'intake_link',
-                    ], 'mail() returned false');
+                    ], 'SMTP send failed');
                 }
             }
-
-            echo json_encode([
-                'success'          => true,
-                'client_id'        => $result['client_id'],
-                'already'          => $result['already'],
-                'intake_link_sent' => $mailed,
-                'intake_url'       => $result['intake_url']
-            ]);
-            break;
-
-        case 'update_intake_status':
-            $email = trim($_POST['email'] ?? '');
-            $phone = trim($_POST['phone'] ?? '');
-            $status = trim($_POST['status'] ?? '');
-
-            if (empty($email) || !isValidLeadStatus($status)) {
-                echo json_encode(['success'=>false,'error'=>'Invalid parameters']);
-                exit;
-            }
-
-            // Find matching lead
-            $checkLead = $db->prepare("SELECT * FROM `leads` WHERE `email` = :email AND `phone` = :phone LIMIT 1");
-            $checkLead->execute([':email' => $email, ':phone' => $phone]);
-            $existingLead = $checkLead->fetch(PDO::FETCH_ASSOC);
-
-            if ($existingLead) {
-                $leadId = $existingLead['id'];
-                $db->prepare("UPDATE `leads` SET `status`=:s WHERE `id`=:id")
-                   ->execute([':s'=>$status, ':id'=>$leadId]);
-            } else {
-                // Fetch name from patient-intake
-                $piStmt = $db->prepare("SELECT * FROM `patient-intake` WHERE `email`=:e AND `phone`=:p LIMIT 1");
-                $piStmt->execute([':e'=>$email, ':p'=>$phone]);
-                $piRow = $piStmt->fetch(PDO::FETCH_ASSOC);
-                $name = $piRow ? ($piRow['first_name'] . ' ' . $piRow['last_name']) : 'Valued Client';
-
-                // Create a new lead/contact from this email/phone
-                $ins = $db->prepare("
-                    INSERT INTO `leads` (`name`, `email`, `phone`, `source`, `status`)
-                    VALUES (:name, :email, :phone, 'Patient Intake Form', :status)
-                ");
-                $ins->execute([
-                    ':name' => $name,
-                    ':email' => $email,
-                    ':phone' => $phone,
-                    ':status' => $status
-                ]);
-                $leadId = $db->lastInsertId();
-            }
-
-            // Log activity
-            $desc = "Lead status updated to {$status}";
-            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('status_changed',:d,'lead',:rid)")
-               ->execute([':d'=>$desc, ':rid'=>$leadId]);
-
-            echo json_encode(['success'=>true]);
-            break;
+            exit;
 
         case 'convert_intake':
             $intakeId = intval($_POST['id'] ?? 0);

@@ -63,8 +63,17 @@ $newLeadCount = $db->query("SELECT COUNT(*) FROM `leads` WHERE `status`='new'")-
       <a class="sidebar-link <?php echo $currentPage === 'forms' ? 'active' : ''; ?>" href="index.php?page=forms">
         <i class="bi bi-ui-checks"></i> Intake Form
       </a>
+    </li>
+
+    <li class="sidebar-section-label">Practice</li>
+    <li>
       <a class="sidebar-link <?php echo $currentPage === 'settings' ? 'active' : ''; ?>" href="index.php?page=settings">
         <i class="bi bi-gear"></i> Settings
+      </a>
+    </li>
+    <li>
+      <a class="sidebar-link <?php echo $currentPage === 'emails' ? 'active' : ''; ?>" href="index.php?page=emails">
+        <i class="bi bi-envelope"></i> Emails
       </a>
     </li>
   </ul>

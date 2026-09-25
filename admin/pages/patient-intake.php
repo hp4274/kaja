@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/lead-status.php';
 
+
 $db = getDbConnection();
 $stmtPI = $db->query("
     SELECT pi.*, 
@@ -60,7 +61,7 @@ function scoreClass($score, $max = 18) {
               <th>Q2 Score</th>
               <th>Total</th>
               <th>Status</th>
-              <th style="text-align:right;">Actions</th>
+              <th class="th-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -84,27 +85,26 @@ function scoreClass($score, $max = 18) {
                   <span class="score-text <?php echo scoreClass($q2); ?>"><?php echo $q2; ?>/18</span>
                 </td>
                 <td>
-                  <span class="score-text <?php echo $totalClass; ?>" style="font-size:0.92rem;"><?php echo $total; ?>/36</span>
-                  <div class="score-bar" style="width:80px;margin-top:3px;">
+                  <span class="score-text <?php echo $totalClass; ?>"><?php echo $total; ?>/36</span>
+                  <div class="score-bar is-compact">
                     <div class="score-bar-fill <?php echo $totalClass; ?>" style="width:<?php echo round(($total/36)*100); ?>%;"></div>
                   </div>
                 </td>
                 <td>
-                  <select class="status-select" onchange="updateIntakeStatus('<?php echo htmlspecialchars($pi['email'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($pi['phone'], ENT_QUOTES); ?>', this.value)" <?php echo $lstatus === 'converted' ? 'disabled' : ''; ?>>
-                    <?php foreach (leadStatuses() as $optS): ?>
-                      <option value="<?php echo $optS; ?>" <?php echo $lstatus === $optS ? 'selected' : ''; ?>><?php echo leadStatusLabel($optS); ?></option>
-                    <?php endforeach; ?>
-                  </select>
+                  <!-- Read-only, like every other status in the admin. The actions beside
+                       it are what move a lead; a dropdown here offered a second
+                       way to write a status, with different rules from the buttons. -->
+                  <span class="badge <?php echo leadStatusBadgeClass($lstatus); ?>"><?php echo leadStatusLabel($lstatus); ?></span>
                 </td>
-                <td style="text-align:right; white-space:nowrap;">
-                  <div style="display:inline-flex; align-items:center; gap:0.5rem; justify-content:flex-end;">
-                    <button class="btn btn-ghost btn-sm" onclick="openPIModal(<?php echo $pi['id']; ?>)"><i class="bi bi-eye"></i> Details</button>
+                <td class="td-actions">
+                  <div class="row-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="openIntakeDrawer(<?php echo $pi['id']; ?>)"><i class="bi bi-eye"></i> Details</button>
                     <?php if ($lstatus !== 'converted'): ?>
                       <button class="btn btn-success btn-sm" onclick="convertIntake(<?php echo $pi['id']; ?>, '<?php echo htmlspecialchars(addslashes($pi['first_name'] . ' ' . $pi['last_name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($pi['email']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($pi['phone']), ENT_QUOTES); ?>')">
                         <i class="bi bi-person-plus"></i> Convert
                       </button>
                     <?php else: ?>
-                      <a href="index.php?page=client-profile&id=<?php echo $lclientId; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
+                      <a href="index.php?page=client-profile&id=<?php echo $lclientId; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
                     <?php endif; ?>
                   </div>
                 </td>
@@ -125,64 +125,63 @@ function scoreClass($score, $max = 18) {
           $fullName = htmlspecialchars($pi['first_name'] . ' ' . $pi['last_name']);
         ?>
           <div class="grid-card">
-            <div style="flex: 1; display: flex; flex-direction: column;">
+            <div class="grid-card-inner">
               <div class="grid-card-header">
                 <div class="grid-card-title">
-                  <i class="bi bi-clipboard2-pulse" style="color:var(--clr-primary); font-size:1.15rem;"></i>
+                  <i class="bi bi-clipboard2-pulse"></i>
                   <span><?php echo $fullName; ?></span>
                 </div>
-                <div style="font-size:0.75rem;color:var(--clr-text-muted);"><?php echo date('d M Y', strtotime($pi['created_at'])); ?></div>
+                <div class="grid-card-date"><?php echo date('d M Y', strtotime($pi['created_at'])); ?></div>
               </div>
-              <div class="grid-card-body" style="margin-top: 0.5rem;">
-                <div class="grid-card-item" title="Email" style="margin-bottom:0.25rem;">
+              <div class="grid-card-body">
+                <div class="grid-card-item" title="Email">
                   <i class="bi bi-envelope"></i>
                   <a href="mailto:<?php echo htmlspecialchars($pi['email']); ?>"><?php echo htmlspecialchars($pi['email']); ?></a>
                 </div>
-                <div class="grid-card-item" title="Primary Concern" style="margin-bottom:0.25rem;">
+                <div class="grid-card-item" title="Primary Concern">
                   <i class="bi bi-heart-pulse"></i>
                   <span>Concern: <?php echo htmlspecialchars($pi['concern']); ?></span>
                 </div>
                 
                 <!-- Score displays -->
-                <div style="margin-top:0.5rem; background:var(--clr-bg); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--clr-border-light);">
-                  <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.35rem;">
+                <div class="score-box">
+                  <div class="score-box-row">
                     <span>Self-Awareness (Q1):</span>
-                    <span class="score-text <?php echo scoreClass($q1); ?>" style="font-weight:600;"><?php echo $q1; ?>/18</span>
+                    <span class="score-text <?php echo scoreClass($q1); ?>"><?php echo $q1; ?>/18</span>
                   </div>
-                  <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.5rem;">
+                  <div class="score-box-row">
                     <span>Well-being (Q2):</span>
-                    <span class="score-text <?php echo scoreClass($q2); ?>" style="font-weight:600;"><?php echo $q2; ?>/18</span>
+                    <span class="score-text <?php echo scoreClass($q2); ?>"><?php echo $q2; ?>/18</span>
                   </div>
-                  <div style="border-top:1px solid var(--clr-border-light); padding-top:0.5rem; display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;">
+                  <div class="score-box-total">
                     <strong>Total Score:</strong>
                     <div>
-                      <span class="score-text <?php echo $totalClass; ?>" style="font-weight:700; font-size:0.9rem;"><?php echo $total; ?>/36</span>
-                      <div class="score-bar" style="width:70px; margin-top:2px;">
+                      <span class="score-text <?php echo $totalClass; ?>"><?php echo $total; ?>/36</span>
+                      <div class="score-bar is-compact">
                         <div class="score-bar-fill <?php echo $totalClass; ?>" style="width:<?php echo round(($total/36)*100); ?>%;"></div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="grid-card-item" style="margin-top: 0.5rem;">
+                <div class="grid-card-item">
                   <i class="bi bi-flag"></i>
-                  <span style="font-size:0.8rem; font-weight:500; color:var(--clr-text-secondary); margin-right: 0.35rem;">Status:</span>
-                  <select class="status-select" onchange="updateIntakeStatus('<?php echo htmlspecialchars($pi['email'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($pi['phone'], ENT_QUOTES); ?>', this.value)" <?php echo $lstatus === 'converted' ? 'disabled' : ''; ?>>
-                    <?php foreach (leadStatuses() as $optS): ?>
-                      <option value="<?php echo $optS; ?>" <?php echo $lstatus === $optS ? 'selected' : ''; ?>><?php echo leadStatusLabel($optS); ?></option>
-                    <?php endforeach; ?>
-                  </select>
+                  <span class="grid-card-label">Status:</span>
+                  <!-- Read-only, like every other status in the admin. The actions beside
+                       it are what move a lead; a dropdown here offered a second
+                       way to write a status, with different rules from the buttons. -->
+                  <span class="badge <?php echo leadStatusBadgeClass($lstatus); ?>"><?php echo leadStatusLabel($lstatus); ?></span>
                 </div>
               </div>
             </div>
-            <div class="grid-card-footer" style="margin-top: 1rem;">
-              <button class="btn btn-ghost btn-sm" onclick="openPIModal(<?php echo $pi['id']; ?>)"><i class="bi bi-eye"></i> Details</button>
+            <div class="grid-card-footer">
+              <button class="btn btn-ghost btn-sm" onclick="openIntakeDrawer(<?php echo $pi['id']; ?>)"><i class="bi bi-eye"></i> Details</button>
               <?php if ($lstatus !== 'converted'): ?>
                 <button class="btn btn-success btn-sm" onclick="convertIntake(<?php echo $pi['id']; ?>, '<?php echo htmlspecialchars(addslashes($pi['first_name'] . ' ' . $pi['last_name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($pi['email']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($pi['phone']), ENT_QUOTES); ?>')">
                   <i class="bi bi-person-plus"></i> Convert
                 </button>
               <?php else: ?>
-                <a href="index.php?page=client-profile&id=<?php echo $lclientId; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
+                <a href="index.php?page=client-profile&id=<?php echo $lclientId; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
               <?php endif; ?>
             </div>
           </div>
@@ -193,23 +192,25 @@ function scoreClass($score, $max = 18) {
 </div>
 
 <!-- Patient Intake Detail Modal -->
-<div class="modal-overlay" id="piModal">
-  <div class="modal-box" style="max-width:800px;">
-    <div class="modal-header">
-      <div class="modal-title">Patient Intake Details</div>
-      <button class="modal-close" onclick="closePIModal()">&times;</button>
+<!-- A drawer, not a modal. Thirty-six answers do not fit in a box over the
+     middle of the page, and reading one person's form should not hide the list
+     you are working through. -->
+<div class="drawer-backdrop" id="piDrawerBackdrop" hidden onclick="closeIntakeDrawer()"></div>
+<aside class="drawer drawer-wide" id="piDrawer" hidden aria-labelledby="pi-drawer-name" role="dialog" aria-modal="true">
+  <div class="drawer-header">
+    <div>
+      <h2 id="pi-drawer-name">Patient intake</h2>
+      <div class="drawer-sub" id="pi-drawer-sub"></div>
     </div>
-    <div class="modal-body" id="piModalContent">
-      <!-- Populated by JS -->
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closePIModal()">Close</button>
-    </div>
+    <button class="btn btn-icon" type="button" onclick="closeIntakeDrawer()" aria-label="Close"><i class="bi bi-x-lg"></i></button>
   </div>
-</div>
+  <div class="drawer-body" id="piDrawerContent">
+    <!-- Populated by JS -->
+  </div>
+</aside>
 
 <script>
-// Store all patient intake data for modal use
+// Every submitted form, for the drawer to read without another request.
 var piData = <?php echo json_encode($patientIntakes); ?>;
 
 var q1Texts = {
@@ -254,7 +255,7 @@ var q2Texts = {
   "q2_18":"Do you feel that you are generally optimistic about your future?"
 };
 
-function openPIModal(id) {
+function openIntakeDrawer(id) {
   var pi = null;
   for (var i = 0; i < piData.length; i++) {
     if (parseInt(piData[i].id) === id) { pi = piData[i]; break; }
@@ -273,7 +274,7 @@ function openPIModal(id) {
   var html = '';
 
   // Personal info
-  html += '<div class="section-title" style="margin-top:0;">Personal Details</div>';
+  html += '<div class="section-title">Personal Details</div>';
   html += '<div class="detail-grid">';
   html += '<div><div class="detail-label">Full Name</div><div class="detail-value">' + escapeHtml(pi.first_name + ' ' + pi.last_name) + '</div></div>';
   html += '<div><div class="detail-label">Email</div><div class="detail-value">' + escapeHtml(pi.email) + '</div></div>';
@@ -281,7 +282,7 @@ function openPIModal(id) {
   html += '<div><div class="detail-label">Date of Birth</div><div class="detail-value">' + escapeHtml(pi.dob) + age + '</div></div>';
   html += '<div><div class="detail-label">City</div><div class="detail-value">' + escapeHtml(pi.city) + '</div></div>';
   html += '<div><div class="detail-label">Occupation</div><div class="detail-value">' + escapeHtml(pi.occupation) + '</div></div>';
-  html += '<div><div class="detail-label">Primary Concern</div><div class="detail-value" style="font-weight:600;">' + escapeHtml(pi.concern) + '</div></div>';
+  html += '<div><div class="detail-label">Primary Concern</div><div class="detail-value">' + escapeHtml(pi.concern) + '</div></div>';
   html += '</div>';
 
   // Preferences
@@ -300,11 +301,11 @@ function openPIModal(id) {
   var totalCls = total >= 24 ? 'high' : (total >= 12 ? 'mid' : 'low');
 
   html += '<div class="section-title">Score Summary</div>';
-  html += '<div class="detail-grid" style="grid-template-columns:repeat(3,1fr);">';
-  html += '<div><div class="detail-label">Questionnaire 1</div><div class="score-text ' + (q1s >= 12 ? 'high' : (q1s >= 6 ? 'mid' : 'low')) + '" style="font-size:1.1rem;">' + q1s + ' / 18</div></div>';
-  html += '<div><div class="detail-label">Questionnaire 2</div><div class="score-text ' + (q2s >= 12 ? 'high' : (q2s >= 6 ? 'mid' : 'low')) + '" style="font-size:1.1rem;">' + q2s + ' / 18</div></div>';
-  html += '<div><div class="detail-label">Total Score</div><div class="score-text ' + totalCls + '" style="font-size:1.3rem;font-weight:700;">' + total + ' / 36</div>';
-  html += '<div class="score-bar" style="margin-top:6px;"><div class="score-bar-fill ' + totalCls + '" style="width:' + Math.round((total/36)*100) + '%;"></div></div></div>';
+  html += '<div class="detail-grid is-thirds">';
+  html += '<div><div class="detail-label">Questionnaire 1</div><div class="score-text ' + (q1s >= 12 ? 'high' : (q1s >= 6 ? 'mid' : 'low')) + ' is-lg">' + q1s + ' / 18</div></div>';
+  html += '<div><div class="detail-label">Questionnaire 2</div><div class="score-text ' + (q2s >= 12 ? 'high' : (q2s >= 6 ? 'mid' : 'low')) + ' is-lg">' + q2s + ' / 18</div></div>';
+  html += '<div><div class="detail-label">Total Score</div><div class="score-text ' + totalCls + ' is-xl">' + total + ' / 36</div>';
+  html += '<div class="score-bar"><div class="score-bar-fill ' + totalCls + '" style="width:' + Math.round((total/36)*100) + '%;"></div></div></div>';
   html += '</div>';
 
   // Q1
@@ -316,43 +317,35 @@ function openPIModal(id) {
   }
 
   // Q2
-  html += '<div class="section-title" style="margin-top:1.5rem;">Questionnaire 2 — Well-being & Life Balance</div>';
+  html += '<div class="section-title">Questionnaire 2 — Well-being & Life Balance</div>';
   for (var key in q2Texts) {
     var ans = pi[key] || 'N/A';
     var aCls = ans.toLowerCase() === 'yes' ? 'yes' : 'no';
     html += '<div class="qa-row"><div class="qa-question">' + escapeHtml(q2Texts[key]) + '</div><div class="qa-answer ' + aCls + '">' + escapeHtml(ans) + '</div></div>';
   }
 
-  document.getElementById('piModalContent').innerHTML = html;
-  document.getElementById('piModal').classList.add('open');
+  document.getElementById('piDrawerContent').innerHTML = html;
+
+  // The header carries who this is, so the answers below do not have to
+  // repeat it and the drawer says whose form you are reading while you scroll.
+  document.getElementById('pi-drawer-name').textContent = pi.first_name + ' ' + pi.last_name;
+  document.getElementById('pi-drawer-sub').textContent =
+    [pi.email, pi.phone].filter(Boolean).join(' · ');
+
+  document.getElementById('piDrawer').hidden = false;
+  document.getElementById('piDrawerBackdrop').hidden = false;
+  document.getElementById('piDrawer').querySelector('.btn-icon').focus();
 }
 
-function closePIModal() {
-  document.getElementById('piModal').classList.remove('open');
+function closeIntakeDrawer() {
+  document.getElementById('piDrawer').hidden = true;
+  document.getElementById('piDrawerBackdrop').hidden = true;
 }
 
-// Close modal on overlay click
-document.getElementById('piModal').addEventListener('click', function(e) {
-  if (e.target === this) closePIModal();
+// Escape closes it, the same as every other panel that covers the page.
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !document.getElementById('piDrawer').hidden) closeIntakeDrawer();
 });
-
-function updateIntakeStatus(email, phone, status) {
-  var fd = new FormData();
-  fd.append('action', 'update_intake_status');
-  fd.append('email', email);
-  fd.append('phone', phone);
-  fd.append('status', status);
-  fetch('api/leads.php', { method: 'POST', body: fd })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success) {
-        showToast('Status updated');
-      } else {
-        showToast(data.error || 'Error', 'error');
-      }
-    })
-    .catch(function() { showToast('Network error', 'error'); });
-}
 
 function convertIntake(id, name, email, phone) {
   if (!confirm('Convert "' + name + '" to a client?')) return;

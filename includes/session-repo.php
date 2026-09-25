@@ -16,6 +16,7 @@
 require_once __DIR__ . '/../db-config.php';
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/session-status.php';
+require_once __DIR__ . '/holidays.php';
 
 /**
  * The exclusion window for a candidate booking: the session itself, widened by
@@ -101,6 +102,17 @@ function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type =
         throw new InvalidArgumentException('A session must belong to a client.');
     }
 
+    // A closed day refuses a booking the same way a clash does -- a
+    // RuntimeException -- so a recurrence that lands on a holiday skips that
+    // occurrence and keeps the rest, which is what generateSeries() already
+    // does with a clash.
+    $day = date('Y-m-d', strtotime($window['start']));
+    if (isHoliday($db, $day)) {
+        $why = holidayReason($db, $day);
+        throw new RuntimeException(date('d M Y', strtotime($day)) . ' is marked a holiday'
+            . ($why ? ' (' . $why . ')' : '') . '.');
+    }
+
     // One static practice room, copied onto the row so the record keeps the
     // link it was actually sent with even if the setting changes later.
     $videoLink = ($type === 'online') ? (getSetting('practice_video_link', '') ?: null) : null;
@@ -160,6 +172,15 @@ function rescheduleSession(PDO $db, $sessionId, $startTime, $durationMinutes) {
     $existing = fetchSession($db, $sessionId);
     if ($existing === null) {
         throw new RuntimeException('Session not found.');
+    }
+
+    // Moving a session onto a closed day is the same mistake as booking one
+    // there, so it is refused in the same place and for the same reason.
+    $day = date('Y-m-d', strtotime($window['start']));
+    if (isHoliday($db, $day)) {
+        $why = holidayReason($db, $day);
+        throw new RuntimeException(date('d M Y', strtotime($day)) . ' is marked a holiday'
+            . ($why ? ' (' . $why . ')' : '') . '.');
     }
     if (sessionStatusIsTerminal($existing['status'])) {
         throw new RuntimeException('A ' . sessionStatusLabel($existing['status'])

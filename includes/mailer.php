@@ -26,13 +26,19 @@ function smtpIsConfigured() {
 }
 
 /**
- * Send one plain-text message. Returns true on a 250 from the server.
+ * Send one message. Returns true on a 250 from the server.
+ *
+ * Plain text by default. Give $background an absolute http(s) URL and the
+ * message goes out as multipart/alternative instead: the same text, plus an
+ * HTML rendering with that image behind it. The image is referenced by URL,
+ * never attached, so the message stays a few kilobytes whatever the picture
+ * weighs -- and a client that blocks remote images still gets a readable mail.
  *
  * Never throws: every caller already treats false as "queue it and move on",
  * and an exception escaping a mail call would roll back work that is already
  * correct.
  */
-function sendMail($to, $subject, $body, $replyTo = null) {
+function sendMail($to, $subject, $body, $replyTo = null, $background = '') {
     if (!smtpIsConfigured()) {
         error_log('[mailer] SMTP is not configured; see db-config.example.php');
         return false;
@@ -125,13 +131,21 @@ function sendMail($to, $subject, $body, $replyTo = null) {
         'To: ' . $to,
         'Subject: ' . mailEncodeHeader($subject),
         'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: 8bit',
     ];
+
+    if (mailBackgroundIsUsable($background)) {
+        $boundary  = 'kaja-' . bin2hex(random_bytes(12));
+        $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+        $payload   = mailMultipartBody($boundary, (string) $body, $background);
+    } else {
+        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        $headers[] = 'Content-Transfer-Encoding: 8bit';
+        $payload   = (string) $body;
+    }
 
     // Normalise to CRLF, then dot-stuff: a body line that is a single dot
     // would otherwise end the message early.
-    $normalised = str_replace(["\r\n", "\r", "\n"], "\r\n", (string) $body);
+    $normalised = str_replace(["\r\n", "\r", "\n"], "\r\n", $payload);
     $stuffed    = preg_replace('/^\./m', '..', $normalised);
 
     fwrite($socket, implode("\r\n", $headers) . "\r\n\r\n" . $stuffed . "\r\n.\r\n");
@@ -154,4 +168,65 @@ function mailEncodeHeader($text) {
         return $text;
     }
     return '=?UTF-8?B?' . base64_encode($text) . '?=';
+}
+
+/** Only a real http(s) URL is ever put into a message. */
+function mailBackgroundIsUsable($url) {
+    return is_string($url) && preg_match('~^https?://[^\s"\'<>]+$~i', $url) === 1;
+}
+
+/**
+ * The HTML rendering of a plain-text body, with an image behind it.
+ *
+ * The text sits on a white card, not straight on the picture: whatever image
+ * gets chosen, the words stay legible. The outer cell carries the image three
+ * ways (attribute, shorthand, and a flat colour) because mail clients honour
+ * different ones, and the flat colour is what a client that blocks remote
+ * images or ignores backgrounds -- desktop Outlook -- falls back to.
+ *
+ * The body is escaped BEFORE links are made, so a template can carry no
+ * markup of its own, and every URL in it becomes clickable.
+ */
+function mailHtmlBody($text, $background) {
+    $safe = htmlspecialchars(str_replace(["\r\n", "\r"], "\n", (string) $text), ENT_QUOTES, 'UTF-8');
+    $safe = preg_replace('~(https?://[^\s<]*[^\s<.,;:!?)])~i', '<a href="$1" style="color:#0d7377;">$1</a>', $safe);
+    $safe = nl2br($safe, false);
+
+    $bg   = htmlspecialchars($background, ENT_QUOTES, 'UTF-8');
+    $font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
+
+    return '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+        . '<body style="margin:0;padding:0;background:#f3f4f6;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"'
+        . ' bgcolor="#f3f4f6" background="' . $bg . '"'
+        . ' style="background:#f3f4f6 url(\'' . $bg . '\') center top / cover no-repeat;">'
+        . '<tr><td align="center" style="padding:32px 16px;">'
+        . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"'
+        . ' style="width:100%;max-width:600px;background:#ffffff;border-radius:8px;">'
+        . '<tr><td style="padding:28px 32px;' . $font . 'font-size:15px;line-height:1.6;color:#1f2937;">'
+        . $safe
+        . '</td></tr></table></td></tr></table></body></html>';
+}
+
+/**
+ * plain + html, as multipart/alternative.
+ *
+ * Quoted-printable, not 8bit: the HTML is a handful of very long lines, and
+ * SMTP caps a line at 998 characters. quoted_printable_encode() wraps them.
+ * It is fed CRLF: given a bare LF it encodes it as =0A, which decodes to the
+ * wrong line ending.
+ * The plain part comes first, because clients show the LAST part they can.
+ */
+function mailMultipartBody($boundary, $text, $background) {
+    $part = function ($type, $content) use ($boundary) {
+        return '--' . $boundary . "\r\n"
+            . 'Content-Type: ' . $type . '; charset=UTF-8' . "\r\n"
+            . 'Content-Transfer-Encoding: quoted-printable' . "\r\n\r\n"
+            . quoted_printable_encode(str_replace(["\r\n", "\r", "\n"], "\r\n", $content)) . "\r\n";
+    };
+
+    return $part('text/plain', $text)
+         . $part('text/html', mailHtmlBody($text, $background))
+         . '--' . $boundary . '--';
 }

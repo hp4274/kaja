@@ -23,6 +23,7 @@ require_once __DIR__ . '/includes/settings.php';
 require_once __DIR__ . '/includes/intake-token.php';
 require_once __DIR__ . '/includes/intake-repo.php';
 require_once __DIR__ . '/includes/lead-repo.php';
+require_once __DIR__ . '/includes/intake-extra-questions.php';
 
 define('INTAKE_FORM_FILE', __DIR__ . '/patient-intake-form.html');
 
@@ -88,6 +89,17 @@ if ($adminMode) {
 
 $html = str_replace($formTypeInput, $injected, $html);
 $html = str_replace($fetchTarget, 'fetch("submit_intake.php"', $html);
+
+// Pinned from the link when there is one, exactly as submit_intake.php does:
+// the form someone is shown and the schema their answers are checked against
+// have to be the same version, or a question can be asked and then rejected.
+$formVersion = $link ? (int) $link['form_version'] : max(1, getSettingInt('intake_form_version'));
+
+// A question added in the form module is validated and stored -- both read the
+// schema -- but the template has no input for it, so without this it would
+// never be asked. Rendered here rather than written into the .html, same rule
+// as the token field: the file on disk stays byte-identical.
+$html = intakeRenderExtraQuestions($html, $formVersion);
 
 // ---------------------------------------------------------------------------
 // Wizard boot data: what we already know, plus anything typed and left behind.

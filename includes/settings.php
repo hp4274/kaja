@@ -23,8 +23,16 @@ function settingDefaults() {
         // conditional background block. Links already sent keep their own.
         'intake_form_version'      => '2',
         'admin_reminder_hours'     => '48',
+        // Shown to the person on the intake confirmation page as "usually
+        // within N working days". It is a promise made to a patient, so it
+        // lives here to be edited rather than hardcoded into the page.
+        'intake_reply_days'        => '2',
 
         // Calendar
+        // The bookable times of day, shared by the public forms and the admin
+        // calendar. See includes/booking-slots.php; tests/test_booking_slots.php
+        // holds the forms to this list.
+        'booking_slots'            => '09:00,11:00,13:00,15:00,17:00',
         'default_session_duration' => '60',
         'buffer_minutes'           => '0',
         'min_notice_hours'         => '24',
@@ -72,6 +80,39 @@ function settingDefaults() {
         'practice_timezone'        => 'Asia/Kolkata',
 
         // Session mail. {{client_name}}, {{session_time}}, {{session_type}},
+        // Sent by hand from a client's Fees tab, never on a schedule.
+        // {{amount_due}} and {{oldest_date}} come from the unpaid rows.
+        'notify_fee_reminder_subject' => 'Outstanding balance - {{practice_name}}',
+        'notify_fee_reminder_body'    =>
+"Hello {{client_name}},
+
+This is a gentle reminder that {{amount_due}} is currently outstanding on your account, the earliest of it from {{oldest_date}}.
+
+If you have already paid, please ignore this message - it may have crossed with your payment.
+
+If anything about this is wrong, or you would like to arrange a different way to settle it, just reply to this email.
+
+Best regards,
+{{practice_name}}",
+
+        // The one nudge a lead gets about an unfinished questionnaire. This
+        // was a heredoc in intake-token.php, so every other mail the practice
+        // sends could be reworded without a deploy and this one could not.
+        'notify_intake_reminder_subject' => 'A reminder about your intake form - {{practice_name}}',
+        'notify_intake_reminder_body'    =>
+"Hello {{name}},
+
+We are still holding your intake questionnaire open. It takes about ten minutes:
+
+{{intake_link}}
+
+This link is unique to you, so please do not forward it. It expires on {{expires}}.
+
+If you no longer need an appointment, you can ignore this message.
+
+Best regards,
+{{practice_name}}",
+
         // {{video_link}}, {{cancel_reason}} and {{practice_name}} substitute.
         'notify_session_confirmed_subject' => 'Your session on {{session_time}} - {{practice_name}}',
         'notify_session_confirmed_body'    =>
@@ -136,6 +177,14 @@ function settingDefaults() {
         // Absolute base URL, e.g. "http://localhost/Kaja/".
         // Leave blank to auto-detect from the request; MUST be set for CLI
         // jobs, which have no HTTP_HOST to derive it from.
+        // Background image per email: a filename inside images/email-backgrounds/,
+        // or empty for a plain-text mail. Set from the Emails page.
+        'notify_lead_confirmed_bg' => '',
+        'notify_intake_reminder_bg' => '',
+        'notify_fee_reminder_bg' => '',
+        'notify_session_confirmed_bg' => '',
+        'notify_session_cancelled_bg' => '',
+        'notify_session_reminder_bg' => '',
         'site_base_url'            => '',
     ];
 }

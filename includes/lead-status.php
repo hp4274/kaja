@@ -7,14 +7,14 @@
  * here, so they cannot disagree about what a status means or what comes next.
  *
  * Pipeline:   new -> contacted -> confirmed -> converted
- * Side exits: rejected, spam — reachable from any live state, terminal.
+ * Side exit: rejected — reachable from any live state, terminal.
  */
 
 /** A lead sitting at 'new' longer than this gets the aging flag in the list. */
 const LEAD_AGING_HOURS = 24;
 
 function leadStatuses() {
-    return ['new', 'contacted', 'confirmed', 'converted', 'rejected', 'spam'];
+    return ['new', 'contacted', 'confirmed', 'converted', 'rejected'];
 }
 
 function isValidLeadStatus($status) {
@@ -25,10 +25,11 @@ function leadStatusLabel($status) {
     $labels = [
         'new'       => 'New',
         'contacted' => 'Contacted',
-        'confirmed' => 'Confirmed',
+        // Stored as 'confirmed'; called Accepted, because the button that
+        // gets a lead here says Accept and one action keeps one name.
+        'confirmed' => 'Accepted',
         'converted' => 'Converted',
         'rejected'  => 'Rejected',
-        'spam'      => 'Spam',
     ];
     return isset($labels[$status]) ? $labels[$status] : 'Unknown';
 }
@@ -40,20 +41,28 @@ function leadStatusBadgeClass($status) {
         'confirmed' => 'badge-confirmed',
         'converted' => 'badge-converted',
         'rejected'  => 'badge-rejected',
-        'spam'      => 'badge-spam',
     ];
     return isset($classes[$status]) ? $classes[$status] : 'badge-archived';
 }
 
 /** Terminal means: nothing leaves this state, ever. */
 function leadStatusIsTerminal($status) {
-    return $status === 'rejected' || $status === 'spam';
+    return $status === 'rejected';
 }
 
 /**
- * Forward one step along the pipeline, or sideways into a terminal exit.
- * Never backwards — a status the admin regrets is a data-repair job, not a
- * button, because moving back out of 'converted' would orphan a client row.
+ * Forward along the pipeline, or sideways into a terminal exit. Never
+ * backwards — a status the admin regrets is a data-repair job, not a button,
+ * because moving back out of 'converted' would orphan a client row.
+ *
+ * Written as a map rather than index arithmetic because the pipeline is not
+ * quite a straight line: a lead can be confirmed straight from 'new'. Someone
+ * who books through the site and is accepted on the spot was never "contacted"
+ * as a separate act, and making the therapist click a step that did not happen
+ * is how a status stops describing anything real.
+ *
+ * 'converted' is still only reachable from 'confirmed', because it is what the
+ * returning intake sets, not a thing anyone announces by hand.
  */
 function leadCanTransition($from, $to) {
     if (!isValidLeadStatus($from) || !isValidLeadStatus($to)) {
@@ -66,14 +75,13 @@ function leadCanTransition($from, $to) {
         return true;
     }
 
-    $pipeline = ['new', 'contacted', 'confirmed', 'converted'];
-    $fromIdx  = array_search($from, $pipeline, true);
-    $toIdx    = array_search($to, $pipeline, true);
+    $allowed = [
+        'new'       => ['contacted', 'confirmed'],
+        'contacted' => ['confirmed'],
+        'confirmed' => ['converted'],
+    ];
 
-    if ($fromIdx === false || $toIdx === false) {
-        return false;
-    }
-    return $toIdx === $fromIdx + 1;
+    return isset($allowed[$from]) && in_array($to, $allowed[$from], true);
 }
 
 /**

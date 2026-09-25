@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'dashboard';
-$allowedPages = ['dashboard','leads','intake','patient-intake','clients','client-profile','sessions','reports','settings','blogs','forms'];
+$allowedPages = ['dashboard','leads','intake','patient-intake','clients','client-profile','sessions','reports','settings','emails','blogs','forms'];
 
 if (!in_array($page, $allowedPages)) {
     $page = 'dashboard';
@@ -21,6 +21,7 @@ $pageTitles = [
     'sessions'       => 'Sessions & Calendar',
     'reports'        => 'Reports & Analytics',
     'forms'          => 'Intake Form Builder',
+    'emails'         => 'Emails',
     'settings'       => 'Settings',
     'blogs'          => 'Blog Manager',
 ];
@@ -35,7 +36,7 @@ $pageTitle = $pageTitles[$page] ?? 'Dashboard';
   <meta name="description" content="Admin Dashboard — Rewire With Kajal Mental Health Consultancy" />
   <title><?php echo htmlspecialchars($pageTitle); ?> | Rewire Admin</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-  <link rel="stylesheet" href="css/dashboard.css?v=<?php echo time(); ?>" />
+  <link rel="stylesheet" href="css/dashboard.css?v=<?php echo filemtime(__DIR__ . '/css/dashboard.css'); ?>" />
   <link rel="icon" type="image/png" href="../images/logo3.png" />
 </head>
 <body class="admin-body">

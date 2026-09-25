@@ -8,6 +8,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <link rel="stylesheet" href="css/index-redesign.css" />
+  <link rel="icon" type="image/png" href="images/logo3.png" />
 </head>
 
 <body>
@@ -23,17 +24,20 @@
         <a href="index.html">Home</a>
         <a href="index.html#how-it-works">How it Works</a>
         <a href="about.html">About</a>
-        <a href="blogs.php">Blog</a>
+        <a href="blogs.html">Blog</a>
       </div>
 
       <div class="rw-nav-actions d-none d-lg-flex">
         <a href="appointment.html" class="rw-btn rw-btn-primary">Book Appointment</a>
-        <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank"
+          aria-label="Instagram"><i class="bi bi-instagram"></i></a>
         <a href="index.html" class="rw-social-icon" aria-label="Website"><i class="bi bi-globe2"></i></a>
-        <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i class="bi bi-envelope"></i></a>
+        <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i
+            class="bi bi-envelope"></i></a>
       </div>
 
-      <button class="navbar-toggler d-lg-none" type="button" style="border:none; background:transparent; font-size:24px;">
+      <button class="navbar-toggler d-lg-none" type="button"
+        style="border:none; background:transparent; font-size:24px;">
         <i class="bi bi-list"></i>
       </button>
     </div>
@@ -47,7 +51,8 @@
         <div class="col-lg-5 pe-lg-4 mb-4 mb-lg-0">
           <span class="rw-apt-eyebrow"><i class="bi bi-flower1"></i> BEGIN YOUR JOURNEY</span>
           <h1 class="rw-apt-title">Book Your<br><span class="rw-accent-text rw-font-italic">Session.</span></h1>
-          <p class="rw-apt-subtext">Book time that fits you. You say what you need; we confirm next steps&mdash;forms use simple words, not clinic jargon.</p>
+          <p class="rw-apt-subtext">Book time that fits you. You say what you need; we confirm next steps&mdash;forms
+            use simple words, not clinic jargon.</p>
           <a href="#intake" class="rw-btn rw-btn-primary rw-apt-btn">
             <i class="bi bi-calendar-event me-2"></i> Start Intake <i class="bi bi-arrow-right ms-2"></i>
           </a>
@@ -69,7 +74,8 @@
             <!-- Floating White Circle Badge -->
             <div class="rw-apt-float-badge">
               <div class="rw-apt-badge-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E07A5F" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                   <path d="m9 12 2 2 4-4"></path>
                 </svg>
@@ -138,13 +144,15 @@
                 <!-- Full Name -->
                 <div class="col-md-6">
                   <label for="ap-name" class="rw-form-label">FULL NAME</label>
-                  <input type="text" id="ap-name" name="name" class="rw-form-input" placeholder="Enter your full name" required>
+                  <input type="text" id="ap-name" name="name" class="rw-form-input" placeholder="Enter your full name"
+                    required>
                 </div>
 
                 <!-- Email -->
                 <div class="col-md-6">
                   <label for="ap-email" class="rw-form-label">EMAIL</label>
-                  <input type="email" id="ap-email" name="email" class="rw-form-input" placeholder="Enter your email" required>
+                  <input type="email" id="ap-email" name="email" class="rw-form-input" placeholder="Enter your email"
+                    required>
                 </div>
 
                 <!-- Country Code -->
@@ -162,25 +170,29 @@
                 <!-- Phone Number -->
                 <div class="col-md-6">
                   <label for="ap-phone" class="rw-form-label">PHONE NUMBER</label>
-                  <input type="tel" id="ap-phone" name="phone" class="rw-form-input" placeholder="Enter your phone number" required>
+                  <input type="tel" id="ap-phone" name="phone" class="rw-form-input"
+                    placeholder="Enter your phone number" required>
                 </div>
 
                 <!-- Preferred Date -->
                 <div class="col-md-6">
                   <label for="ap-date" class="rw-form-label">PREFERRED DATE</label>
-                  <input type="date" id="ap-date" name="preferred_date" class="rw-form-input" required>
+                  <input type="date" id="ap-date" name="date" class="rw-form-input" required>
                 </div>
 
                 <!-- Preferred Time -->
                 <div class="col-md-6">
                   <label for="ap-time" class="rw-form-label">PREFERRED TIME</label>
-                  <select id="ap-time" name="preferred_time" class="rw-form-select" required>
+                  <select id="ap-time" name="time" class="rw-form-select" required>
                     <option value="" disabled selected hidden>Select preferred time</option>
+                    <!-- Kept in step with the `booking_slots` setting and with
+                         the admin calendar; tests/test_booking_slots.php fails
+                         if this list and includes/booking-slots.php disagree. -->
                     <option value="09:00 AM">09:00 AM</option>
                     <option value="11:00 AM">11:00 AM</option>
-                    <option value="02:00 PM">02:00 PM</option>
-                    <option value="04:00 PM">04:00 PM</option>
-                    <option value="06:00 PM">06:00 PM</option>
+                    <option value="01:00 PM">01:00 PM</option>
+                    <option value="03:00 PM">03:00 PM</option>
+                    <option value="05:00 PM">05:00 PM</option>
                   </select>
                 </div>
 
@@ -197,16 +209,18 @@
                 <!-- What would you like support with -->
                 <div class="col-12">
                   <label for="ap-msg" class="rw-form-label">WHAT WOULD YOU LIKE SUPPORT WITH?</label>
-                  <textarea id="ap-msg" name="message" class="rw-form-textarea" rows="3" placeholder="Share what's on your mind..." required></textarea>
+                  <textarea id="ap-msg" name="message" class="rw-form-textarea" rows="3"
+                    placeholder="Share what's on your mind..." required></textarea>
                 </div>
 
                 <!-- Submit Button -->
                 <div class="col-12 mt-4">
+                  <p id="ap-feedback" class="rw-form-alert" role="status" aria-live="polite" hidden></p>
                   <button type="submit" class="rw-btn-submit-full">
                     Submit <i class="bi bi-arrow-right ms-2"></i>
                   </button>
                   <p class="rw-form-footer-note">
-                    <i class="bi bi-lock me-1"></i> Demo form &ndash; wire to your backend. Full multi-step intake-form page.
+                    <i class="bi bi-lock me-1"></i> Your details are submitted securely and kept confidential.
                   </p>
                 </div>
               </div>
@@ -229,7 +243,8 @@
             <div class="rw-quote-content-inner">
               <span class="rw-big-quote-mark">&ldquo;</span>
               <p class="rw-commitment-quote-text">
-                Dedicated to helping you navigate <span class="rw-accent-text rw-font-italic">life's complexities</span> with curated grace and evidence-based precision.
+                Dedicated to helping you navigate <span class="rw-accent-text rw-font-italic">life's complexities</span>
+                with curated grace and evidence-based precision.
               </p>
               <span class="rw-commitment-attribution">&mdash; OUR COMMITMENT TO YOU</span>
             </div>
@@ -256,9 +271,14 @@
           </a>
           <p class="mb-4">Calm mind. Healthy heart.<br>Better you.</p>
           <div class="d-flex gap-3">
-            <a href="https://www.instagram.com/rewirewithkajal/" target="_blank" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-            <a href="index.html" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Website"><i class="bi bi-globe2"></i></a>
-            <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Email"><i class="bi bi-envelope"></i></a>
+            <a href="https://www.instagram.com/rewirewithkajal/" target="_blank" class="rw-social-icon"
+              style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Instagram"><i
+                class="bi bi-instagram"></i></a>
+            <a href="index.html" class="rw-social-icon" style="border-color: rgba(255,255,255,0.2); color:#fff;"
+              aria-label="Website"><i class="bi bi-globe2"></i></a>
+            <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon"
+              style="border-color: rgba(255,255,255,0.2); color:#fff;" aria-label="Email"><i
+                class="bi bi-envelope"></i></a>
           </div>
         </div>
 
@@ -269,7 +289,7 @@
             <li><a href="about.html">About</a></li>
             <li><a href="index.html#how-it-works">How It Works</a></li>
             <li><a href="index.html#services">Services</a></li>
-            <li><a href="blogs.php">Blog</a></li>
+            <li><a href="blogs.html">Blog</a></li>
           </ul>
         </div>
 
@@ -287,7 +307,8 @@
         <div class="col-lg-3 col-md-6">
           <h5>Get In Touch</h5>
           <ul class="rw-footer-contact">
-            <li><i class="bi bi-envelope"></i> <a href="mailto:hello@rewirewithkajal.com">hello@rewirewithkajal.com</a></li>
+            <li><i class="bi bi-envelope"></i> <a href="mailto:hello@rewirewithkajal.com">hello@rewirewithkajal.com</a>
+            </li>
             <li><i class="bi bi-telephone"></i> <a href="tel:+919876543210">+91 98765 43210</a></li>
             <li><i class="bi bi-geo-alt"></i> <span>New Delhi, India</span></li>
           </ul>
@@ -295,7 +316,8 @@
 
         <div class="col-lg-2 col-md-6">
           <h5>Book a Session</h5>
-          <p class="mb-3" style="font-size: 14px; line-height: 1.5;">Take the first step towards inner peace and lasting change.</p>
+          <p class="mb-3" style="font-size: 14px; line-height: 1.5;">Take the first step towards inner peace and lasting
+            change.</p>
           <a href="appointment.html" class="rw-footer-btn">Book Free Call <i class="bi bi-arrow-right"></i></a>
         </div>
       </div>
@@ -307,6 +329,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/appointment.js"></script>
 </body>
 
 </html>

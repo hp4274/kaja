@@ -61,19 +61,17 @@ $concerns = $db->query("SELECT `concern`, COUNT(*) as cnt FROM `clients` WHERE `
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+<div class="split-grid">
   <!-- Monthly Sessions Chart -->
   <div class="panel">
     <div class="panel-header"><div class="panel-title">Sessions per Month</div></div>
     <div class="panel-body">
-      <div style="display:flex;align-items:flex-end;gap:0.75rem;height:160px;">
+      <div class="bar-chart">
         <?php foreach ($monthlyData as $md): ?>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
-            <div style="font-size:0.75rem;font-weight:600;margin-bottom:0.35rem;color:var(--clr-text);"><?php echo $md['count']; ?></div>
-            <div style="width:100%;background:var(--clr-primary-light);border-radius:6px 6px 0 0;height:<?php echo max(4, round(($md['count']/$maxSessions)*120)); ?>px;transition:height 0.3s ease;">
-              <div style="width:100%;height:100%;background:var(--clr-primary);border-radius:6px 6px 0 0;opacity:0.85;"></div>
-            </div>
-            <div style="font-size:0.7rem;color:var(--clr-text-muted);margin-top:0.35rem;"><?php echo $md['label']; ?></div>
+          <div class="bar-chart-col">
+            <div class="bar-chart-value"><?php echo $md['count']; ?></div>
+            <div class="bar-chart-bar" style="height:<?php echo max(4, round(($md['count'] / $maxSessions) * 120)); ?>px;"></div>
+            <div class="bar-chart-label"><?php echo $md['label']; ?></div>
           </div>
         <?php endforeach; ?>
       </div>
@@ -94,13 +92,13 @@ $concerns = $db->query("SELECT `concern`, COUNT(*) as cnt FROM `clients` WHERE `
       foreach ($funnelItems as $fi):
         $pct = $leadTotal > 0 ? round(($fi['count'] / $leadTotal) * 100) : 0;
       ?>
-        <div style="margin-bottom:0.85rem;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
-            <span style="font-size:0.82rem;font-weight:500;"><?php echo $fi['label']; ?></span>
-            <span style="font-size:0.82rem;font-weight:600;"><?php echo $fi['count']; ?> (<?php echo $pct; ?>%)</span>
+        <div class="meter">
+          <div class="meter-head">
+            <span class="meter-name"><?php echo $fi['label']; ?></span>
+            <span class="meter-value"><?php echo $fi['count']; ?> (<?php echo $pct; ?>%)</span>
           </div>
           <div class="score-bar">
-            <div style="height:100%;width:<?php echo $pct; ?>%;background:<?php echo $fi['color']; ?>;border-radius:var(--radius-full);"></div>
+            <div class="meter-fill" style="width:<?php echo $pct; ?>%;background:<?php echo $fi['color']; ?>;"></div>
           </div>
         </div>
       <?php endforeach; ?>
@@ -109,17 +107,17 @@ $concerns = $db->query("SELECT `concern`, COUNT(*) as cnt FROM `clients` WHERE `
 </div>
 
 <!-- Concern Distribution & Revenue -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+<div class="split-grid">
   <div class="panel">
     <div class="panel-header"><div class="panel-title">Top Client Concerns</div></div>
     <div class="panel-body">
       <?php if (empty($concerns)): ?>
-        <div class="empty-state" style="padding:1.5rem;"><p>No data yet</p></div>
+        <div class="empty-state"><p>No data yet</p></div>
       <?php else: ?>
         <?php foreach ($concerns as $cn): ?>
-          <div style="display:flex;justify-content:space-between;padding:0.55rem 0;border-bottom:1px solid var(--clr-border-light);">
-            <span style="font-size:0.85rem;"><?php echo htmlspecialchars($cn['concern']); ?></span>
-            <span style="font-size:0.85rem;font-weight:600;"><?php echo $cn['cnt']; ?></span>
+          <div class="kv-row">
+            <span><?php echo htmlspecialchars($cn['concern']); ?></span>
+            <span class="kv-value"><?php echo $cn['cnt']; ?></span>
           </div>
         <?php endforeach; ?>
       <?php endif; ?>
@@ -129,20 +127,18 @@ $concerns = $db->query("SELECT `concern`, COUNT(*) as cnt FROM `clients` WHERE `
   <div class="panel">
     <div class="panel-header"><div class="panel-title">Revenue Summary</div></div>
     <div class="panel-body">
-      <div style="display:grid;grid-template-columns:1fr;gap:1rem;">
-        <div style="text-align:center;padding:1rem 0;border-bottom:1px solid var(--clr-border-light);">
-          <div class="detail-label">Total Invoiced</div>
-          <div style="font-size:1.5rem;font-weight:700;">₹<?php echo number_format($totalRevenue, 2); ?></div>
+      <div class="stat-tile is-banner">
+        <div class="detail-label">Total Invoiced</div>
+        <div class="stat-tile-value">₹<?php echo number_format($totalRevenue, 2); ?></div>
+      </div>
+      <div class="split-grid">
+        <div class="stat-tile">
+          <div class="detail-label">Collected</div>
+          <div class="stat-tile-value is-paid">₹<?php echo number_format($paidRevenue, 2); ?></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;text-align:center;">
-          <div>
-            <div class="detail-label">Collected</div>
-            <div style="font-size:1.2rem;font-weight:700;color:var(--clr-success);">₹<?php echo number_format($paidRevenue, 2); ?></div>
-          </div>
-          <div>
-            <div class="detail-label">Outstanding</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#b45309;">₹<?php echo number_format($pendingRevenue, 2); ?></div>
-          </div>
+        <div class="stat-tile">
+          <div class="detail-label">Outstanding</div>
+          <div class="stat-tile-value is-pending">₹<?php echo number_format($pendingRevenue, 2); ?></div>
         </div>
       </div>
     </div>

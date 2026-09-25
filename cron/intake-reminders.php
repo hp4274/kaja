@@ -41,8 +41,12 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
     $db = getDbConnection();
 
     $drained = drainQueuedMail(function (array $payload) {
-        if (($payload['kind'] ?? '') === 'session_mail') {
-            return sendMail($payload['to'], $payload['subject'], $payload['body']);
+        // Both are queued already rendered, so the replay only has to send.
+        // fee_reminder used to fall through to the intake-link branch below,
+        // which reads a name and a URL a payment reminder does not have.
+        if (in_array($payload['kind'] ?? '', ['session_mail', 'fee_reminder'], true)) {
+            return sendMail($payload['to'], $payload['subject'], $payload['body'],
+                            null, $payload['background'] ?? '');
         }
         if (($payload['kind'] ?? '') === 'intake_review') {
             return sendMail($payload['to'],

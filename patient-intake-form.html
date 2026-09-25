@@ -1395,8 +1395,10 @@
             defaultOpt.textContent = "Select a time slot";
             timeSelect.appendChild(defaultOpt);
 
-            // Mock slots
-            var slots = ["09:00 AM", "10:30 AM", "01:00 PM", "03:30 PM", "05:00 PM"];
+            // The practice's bookable times. Kept in step with the
+            // `booking_slots` setting, the appointment page and the admin
+            // calendar; tests/test_booking_slots.php fails if they diverge.
+            var slots = ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM"];
             slots.forEach(function (slot) {
               var opt = document.createElement("option");
               opt.value = slot;
@@ -1493,6 +1495,14 @@
           }
 
           var formData = new FormData(f);
+
+          // A second click while the first POST is still open would send the
+          // questionnaire twice. The server refuses the duplicate under a row
+          // lock, but the person would see an error for something they did
+          // nothing wrong to cause.
+          var submitBtn = f.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.disabled = true;
+
           fb.hidden = false;
           fb.className = "ra-form-alert";
           fb.style.backgroundColor = "rgba(0, 55, 62, 0.05)";
@@ -1509,6 +1519,18 @@
             .then(function (data) {
               fb.removeAttribute("style");
               if (data.success) {
+                // The confirmation is a page of its own. replace() rather than
+                // assign() so the filled-in questionnaire leaves the history
+                // stack with it: Back from the thank-you page must not return
+                // to a form that is still populated and still submittable.
+                if (data.redirect) {
+                  window.location.replace(data.redirect);
+                  return;
+                }
+
+                // Server sent no destination. Acknowledge in place rather than
+                // leaving the person looking at "Submitting..." forever.
+                if (submitBtn) submitBtn.disabled = false;
                 fb.className = "ra-form-alert success";
                 fb.textContent = data.message || "Thank you! Your intake information has been received successfully.";
                 f.reset();
@@ -1523,12 +1545,14 @@
                 }
                 window.scrollTo({ top: 0, behavior: "smooth" });
               } else {
+                if (submitBtn) submitBtn.disabled = false;
                 fb.className = "ra-form-alert error";
                 fb.textContent = data.error || "An error occurred. Please try again.";
                 fb.scrollIntoView({ behavior: "smooth", block: "center" });
               }
             })
             .catch(function (err) {
+              if (submitBtn) submitBtn.disabled = false;
               fb.removeAttribute("style");
               fb.className = "ra-form-alert error";
               fb.textContent = "Network error. Please check your connection and try again.";

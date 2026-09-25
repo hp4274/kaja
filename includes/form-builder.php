@@ -140,6 +140,11 @@ function updateFormQuestion(PDO $db, $questionId, array $fields) {
           . 'Publish a new version to change it.'
         );
     }
+    if (intakeSectionIsFixed($existing['section'])) {
+        throw new RuntimeException(
+            $existing['section'] . ' is a fixed section and cannot be edited.'
+        );
+    }
 
     $allowed = ['label' => 's', 'section' => 's', 'field_type' => 't',
                 'is_required' => 'b', 'sort_order' => 'i'];
@@ -171,6 +176,252 @@ function updateFormQuestion(PDO $db, $questionId, array $fields) {
     $db->prepare('UPDATE `form_questions` SET ' . implode(', ', $set) . ' WHERE `id` = :id')
        ->execute($params);
     return true;
+}
+
+/**
+ * Add a question to a section.
+ *
+ * Yes or no, required, at the end of its section. That is the only kind of
+ * question this form asks that anyone adds: the shape is fixed, so the admin
+ * is asked for the one thing that actually varies -- the wording.
+ *
+ * The field id is derived from the wording rather than typed. It is a storage
+ * key, not something a person should have to invent, and a hand-typed one that
+ * collides with an existing question silently overwrites an answer.
+ */
+function addFormQuestion(PDO $db, $version, $section, $label) {
+    $version = (int) $version;
+    $section = trim((string) $section);
+    $label   = trim((string) $label);
+
+    if ($label === '') {
+        throw new InvalidArgumentException('A question needs some wording.');
+    }
+    if (formVersionIsInUse($db, $version)) {
+        throw new RuntimeException(
+            'Version ' . $version . ' has already been answered. Publish a new version to change it.'
+        );
+    }
+    if (intakeSectionIsFixed($section)) {
+        throw new RuntimeException($section . ' is a fixed section and cannot be added to.');
+    }
+
+    $all = formQuestions($db, $version);
+    if (!$all) {
+        throw new RuntimeException('That version has no questions.');
+    }
+
+    $sectionExists = false;
+    $lastOfSection = null;
+    $taken         = [];
+    foreach ($all as $q) {
+        $taken[$q['field_id']] = true;
+        if ($q['section'] === $section) {
+            $sectionExists = true;
+            $lastOfSection = (int) $q['sort_order'];
+        }
+    }
+    if (!$sectionExists) {
+        throw new RuntimeException('There is no section called ' . $section . ' in version ' . $version . '.');
+    }
+
+    $fieldId = formFieldIdFrom($label, $taken);
+
+    $db->prepare('
+        INSERT INTO `form_questions`
+            (`form_version`,`field_id`,`section`,`label`,`field_type`,`is_required`,`sort_order`)
+        VALUES (:v,:fid,:sec,:label,"yesno",1,:sort)
+    ')->execute([
+        ':v'     => $version,
+        ':fid'   => $fieldId,
+        ':sec'   => $section,
+        ':label' => $label,
+        // Just past the last question of its section, inside the gap seeding
+        // left. The next drag renumbers the version cleanly anyway.
+        ':sort'  => $lastOfSection + 1,
+    ]);
+
+    return ['id' => (int) $db->lastInsertId(), 'field_id' => $fieldId];
+}
+
+/**
+ * A storage key from a question's wording: lowercase, words joined by
+ * underscores, never starting with a digit, never colliding with one already
+ * taken on this version.
+ */
+function formFieldIdFrom($label, array $taken) {
+    $slug = strtolower(trim((string) $label));
+    $slug = preg_replace('/[^a-z0-9]+/', '_', $slug);
+    $slug = trim($slug, '_');
+    $slug = substr($slug, 0, 44);
+
+    if ($slug === '' || ctype_digit($slug[0])) {
+        $slug = 'q_' . $slug;
+    }
+    $slug = rtrim($slug, '_');
+
+    if (!isset($taken[$slug])) {
+        return $slug;
+    }
+    // A collision is not an error -- two questions can reasonably read alike --
+    // but it must never resolve to the same key, which would overwrite an
+    // answer with another question's.
+    for ($n = 2; $n < 500; $n++) {
+        $candidate = $slug . '_' . $n;
+        if (!isset($taken[$candidate])) {
+            return $candidate;
+        }
+    }
+    throw new RuntimeException('Could not find a free field id for that wording.');
+}
+
+/**
+ * Put one section's questions in the given order.
+ *
+ * The admin used to type a number into every row and press Save on each one,
+ * which is a sort key spelled out by hand: two rows could hold the same number,
+ * a gap could be closed by accident, and nothing said what the result would be.
+ * Dragging says the order directly, and the numbers are derived from it here.
+ *
+ * The whole version is renumbered in one pass rather than just this section,
+ * so section order -- which formSchemaFromDb() reads from the first question in
+ * each -- cannot drift when one section's numbers are rewritten.
+ */
+function reorderFormQuestions(PDO $db, $version, $section, array $orderedIds) {
+    $version = (int) $version;
+
+    if (formVersionIsInUse($db, $version)) {
+        throw new RuntimeException(
+            'Version ' . $version . ' has already been answered. Publish a new version to change it.'
+        );
+    }
+    if (intakeSectionIsFixed($section)) {
+        throw new RuntimeException($section . ' is a fixed section and cannot be reordered.');
+    }
+
+    $all = formQuestions($db, $version);
+    if (!$all) {
+        throw new RuntimeException('That version has no questions.');
+    }
+
+    // The ids offered must be exactly this section's, no more and no fewer:
+    // a partial list would silently drop whatever it left out to the end.
+    $inSection = [];
+    foreach ($all as $q) {
+        if ($q['section'] === $section) {
+            $inSection[] = (int) $q['id'];
+        }
+    }
+    $offered = array_values(array_unique(array_map('intval', $orderedIds)));
+    sort($inSection);
+    $check = $offered;
+    sort($check);
+    if ($check !== $inSection) {
+        throw new InvalidArgumentException('The order given does not match the questions in ' . $section . '.');
+    }
+
+    // Rebuild the whole run: sections keep the order they are in now, and the
+    // target section takes the order just given.
+    $bySection = [];
+    $order     = [];
+    foreach ($all as $q) {
+        if (!isset($bySection[$q['section']])) {
+            $bySection[$q['section']] = [];
+            $order[] = $q['section'];
+        }
+        $bySection[$q['section']][] = (int) $q['id'];
+    }
+    $bySection[$section] = $offered;
+
+    $stmt = $db->prepare('UPDATE `form_questions` SET `sort_order` = :s WHERE `id` = :id AND `form_version` = :v');
+    $n    = 0;
+
+    $db->beginTransaction();
+    try {
+        foreach ($order as $title) {
+            foreach ($bySection[$title] as $id) {
+                // Gaps of ten, the same as seeding: a question can still be
+                // dropped between two others without renumbering the world.
+                $stmt->execute([':s' => ++$n * 10, ':id' => $id, ':v' => $version]);
+            }
+        }
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+
+    return $n;
+}
+
+/**
+ * Put the sections back in the order the shipped schema defines.
+ *
+ * Section order is read from the first question in each section, so a hand-
+ * typed sort number could drop one section into the middle of another: on this
+ * install the emergency contact had drifted to sit after Preferences, in the
+ * middle of the form, because someone typed a 14 next to a 10.
+ *
+ * Within a section the current order is kept -- that part is the admin's own
+ * arrangement and there is nothing wrong with it. Only the sections move, and
+ * everything is renumbered cleanly on the way out.
+ */
+function normaliseFormOrder(PDO $db, $version) {
+    $version = (int) $version;
+
+    if (formVersionIsInUse($db, $version)) {
+        throw new RuntimeException(
+            'Version ' . $version . ' has already been answered. Publish a new version to change it.'
+        );
+    }
+
+    $all = formQuestions($db, $version);
+    if (!$all) {
+        throw new RuntimeException('That version has no questions.');
+    }
+
+    $bySection = [];
+    $present   = [];
+    foreach ($all as $q) {
+        if (!isset($bySection[$q['section']])) {
+            $bySection[$q['section']] = [];
+            $present[] = $q['section'];
+        }
+        $bySection[$q['section']][] = (int) $q['id'];
+    }
+
+    // The shipped order first, then anything the admin has since added, in the
+    // order it currently sits -- a section we do not recognise still has to
+    // land somewhere predictable.
+    $order = [];
+    foreach (intakeSchemaShipped($version) as $section) {
+        if (isset($bySection[$section['title']]) && !in_array($section['title'], $order, true)) {
+            $order[] = $section['title'];
+        }
+    }
+    foreach ($present as $title) {
+        if (!in_array($title, $order, true)) {
+            $order[] = $title;
+        }
+    }
+
+    $stmt = $db->prepare('UPDATE `form_questions` SET `sort_order` = :s WHERE `id` = :id AND `form_version` = :v');
+    $n    = 0;
+
+    $db->beginTransaction();
+    try {
+        foreach ($order as $title) {
+            foreach ($bySection[$title] as $id) {
+                $stmt->execute([':s' => ++$n * 10, ':id' => $id, ':v' => $version]);
+            }
+        }
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+
+    return $order;
 }
 
 /** True once any client's answers were recorded against this version. */

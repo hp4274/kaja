@@ -65,7 +65,7 @@ function leadListSql(array $filters) {
     if (isset($filters['sort']) && $filters['sort'] === 'status') {
         // FIELD() sorts by pipeline position. Plain alphabetical order would
         // read confirmed, contacted, converted, new — which means nothing.
-        $order = "FIELD(`status`,'new','contacted','confirmed','converted','rejected','spam')";
+        $order = "FIELD(`status`,'new','contacted','confirmed','converted','rejected')";
         $sql .= ' ORDER BY ' . $order . ' ' . $dir . ', `created_at` DESC';
     } else {
         $sql .= ' ORDER BY `created_at` ' . $dir;

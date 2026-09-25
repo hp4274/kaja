@@ -233,7 +233,7 @@ a {
 /* Hero Section */
 .rw-hero {
   padding-top: 140px;
-  padding-bottom: 90px;
+  padding-bottom: 45px;
   position: relative;
   overflow: hidden;
   background-color: #FAF7F2;
@@ -445,10 +445,10 @@ a {
 /* Stats Section */
 .rw-stats-section {
   padding: 0 20px;
-  margin-top: -45px;
+  margin-top: -40px;
   position: relative;
   z-index: 20;
-  padding-bottom: 40px;
+  padding-bottom: 15px;
 }
 
 .rw-stats-container {
@@ -556,7 +556,7 @@ a {
 
 /* What is Hypnotherapy */
 .rw-section {
-  padding: 100px 0;
+  padding: 35px 0;
 }
 
 .rw-section-bg-white {
@@ -565,7 +565,7 @@ a {
 
 .rw-what-is {
   background-color: #FCF9F5;
-  padding: 45px 0;
+  padding: 30px 0;
 }
 
 .rw-what-is h2 {
@@ -734,7 +734,7 @@ a {
 
 /* How It Works Redesign - Sine Wave Layout */
 .rw-process-wave-section {
-  padding: 55px 0 85px 0;
+  padding: 25px 0 35px 0;
   background-color: var(--rw-bg-light, #FDFBF7);
   position: relative;
   overflow: visible;
@@ -743,7 +743,7 @@ a {
 .rw-process-wave-wrapper {
   position: relative;
   width: 100%;
-  padding-top: 40px;
+  padding-top: 20px;
 }
 
 .rw-process-svg-wrap {
@@ -784,12 +784,15 @@ a {
   .rw-step-1 {
     transform: translateY(22px);
   }
+
   .rw-step-2 {
     transform: translateY(-18px);
   }
+
   .rw-step-3 {
     transform: translateY(38px);
   }
+
   .rw-step-4 {
     transform: translateY(-18px);
   }
@@ -807,9 +810,9 @@ a {
   height: 134px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.45);
-  box-shadow: 
-    0 0 0 10px rgba(244, 230, 222, 0.55), 
-    0 0 0 22px rgba(244, 230, 222, 0.28), 
+  box-shadow:
+    0 0 0 10px rgba(244, 230, 222, 0.55),
+    0 0 0 22px rgba(244, 230, 222, 0.28),
     0 15px 35px rgba(224, 122, 95, 0.09);
   display: flex;
   align-items: center;
@@ -872,6 +875,7 @@ a {
     flex-wrap: wrap;
     gap: 40px 0;
   }
+
   .rw-process-item {
     flex: 0 0 50%;
     max-width: 50%;
@@ -996,9 +1000,6 @@ a {
   .rw-about-content-col {
     padding: 40px 20px;
   }
-}
-
-font-size: 14px;
 }
 
 /* Testimonials */
@@ -1444,7 +1445,7 @@ font-size: 14px;
   flex-direction: column;
   gap: 22px;
   position: relative;
-  z-index: 2;
+  z-index: 5;
 }
 
 .rw-guide-feature-item {
@@ -1482,14 +1483,14 @@ font-size: 14px;
 
 .rw-guide-leaf-svg {
   position: absolute;
-  right: -55px;
-  bottom: -40px;
-  width: 215px;
+  right: -80px;
+  bottom: -200px;
+  width: 240px;
   height: auto;
   pointer-events: none;
-  opacity: 0.9;
-  transform: rotate(10deg);
-  z-index: 10;
+  opacity: 0.55;
+  transform: rotate(25deg);
+  z-index: 1;
 }
 
 @media (max-width: 991px) {
@@ -1497,6 +1498,7 @@ font-size: 14px;
     border-radius: 0;
     max-height: 340px;
   }
+
   .rw-guide-banner {
     border-radius: 20px;
   }
@@ -1529,7 +1531,7 @@ font-size: 14px;
 .rw-testimonial-card-v2 {
   background: #ffffff;
   border-radius: 20px;
-  padding: 32px 30px;
+  padding: 34px 32px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1609,17 +1611,17 @@ font-size: 14px;
 
 /* Carousel Navigation Buttons */
 .rw-carousel-nav-btn {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: #ffffff;
-  border: none;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #F0E2D8;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   color: #E07A5F;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 16px;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -1629,17 +1631,19 @@ font-size: 14px;
 }
 
 .rw-carousel-nav-btn:hover {
-  background: #E07A5F;
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgba(224, 122, 95, 0.3);
+  background: #ffffff;
+  color: #E07A5F;
+  border-color: #E07A5F;
+  box-shadow: 0 6px 20px rgba(224, 122, 95, 0.25);
+  transform: translateY(-50%) scale(1.06);
 }
 
 .rw-carousel-prev {
-  left: -23px;
+  left: -21px;
 }
 
 .rw-carousel-next {
-  right: -23px;
+  right: -21px;
 }
 
 @media (max-width: 991px) {
@@ -1647,9 +1651,11 @@ font-size: 14px;
     padding: 36px 24px;
     border-radius: 20px;
   }
+
   .rw-carousel-prev {
     left: -10px;
   }
+
   .rw-carousel-next {
     right: -10px;
   }
@@ -1756,16 +1762,20 @@ font-size: 14px;
     padding: 50px 24px;
     border-radius: 20px;
   }
+
   .rw-cta-subtitle {
     font-size: 20px;
   }
+
   .rw-cta-title {
     font-size: 30px;
   }
+
   .rw-cta-leaf-left {
     width: 170px;
     left: -30px;
   }
+
   .rw-cta-leaf-right {
     width: 180px;
     right: -30px;
@@ -2148,9 +2158,11 @@ font-size: 14px;
     padding: 36px 24px;
     border-radius: 20px;
   }
+
   .rw-about-hero-title {
     font-size: 32px;
   }
+
   .rw-about-quote-card {
     position: relative;
     top: auto;
@@ -2158,6 +2170,7 @@ font-size: 14px;
     margin: 20px auto 0 auto;
     max-width: 100%;
   }
+
   .rw-about-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2210,7 +2223,7 @@ font-size: 14px;
 .rw-about-glass-quote {
   position: absolute;
   top: 70px;
-  right: -75px;
+  right: -170px;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(18px) saturate(180%);
   -webkit-backdrop-filter: blur(18px) saturate(180%);
@@ -2242,7 +2255,7 @@ font-size: 14px;
 
 /* Blog Hero Header */
 .rw-blog-hero {
-  margin-top: 50px;
+  margin-top: 135px;
   margin-bottom: 30px;
 }
 
@@ -2921,23 +2934,33 @@ font-size: 14px;
 
 /* Mobile Responsiveness for Appointment Page */
 @media (max-width: 991px) {
+  .rw-blog-hero {
+    margin-top: 110px;
+    margin-bottom: 24px;
+  }
+
   .rw-apt-hero-images-wrap {
     padding-left: 0;
     margin-top: 30px;
   }
+
   .rw-apt-float-badge {
     left: 20px;
     bottom: 20px;
   }
+
   .rw-privacy-panel {
     padding: 40px 30px;
   }
+
   .rw-form-panel {
     padding: 40px 30px;
   }
+
   .rw-quote-commitment-banner {
     padding: 30px 25px;
   }
+
   .rw-commitment-img-wrap {
     margin-top: 20px;
   }

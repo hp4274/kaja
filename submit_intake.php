@@ -286,8 +286,35 @@ if ($notifyTo) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// 5. Hand the browser somewhere to go.
+//
+//    The confirmation is a page of its own rather than a banner painted into
+//    the questionnaire. A message rendered in place leaves the form standing
+//    behind it, still filled in and still postable; navigating away removes
+//    that possibility rather than relying on the person not to scroll back.
+//
+//    An admin filling the form on someone else's behalf is not the audience
+//    for a patient-facing thank-you, so they return to the profile instead.
+// ---------------------------------------------------------------------------
+
+if ($adminMode) {
+    $redirect = 'admin/index.php?page=client-profile&id=' . $clientId;
+} else {
+    // Deliberately left in place after the confirmation page reads it, so a
+    // refresh of that page still works. It holds a first name, an address
+    // already on its way to this person's inbox, and a count.
+    $_SESSION['intake_done'] = [
+        'first_name' => $values['first_name'],
+        'email'      => $values['email'],
+        'sections'   => count(intakeSchema($formVersion)),
+    ];
+    $redirect = 'intake-thank-you.php';
+}
+
 echo json_encode([
     'success'   => true,
     'message'   => 'Thank you! Your intake information has been received successfully.',
     'client_id' => $clientId,
+    'redirect'  => $redirect,
 ]);

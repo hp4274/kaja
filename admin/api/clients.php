@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../includes/client-repo.php';
 require_once __DIR__ . '/../../includes/client-status.php';
 require_once __DIR__ . '/../../includes/client-notes.php';
 require_once __DIR__ . '/../../includes/client-payments.php';
+require_once __DIR__ . '/../../includes/fee-mail.php';
 require_once __DIR__ . '/../../includes/client-documents.php';
 require_once __DIR__ . '/../../includes/client-merge.php';
 
@@ -163,30 +164,25 @@ try {
             echo json_encode(['success' => true, 'moved' => $moved]);
             break;
 
-        case 'add_payment':
-            $clientId  = intval($_POST['client_id'] ?? 0);
-            $amount    = trim($_POST['amount'] ?? '');
-            $method    = trim($_POST['method'] ?? 'cash');
-            $date      = trim($_POST['fee_date'] ?? '');
-            $reference = trim($_POST['reference'] ?? '');
-
+        case 'send_fee_reminder':
+            // Sent by hand, one client at a time. Chasing money on a schedule
+            // is a decision about a relationship, not a cron job.
+            $clientId = intval($_POST['client_id'] ?? 0);
             if (!$clientId) {
                 echo json_encode(['success' => false, 'error' => 'Client not found']);
                 exit;
             }
 
-            try {
-                addClientPayment($db, $clientId, $amount, $method, $date, $reference);
-            } catch (InvalidArgumentException $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            $result = sendFeeReminder($db, $clientId);
+            if (!$result['sent']) {
+                echo json_encode(['success' => false, 'error' => $result['error']]);
                 exit;
             }
 
-            echo json_encode([
-                'success'  => true,
-                'payments' => clientPayments($db, $clientId),
-                'total'    => clientPaymentTotal($db, $clientId),
-            ]);
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('fee_reminder_sent',:d,'client',:rid)")
+               ->execute([':d' => 'Payment reminder sent for INR ' . $result['amount'], ':rid' => $clientId]);
+
+            echo json_encode(['success' => true, 'amount' => $result['amount']]);
             break;
 
         case 'add_fee':
@@ -195,19 +191,31 @@ try {
             $feeDate = trim($_POST['fee_date'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = trim($_POST['status'] ?? 'pending');
+            // The Payments tab was the only way to record these; it was the
+            // same table shown twice, so they belong on the fee itself.
+            $method = trim($_POST['method'] ?? 'cash');
+            $reference = trim($_POST['reference'] ?? '');
 
             if (!$clientId || $amount <= 0 || empty($feeDate) || !in_array($status, ['paid', 'pending', 'waived'])) {
                 echo json_encode(['success' => false, 'error' => 'Invalid or missing fields']);
                 exit;
             }
+            if (!in_array($method, clientPaymentMethods(), true)) {
+                // MySQL would coerce an unknown enum value to '' and the
+                // ledger would go on to claim it was cash.
+                echo json_encode(['success' => false, 'error' => 'Unknown payment method']);
+                exit;
+            }
 
-            $stmt = $db->prepare("INSERT INTO `client_fees` (`client_id`, `amount`, `fee_date`, `description`, `status`) VALUES (:cid, :a, :fd, :d, :s)");
+            $stmt = $db->prepare("INSERT INTO `client_fees` (`client_id`, `amount`, `fee_date`, `description`, `status`, `method`, `reference`) VALUES (:cid, :a, :fd, :d, :s, :m, :r)");
             $stmt->execute([
                 ':cid' => $clientId,
                 ':a' => $amount,
                 ':fd' => $feeDate,
                 ':d' => $description,
-                ':s' => $status
+                ':s' => $status,
+                ':m' => $method,
+                ':r' => mb_substr($reference, 0, 255)
             ]);
             $feeId = $db->lastInsertId();
 

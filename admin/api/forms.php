@@ -53,6 +53,78 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+        case 'add_question':
+            // Yes or no, required, end of the section. The only thing asked
+            // for is the wording; the field id is derived from it.
+            $version = intval($_POST['version'] ?? 0);
+            $section = trim($_POST['section'] ?? '');
+            $label   = trim($_POST['label'] ?? '');
+
+            if (!$version || $section === '' || $label === '') {
+                echo json_encode(['success' => false, 'error' => 'A question needs some wording']);
+                exit;
+            }
+
+            try {
+                $added = addFormQuestion($db, $version, $section, $label);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_question_added',:d,'form',:rid)")
+               ->execute([':d' => 'Added "' . $label . '" to ' . $section . ' in intake version ' . $version,
+                          ':rid' => $added['id']]);
+
+            echo json_encode(['success' => true] + $added);
+            break;
+
+        case 'reorder_questions':
+            // The order arrives as the ids in the order they now sit on screen.
+            // The numbers are derived from it here -- see reorderFormQuestions()
+            // for why they are no longer typed in by hand.
+            $version = intval($_POST['version'] ?? 0);
+            $section = trim($_POST['section'] ?? '');
+            $ids     = array_filter(array_map('intval', explode(',', $_POST['ids'] ?? '')));
+
+            if (!$version || $section === '' || !$ids) {
+                echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+                exit;
+            }
+
+            try {
+                $n = reorderFormQuestions($db, $version, $section, $ids);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_reordered',:d,'form',:rid)")
+               ->execute([':d' => 'Reordered ' . $section . ' in intake version ' . $version, ':rid' => $version]);
+
+            echo json_encode(['success' => true, 'renumbered' => $n]);
+            break;
+
+        case 'normalise_order':
+            $version = intval($_POST['version'] ?? 0);
+            if (!$version) {
+                echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+                exit;
+            }
+
+            try {
+                $order = normaliseFormOrder($db, $version);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_reordered',:d,'form',:rid)")
+               ->execute([':d' => 'Restored the shipped section order in intake version ' . $version, ':rid' => $version]);
+
+            echo json_encode(['success' => true, 'sections' => $order]);
+            break;
+
         case 'publish_version':
             $from = intval($_POST['from_version'] ?? 0);
 

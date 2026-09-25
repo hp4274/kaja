@@ -24,6 +24,21 @@
   --clr-info: #4285f4;
   --clr-info-light: #e8f0fe;
 
+  /* Surfaces a value used to be hardcoded into. Each of these was written
+     into the rule that needed it, where no theme could reach it -- which is
+     exactly how a dark page ends up with white washes and unreadable amber. */
+  --clr-on-accent: #ffffff;        /* label on a filled colour button/badge */
+  --clr-warning-text: #b45309;     /* amber text that stays readable on its tint */
+  --clr-neutral-pill: #f3f4f6;     /* badges whose colour is grey by design */
+  --clr-hover-surface: #f3f4f6;    /* rows, cells and ghost buttons on hover */
+  --clr-veil: rgba(15, 23, 42, 0.35);   /* modal and drawer backdrops */
+  --clr-focus-ring: rgba(13, 115, 119, 0.10);
+
+  /* Tells the browser which way its own controls go: date pickers, select
+     popups, scrollbars and autofill are painted by the UA, not by this file,
+     and stay light on a black page without it. */
+  color-scheme: light;
+
   /* Neutrals */
   --clr-bg: #f7f8fa;
   --clr-surface: #ffffff;
@@ -44,6 +59,30 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.06), 0 4px 6px rgba(0,0,0,0.04);
+
+  /* Spacing. There were 26 distinct padding/margin values in this file --
+     0.15, 0.2, 0.3, 0.35, 0.45, 0.55, 0.6, 0.65, 0.7, 0.85, 0.9, 1.1, 1.15,
+     1.35 -- which is a value chosen by eye each time, not a system. These are
+     the steps; anything between them is a decision that has to justify itself. */
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-2-5: 0.625rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-section: 1.75rem;   /* between the top-level blocks of a page */
+
+  /* The height of a control that can share a row with another control.
+     A toolbar held a 32px icon button, a 24px status select and a 27px small
+     button, all centred on different midlines -- which is what "nothing lines
+     up" actually looks like when you measure it. Everything small enough to
+     sit in a row is this tall; nothing else needs to know why. */
+  --control-h: 32px;
 
   /* Radius */
   --radius-sm: 8px;
@@ -108,11 +147,11 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .sidebar-brand {
-  padding: 1.5rem 1.25rem;
+  padding: var(--space-6) var(--space-5);
   border-bottom: 1px solid var(--clr-border-light);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .sidebar-brand img {
@@ -137,7 +176,7 @@ a:hover { color: var(--clr-primary-dark); }
 
 .sidebar-nav {
   flex: 1;
-  padding: 0.75rem 0;
+  padding: var(--space-3) 0;
   list-style: none;
 }
 
@@ -147,15 +186,19 @@ a:hover { color: var(--clr-primary-dark); }
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--clr-text-muted);
-  padding: 1.25rem 1.25rem 0.5rem;
+  padding: var(--space-5) var(--space-5) var(--space-2);
 }
 
+/* The inset here has to add up to the --space-5 that the brand, the section
+   labels and the footer all use, or the nav sits ten pixels further in than
+   everything above and below it and the sidebar has two left edges. The pill
+   is inset by its margin, so the padding makes up the difference. */
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1.25rem;
-  margin: 1px 0.6rem;
+  gap: var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  margin: 1px var(--space-2);
   border-radius: var(--radius-sm);
   color: var(--clr-text-secondary);
   font-size: 0.88rem;
@@ -183,27 +226,28 @@ a:hover { color: var(--clr-primary-dark); }
   flex-shrink: 0;
 }
 
-.sidebar-link .badge-count {
-  margin-left: auto;
+.sidebar-link .badge-count { margin-left: auto; }
+
+.badge-count {
   background: var(--clr-primary);
-  color: #fff;
+  color: var(--clr-on-accent);
   font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.15rem 0.5rem;
+  padding: var(--space-0-5) var(--space-2);
   border-radius: var(--radius-full);
   min-width: 20px;
   text-align: center;
 }
 
 .sidebar-footer {
-  padding: 1rem 1.25rem;
+  padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--clr-border-light);
 }
 
 .sidebar-user {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: var(--space-2-5);
 }
 
 .sidebar-avatar {
@@ -253,7 +297,7 @@ a:hover { color: var(--clr-primary-dark); }
 .admin-header {
   background: var(--clr-surface);
   border-bottom: 1px solid var(--clr-border);
-  padding: 0 2rem;
+  padding: 0 var(--space-8);
   height: 64px;
   display: flex;
   align-items: center;
@@ -266,7 +310,7 @@ a:hover { color: var(--clr-primary-dark); }
 .admin-header-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .admin-header-title {
@@ -278,7 +322,7 @@ a:hover { color: var(--clr-primary-dark); }
 .admin-header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .btn-mobile-toggle {
@@ -288,14 +332,14 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 1.35rem;
   color: var(--clr-text-secondary);
   cursor: pointer;
-  padding: 0.25rem;
+  padding: var(--space-1);
 }
 
 .btn-header-action {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 1rem;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 500;
@@ -307,14 +351,26 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .btn-header-action:hover {
-  background: var(--clr-bg);
+  /* Hover lifts. --clr-bg is the page behind the panel, which is black in the
+     dark theme -- filling a control with it on hover digs a hole. */
+  background: var(--clr-hover-surface);
   color: var(--clr-text);
 }
 
 /* ─── Content Container ─── */
 .admin-content {
-  padding: 1.75rem 2rem 3rem;
+  padding: var(--space-section) var(--space-8) var(--space-12);
   flex: 1;
+
+  /* The page's vertical rhythm, owned in one place. Sections used to carry
+     their own margin-bottom, so anything without one -- a bare .panel, and the
+     dashboard stacks three -- sat flush against its neighbour with two borders
+     touching. Fixed and absolutely-positioned children (modals, drawers) are
+     out of flow and script/style are display:none, so none of them become
+     flex items or leave a gap behind. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
 }
 
 /* ═══════════════════════════════════════════
@@ -323,15 +379,14 @@ a:hover { color: var(--clr-primary-dark); }
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
-  margin-bottom: 1.75rem;
+  gap: var(--space-5);
 }
 
 .kpi-card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-lg);
-  padding: 1.35rem 1.5rem;
+  padding: var(--space-5) var(--space-6);
   box-shadow: var(--shadow-xs);
   transition: box-shadow var(--transition-base), transform var(--transition-base);
 }
@@ -347,10 +402,10 @@ a:hover { color: var(--clr-primary-dark); }
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 0.6rem;
+  margin-bottom: var(--space-2-5);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-1-5);
 }
 
 .kpi-label i {
@@ -367,7 +422,7 @@ a:hover { color: var(--clr-primary-dark); }
 .kpi-sub {
   font-size: 0.75rem;
   color: var(--clr-text-muted);
-  margin-top: 0.35rem;
+  margin-top: var(--space-1-5);
 }
 
 .kpi-icon-wrap {
@@ -378,7 +433,7 @@ a:hover { color: var(--clr-primary-dark); }
   align-items: center;
   justify-content: center;
   font-size: 1.15rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .kpi-icon-wrap.teal { background: var(--clr-primary-light); color: var(--clr-primary); }
@@ -397,7 +452,7 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .panel-header {
-  padding: 1.15rem 1.5rem;
+  padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--clr-border-light);
   display: flex;
   align-items: center;
@@ -411,7 +466,15 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .panel-body {
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-5) var(--space-6);
+}
+
+/* A panel whose body is a list of rows: the rows bring their own padding, so
+   the body only needs to keep them off the panel edge. Both the dashboard and
+   the sessions page had this as an inline override, at two different values --
+   which is why panels sitting side by side did not line up inside. */
+.panel-body.is-list {
+  padding: var(--space-3) var(--space-5);
 }
 
 .panel-body-flush {
@@ -424,8 +487,7 @@ a:hover { color: var(--clr-primary-dark); }
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 380px;
-  gap: 1.25rem;
-  margin-bottom: 1.75rem;
+  gap: var(--space-5);
 }
 
 /* ═══════════════════════════════════════════
@@ -447,14 +509,14 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 0.75rem 1rem;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--clr-border);
   text-align: left;
   white-space: nowrap;
 }
 
 .data-table td {
-  padding: 0.85rem 1rem;
+  padding: var(--space-3) var(--space-4);
   font-size: 0.88rem;
   border-bottom: 1px solid var(--clr-border-light);
   vertical-align: middle;
@@ -466,7 +528,7 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .data-table tbody tr:hover {
-  background: #fafbfc;
+  background: var(--clr-hover-surface);
 }
 
 .data-table tbody tr:last-child td {
@@ -496,7 +558,7 @@ a:hover { color: var(--clr-primary-dark); }
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.6rem;
+  padding: var(--space-1) var(--space-2-5);
   border-radius: var(--radius-full);
   font-size: 0.72rem;
   font-weight: 600;
@@ -506,29 +568,31 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .badge-new { background: var(--clr-info-light); color: var(--clr-info); }
-.badge-contacted { background: var(--clr-warning-light); color: #b45309; }
+.badge-contacted { background: var(--clr-warning-light); color: var(--clr-warning-text); }
 .badge-converted { background: var(--clr-primary-light); color: var(--clr-primary); }
-.badge-archived { background: #f3f4f6; color: var(--clr-text-muted); }
+.badge-archived { background: var(--clr-neutral-pill); color: var(--clr-text-secondary); }
 .badge-active { background: var(--clr-success-light); color: var(--clr-success); }
-.badge-inactive { background: #f3f4f6; color: var(--clr-text-muted); }
+.badge-inactive { background: var(--clr-neutral-pill); color: var(--clr-text-secondary); }
 .badge-discharged { background: var(--clr-danger-light); color: var(--clr-danger); }
 .badge-online { background: var(--clr-primary-light); color: var(--clr-primary); }
-.badge-inperson { background: var(--clr-warning-light); color: #b45309; }
+.badge-inperson { background: var(--clr-warning-light); color: var(--clr-warning-text); }
 .badge-scheduled { background: var(--clr-info-light); color: var(--clr-info); }
 .badge-completed { background: var(--clr-success-light); color: var(--clr-success); }
 .badge-cancelled { background: var(--clr-danger-light); color: var(--clr-danger); }
-.badge-no-show { background: #f3f4f6; color: var(--clr-text-muted); }
+.badge-no-show { background: var(--clr-neutral-pill); color: var(--clr-text-secondary); }
 .badge-confirmed { background: var(--clr-success-light); color: var(--clr-success); }
 .badge-rejected { background: var(--clr-danger-light); color: var(--clr-danger); }
-.badge-spam { background: #f3f4f6; color: var(--clr-text-muted); }
 .badge-paid { background: var(--clr-success-light); color: var(--clr-success); }
-.badge-pending { background: var(--clr-warning-light); color: #b45309; }
-.badge-waived { background: #f3f4f6; color: var(--clr-text-muted); }
+.badge-pending { background: var(--clr-warning-light); color: var(--clr-warning-text); }
+.badge-waived { background: var(--clr-neutral-pill); color: var(--clr-text-secondary); }
+.badge-published { background: var(--clr-success-light); color: var(--clr-success); }
+.badge-draft { background: var(--clr-warning-light); color: var(--clr-warning-text); }
+.badge-category { background: var(--clr-primary-light); color: var(--clr-primary); }
 
 /* Intake link lifecycle */
-.badge-intake-sent      { background: #f3f4f6; color: var(--clr-text-muted); }
+.badge-intake-sent      { background: var(--clr-neutral-pill); color: var(--clr-text-secondary); }
 .badge-intake-opened    { background: var(--clr-info-light); color: var(--clr-info); }
-.badge-intake-filled    { background: var(--clr-warning-light); color: #b45309; }
+.badge-intake-filled    { background: var(--clr-warning-light); color: var(--clr-warning-text); }
 .badge-intake-submitted { background: var(--clr-success-light); color: var(--clr-success); }
 .badge-intake-expired   { background: var(--clr-danger-light); color: var(--clr-danger); }
 
@@ -536,7 +600,7 @@ a:hover { color: var(--clr-primary-dark); }
 .badge-aging {
   background: var(--clr-danger-light);
   color: var(--clr-danger);
-  margin-left: 0.35rem;
+  margin-left: var(--space-1-5);
 }
 
 /* ═══════════════════════════════════════════
@@ -545,11 +609,11 @@ a:hover { color: var(--clr-primary-dark); }
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-1-5);
   font-family: var(--font-family);
   font-size: 0.85rem;
   font-weight: 500;
-  padding: 0.55rem 1.1rem;
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
@@ -559,22 +623,33 @@ a:hover { color: var(--clr-primary-dark); }
 
 .btn:active { transform: scale(0.97); }
 
+/* An icon in a button has the same problem the sort glyph had: it inherits the
+   body's 1.6 line-height, so its box is taller than the glyph and the glyph
+   floats inside it. The button already centres its children; the icon just has
+   to stop carrying empty space around. */
+.btn i {
+  line-height: 1;
+  flex-shrink: 0;
+}
+.btn i::before { vertical-align: 0; }
+
 .btn-primary {
   background: var(--clr-primary);
-  color: #fff;
+  color: var(--clr-on-accent);
 }
-.btn-primary:hover { background: var(--clr-primary-hover); color: #fff; }
+.btn-primary:hover { background: var(--clr-primary-hover); color: var(--clr-on-accent); }
 
 .btn-ghost {
   background: transparent;
   color: var(--clr-text-secondary);
   border: 1px solid var(--clr-border);
 }
-.btn-ghost:hover { background: var(--clr-bg); color: var(--clr-text); }
+.btn-ghost:hover { background: var(--clr-hover-surface); color: var(--clr-text); }
 
 .btn-sm {
   font-size: 0.78rem;
-  padding: 0.35rem 0.75rem;
+  padding: var(--space-1-5) var(--space-3);
+  min-height: var(--control-h);
 }
 
 /* .btn sets display:inline-flex, which out-specifies the UA [hidden] rule. */
@@ -584,17 +659,17 @@ a:hover { color: var(--clr-primary-dark); }
   background: var(--clr-danger-light);
   color: var(--clr-danger);
 }
-.btn-danger:hover { background: var(--clr-danger); color: #fff; }
+.btn-danger:hover { background: var(--clr-danger); color: var(--clr-on-accent); }
 
 .btn-success {
   background: var(--clr-success-light);
   color: var(--clr-success);
 }
-.btn-success:hover { background: var(--clr-success); color: #fff; }
+.btn-success:hover { background: var(--clr-success); color: var(--clr-on-accent); }
 
 .btn-icon {
-  width: 32px;
-  height: 32px;
+  width: var(--control-h);
+  height: var(--control-h);
   padding: 0;
   justify-content: center;
   border-radius: var(--radius-sm);
@@ -603,7 +678,7 @@ a:hover { color: var(--clr-primary-dark); }
   border: 1px solid transparent;
 }
 .btn-icon:hover {
-  background: var(--clr-bg);
+  background: var(--clr-hover-surface);
   color: var(--clr-text);
   border-color: var(--clr-border);
 }
@@ -612,7 +687,7 @@ a:hover { color: var(--clr-primary-dark); }
    FORMS
    ═══════════════════════════════════════════ */
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .form-label {
@@ -620,12 +695,12 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--clr-text-secondary);
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--space-1-5);
 }
 
 .form-input, .form-select, .form-textarea {
   width: 100%;
-  padding: 0.55rem 0.85rem;
+  padding: var(--space-2) var(--space-3);
   font-family: var(--font-family);
   font-size: 0.88rem;
   border: 1px solid var(--clr-border);
@@ -638,11 +713,11 @@ a:hover { color: var(--clr-primary-dark); }
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   outline: none;
   border-color: var(--clr-primary);
-  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.1);
+  box-shadow: 0 0 0 3px var(--clr-focus-ring);
 }
 
 .form-textarea { resize: vertical; min-height: 80px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 
 /* ═══════════════════════════════════════════
    CALENDAR
@@ -651,17 +726,22 @@ a:hover { color: var(--clr-primary-dark); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .calendar-title {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
+  padding: 0 var(--space-2);
+  white-space: nowrap;
 }
 
+/* Without align-items the month label is a stretched flex item and its text
+   sits at the top of a box as tall as the chevron buttons next to it. */
 .calendar-nav {
   display: flex;
-  gap: 0.35rem;
+  align-items: center;
+  gap: var(--space-1-5);
 }
 
 .calendar-grid {
@@ -674,7 +754,7 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .cal-day-label {
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
   text-align: center;
   font-size: 0.7rem;
   font-weight: 600;
@@ -685,14 +765,14 @@ a:hover { color: var(--clr-primary-dark); }
 
 .cal-cell {
   background: var(--clr-surface);
-  padding: 0.45rem;
+  padding: var(--space-2);
   min-height: 54px;
   cursor: pointer;
   transition: background var(--transition-fast);
   position: relative;
 }
 
-.cal-cell:hover { background: #fafbfc; }
+.cal-cell:hover { background: var(--clr-hover-surface); }
 
 .cal-cell.other-month { opacity: 0.35; }
 .cal-cell.today {
@@ -703,7 +783,7 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--clr-text);
-  margin-bottom: 0.2rem;
+  margin-bottom: var(--space-1);
 }
 
 .cal-dot {
@@ -729,8 +809,8 @@ a:hover { color: var(--clr-primary-dark); }
 .activity-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.85rem 0;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
   border-bottom: 1px solid var(--clr-border-light);
 }
 
@@ -761,7 +841,7 @@ a:hover { color: var(--clr-primary-dark); }
 .activity-time {
   font-size: 0.72rem;
   color: var(--clr-text-muted);
-  margin-top: 0.15rem;
+  margin-top: var(--space-0-5);
 }
 
 /* ═══════════════════════════════════════════
@@ -788,21 +868,22 @@ a:hover { color: var(--clr-primary-dark); }
 .score-text {
   font-size: 0.78rem;
   font-weight: 600;
-  margin-top: 0.2rem;
+  margin-top: var(--space-1);
 }
 
 .score-text.high { color: var(--clr-success); }
-.score-text.mid { color: #b45309; }
+.score-text.mid { color: var(--clr-warning-text); }
 .score-text.low { color: var(--clr-danger); }
 
 /* ═══════════════════════════════════════════
    CLIENT PROFILE
    ═══════════════════════════════════════════ */
+/* Spaced by .admin-content, which stacks its children with a gap. This
+   carried a margin as well, so the two were added together. */
 .profile-header {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 1.75rem;
+  gap: var(--space-6);
 }
 
 .profile-avatar {
@@ -828,24 +909,45 @@ a:hover { color: var(--clr-primary-dark); }
 .profile-meta {
   font-size: 0.85rem;
   color: var(--clr-text-secondary);
-  margin-top: 0.15rem;
+  margin-top: var(--space-0-5);
 }
 
 .profile-meta span + span::before {
   content: '·';
-  margin: 0 0.4rem;
+  margin: 0 var(--space-1-5);
   color: var(--clr-text-muted);
 }
 
+/* Named for the shape, not for one page: the settings page divides into the
+   same three-or-four groups a profile does, and a second tab strip with its
+   own padding would be a second answer to a question already answered. */
+.tabs,
 .profile-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--clr-border);
-  margin-bottom: 1.5rem;
-}
 
+  /* The rule is painted INSIDE the box, so the active indicator can sit at
+     bottom:0 and overlay it without leaving the element. A border here plus
+     an indicator at bottom:-2px overflowed by two pixels, and because
+     overflow-x:auto forces the other axis to `auto` too, those two pixels
+     bought a vertical scrollbar on a strip of seven tabs. */
+  box-shadow: inset 0 -2px 0 var(--clr-border);
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  /* Spaced by .admin-content, which stacks its children with a gap. This
+     carried one of its own as well, so the two were added together. */
+
+  /* The strip scrolls by swipe and wheel. A track drawn under it is chrome
+     nobody asked for on a row that usually fits. */
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar,
+.profile-tabs::-webkit-scrollbar { display: none; }
+
+.tab,
 .profile-tab {
-  padding: 0.75rem 1.25rem;
+  padding: var(--space-3) var(--space-5);
   font-size: 0.88rem;
   font-weight: 500;
   color: var(--clr-text-muted);
@@ -853,29 +955,71 @@ a:hover { color: var(--clr-primary-dark); }
   border: none;
   cursor: pointer;
   position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color var(--transition-fast);
 }
 
+.tab:hover,
 .profile-tab:hover { color: var(--clr-text); }
 
+.tab.active,
 .profile-tab.active {
   color: var(--clr-primary);
   font-weight: 600;
 }
 
+.tab.active::after,
 .profile-tab.active::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: 0;
   left: 0;
   right: 0;
   height: 2px;
   background: var(--clr-primary);
   border-radius: var(--radius-full);
+
+  /* Drawn on, rather than appearing. It grows from the middle of the tab you
+     pressed, which is where you were looking. */
+  animation: tabMark 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
 }
 
+@keyframes tabMark {
+  from { transform: scaleX(0.4); opacity: 0; }
+  to   { transform: scaleX(1);   opacity: 1; }
+}
+
+/* Keyboard users need to see which tab they are on before they press it. */
+.tab:focus-visible,
+.profile-tab:focus-visible {
+  outline: 2px solid var(--clr-primary);
+  outline-offset: -4px;
+  border-radius: var(--radius-sm);
+}
+
+.tab-panel[hidden],
 .profile-tab-content { display: none; }
-.profile-tab-content.active { display: block; }
+
+/* A tab panel owns the rhythm between its blocks, the same way .admin-content
+   does for the page. Every panel inside one used to carry its own margin, at
+   1.25rem, 1rem or 0.75rem depending on which tab it was on. */
+.profile-tab-content.active {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
+
+  /* Content swapping in place, with nothing to say it swapped, reads as the
+     page having been wrong a moment ago. A short rise says "this replaced
+     that" and gets out of the way. */
+  animation: panelIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ═══════════════════════════════════════════
    DETAIL GRID (for profile / intake details)
@@ -883,8 +1027,8 @@ a:hover { color: var(--clr-primary-dark); }
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .detail-label {
@@ -893,7 +1037,7 @@ a:hover { color: var(--clr-primary-dark); }
   color: var(--clr-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 0.2rem;
+  margin-bottom: var(--space-1);
 }
 
 .detail-value {
@@ -909,11 +1053,11 @@ a:hover { color: var(--clr-primary-dark); }
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: var(--clr-veil);
   z-index: 1000;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: var(--space-8);
 }
 
 .modal-overlay.open {
@@ -937,7 +1081,7 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 .modal-header {
-  padding: 1.15rem 1.5rem;
+  padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--clr-border);
   display: flex;
   align-items: center;
@@ -955,18 +1099,18 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 1.2rem;
   color: var(--clr-text-muted);
   cursor: pointer;
-  padding: 0.25rem;
+  padding: var(--space-1);
   line-height: 1;
 }
 .modal-close:hover { color: var(--clr-text); }
 
-.modal-body { padding: 1.5rem; }
+.modal-body { padding: var(--space-6); }
 .modal-footer {
-  padding: 1rem 1.5rem;
+  padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--clr-border);
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 /* ═══════════════════════════════════════════
@@ -976,7 +1120,8 @@ a:hover { color: var(--clr-primary-dark); }
   font-family: var(--font-family);
   font-size: 0.78rem;
   font-weight: 500;
-  padding: 0.25rem 0.5rem;
+  height: var(--control-h);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-sm);
   background: var(--clr-surface);
@@ -1016,11 +1161,12 @@ a:hover { color: var(--clr-primary-dark); }
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  min-height: var(--control-h);
+  gap: var(--space-2);
   background: var(--clr-bg);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-sm);
-  padding: 0.45rem 0.85rem;
+  padding: var(--space-2) var(--space-3);
   max-width: 320px;
 }
 
@@ -1043,28 +1189,30 @@ a:hover { color: var(--clr-primary-dark); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
 .toolbar-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .filter-btn {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--font-family);
   font-size: 0.78rem;
   font-weight: 500;
-  padding: 0.4rem 0.85rem;
+  min-height: var(--control-h);
+  padding: var(--space-1-5) var(--space-3);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-full);
   background: var(--clr-surface);
@@ -1076,7 +1224,7 @@ a:hover { color: var(--clr-primary-dark); }
 .filter-btn:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
 .filter-btn.active {
   background: var(--clr-primary);
-  color: #fff;
+  color: var(--clr-on-accent);
   border-color: var(--clr-primary);
 }
 
@@ -1087,7 +1235,7 @@ a:hover { color: var(--clr-primary-dark); }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 0;
+  padding: var(--space-2-5) 0;
   border-bottom: 1px solid var(--clr-border-light);
 }
 .qa-row:last-child { border-bottom: none; }
@@ -1095,14 +1243,14 @@ a:hover { color: var(--clr-primary-dark); }
 .qa-question {
   font-size: 0.84rem;
   color: var(--clr-text);
-  padding-right: 1rem;
+  padding-right: var(--space-4);
   flex: 1;
 }
 
 .qa-answer {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.2rem 0.6rem;
+  padding: var(--space-1) var(--space-2-5);
   border-radius: var(--radius-sm);
   text-align: center;
   min-width: 48px;
@@ -1116,20 +1264,25 @@ a:hover { color: var(--clr-primary-dark); }
    ═══════════════════════════════════════════ */
 .empty-state {
   text-align: center;
-  padding: 3rem 2rem;
+  padding: var(--space-12) var(--space-8);
   color: var(--clr-text-muted);
 }
 
 .empty-state i {
   font-size: 2.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
   display: block;
   opacity: 0.4;
 }
 
 .empty-state p {
   font-size: 0.92rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
+}
+
+.empty-state p + p {
+  font-size: 0.8rem;
+  margin-bottom: 0;
 }
 
 /* ═══════════════════════════════════════════
@@ -1139,10 +1292,11 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 1rem;
   font-weight: 600;
   color: var(--clr-text);
-  margin-bottom: 0.3rem;
-  padding-bottom: 0.5rem;
+  margin: var(--space-6) 0 var(--space-2);
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--clr-border-light);
 }
+.section-title:first-child { margin-top: 0; }
 
 /* ═══════════════════════════════════════════
    MOBILE OVERLAY
@@ -1151,7 +1305,7 @@ a:hover { color: var(--clr-primary-dark); }
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: var(--clr-veil);
   z-index: 99;
 }
 
@@ -1162,7 +1316,7 @@ a:hover { color: var(--clr-primary-dark); }
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  padding: 0.85rem 1.35rem;
+  padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-md);
   font-size: 0.85rem;
   font-weight: 500;
@@ -1180,8 +1334,8 @@ a:hover { color: var(--clr-primary-dark); }
   pointer-events: auto;
 }
 
-.alert-toast.success { background: var(--clr-success); color: #fff; }
-.alert-toast.error { background: var(--clr-danger); color: #fff; }
+.alert-toast.success { background: var(--clr-success); color: var(--clr-on-accent); }
+.alert-toast.error { background: var(--clr-danger); color: var(--clr-on-accent); }
 
 /* ═══════════════════════════════════════════
    RESPONSIVE
@@ -1213,10 +1367,10 @@ a:hover { color: var(--clr-primary-dark); }
 
 @media (max-width: 640px) {
   .admin-content {
-    padding: 1.25rem 1rem 2rem;
+    padding: var(--space-5) var(--space-4) var(--space-8);
   }
   .admin-header {
-    padding: 0 1rem;
+    padding: 0 var(--space-4);
   }
   .kpi-grid {
     grid-template-columns: 1fr;
@@ -1232,12 +1386,8 @@ a:hover { color: var(--clr-primary-dark); }
 }
 
 /* ═══════════════════════════════════════════
-   TABLE HOVER FIX & DISABLED STYLES
+   DISABLED STYLES
    ═══════════════════════════════════════════ */
-.data-table tbody tr:hover {
-  background: var(--sidebar-hover-bg);
-}
-
 .form-input:disabled {
   background: var(--clr-border-light);
   color: var(--clr-text-secondary);
@@ -1245,28 +1395,176 @@ a:hover { color: var(--clr-primary-dark); }
   opacity: 0.7;
 }
 
+/* Two equal columns that become one on a narrow screen. Reports and settings
+   each built this inline, where no media query could reach it, so those pages
+   stayed two-up on a phone and squeezed both halves. */
+.split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+.split-grid.split-aside { grid-template-columns: 1fr 340px; align-items: start; }
+
+@media (max-width: 900px) {
+  .split-grid,
+  .split-grid.split-aside { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════
+   REORDERABLE LISTS
+   ═══════════════════════════════════════════ */
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--clr-text-muted);
+  cursor: grab;
+}
+.drag-handle:active { cursor: grabbing; }
+tr[draggable="true"]:hover .drag-handle { color: var(--clr-text); }
+
+/* The row being carried. Kept faint rather than hidden, so the gap it leaves
+   and the row itself are both visible while it is moving. */
+tr.is-dragging {
+  opacity: 0.4;
+  background: var(--clr-primary-light);
+}
+
+/* While the new order is in flight. Not a spinner: the rows are already where
+   they will be, so the only thing worth saying is "not settled yet". */
+.question-list.is-saving tr[data-question] { opacity: 0.6; }
+
+/* Available to a screen reader and to the keyboard, out of the way of a mouse.
+   A reorder that needs a pointer is one some people cannot make at all. */
+.visually-hidden,
+.visually-hidden-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.visually-hidden-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  padding: var(--space-0-5) var(--space-1);
+  font-size: 0.72rem;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  cursor: pointer;
+}
+
+/* An address plus the button that acts on it, sized to the toolbar it sits in. */
+.send-link-form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.send-link-form .form-input { width: 20rem; max-width: 100%; }
+
+/* The one row in a section that adds to it. Sits under its table, indented to
+   the same inset, so it reads as the end of that list rather than a control
+   floating between two of them. */
+.add-question {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+.add-question .form-input { max-width: 26rem; }
+
 /* ═══════════════════════════════════════════
    DARK MODE
    ═══════════════════════════════════════════ */
 body.admin-body.admin-dark-theme {
-  --clr-bg: #0f172a;
-  --clr-surface: #1e293b;
-  --clr-border: #334155;
-  --clr-border-light: #2d3748;
-  --clr-text: #f8fafc;
-  --clr-text-secondary: #cbd5e1;
-  --clr-text-muted: #64748b;
+  /* Black and white, not navy. The slate palette this replaced (#0f172a /
+     #1e293b) reads as "dim blue" beside a real dark theme. Everything
+     structural is a neutral here; colour is kept for what is colour-coded.
 
-  --sidebar-bg: #0b0f19;
-  --sidebar-active-bg: #1e293b;
-  --sidebar-hover-bg: #1e293b;
-  
-  --clr-primary-light: rgba(13, 115, 119, 0.15);
-  --clr-accent-light: rgba(127, 182, 133, 0.15);
-  --clr-success-light: rgba(52, 168, 83, 0.15);
-  --clr-warning-light: rgba(245, 158, 11, 0.15);
-  --clr-danger-light: rgba(234, 67, 53, 0.15);
-  --clr-info-light: rgba(66, 133, 244, 0.15);
+     This block is only token values -- no per-component overrides. Every
+     component reads a token, so a component that looks wrong in the dark is a
+     component still holding a colour of its own, and the fix belongs there. */
+  color-scheme: dark;
+
+  --clr-bg: #000000;
+  --clr-surface: #0c0c0c;
+  --clr-border: #2e2e2e;
+  --clr-border-light: #1c1c1c;
+  --clr-text: #ffffff;
+  --clr-text-secondary: #b9b9b9;
+  --clr-text-muted: #8a8a8a;
+
+  --sidebar-bg: #000000;
+  --sidebar-active-bg: #1c1c1c;
+  --sidebar-hover-bg: #161616;
+
+  /* Terracotta, chosen for the dark theme rather than derived from the light
+     one. The teal that was here reads as an electric blue against black, which
+     is not what anyone picked; this is warm, and it is the one colour on an
+     otherwise black-and-white page.
+
+     Roles invert on a dark ground: -dark is the *lighter* step here, because
+     it is what a link goes to on hover, and hovering must brighten. */
+  --clr-primary: #e07a5f;          /* hue 13, L 63% -- 6.6:1 on a panel */
+  --clr-primary-hover: #e89b87;
+  --clr-primary-dark: #efb8a9;
+  --clr-accent: #77c580;           /* the sage at its own hue 126, lifted */
+
+  /* The status colours stay colours -- a badge that says "cancelled" in grey
+     is not a status badge any more. Same rule as the brand: each one is its
+     own light-theme hue at exactly the same angle, raised in lightness until
+     it clears AA against its own pill. Nothing here is a new colour. */
+  --clr-success: #63cf80;          /* hue 136, from #34a853 */
+  --clr-warning: #f7b13b;          /* hue  38, from #f59e0b */
+  /* The one colour that had to leave its own hue. #f07a70 sat 7.9 degrees
+     from the terracotta above -- a deltaE of 9.7, which is the same colour to
+     a reader -- so Reject and Book would have looked alike. Pushed to a cooler
+     red: deltaE 26.6 from the primary, distinct at a glance. */
+  --clr-danger:  #f65a6f;          /* was #f07a70, moved for the accent above */
+  --clr-info:    #659bf6;          /* hue 217, from #4285f4 */
+
+  /* Badge and pill backgrounds: the same hue at low alpha, so the tint reads
+     as a wash over black rather than as a second, muddier colour. */
+  --clr-primary-light: rgba(224, 122, 95, 0.18);
+  --clr-accent-light: rgba(119, 197, 128, 0.16);
+  --clr-success-light: rgba(99, 207, 128, 0.16);
+  --clr-warning-light: rgba(247, 177, 59, 0.16);
+  --clr-danger-light: rgba(246, 90, 111, 0.16);
+  --clr-info-light: rgba(101, 155, 246, 0.16);
+
+  /* The fills above are light hues, so a label on one has to be black --
+     white on #e07a5f is 3.0:1, which is not a label anyone can read. */
+  --clr-on-accent: #000000;
+  /* Dark amber on a dark amber wash is unreadable; on black the text has to
+     become the bright hue itself. */
+  --clr-warning-text: #f7b13b;
+  --clr-neutral-pill: rgba(255, 255, 255, 0.08);
+  /* Hover must LIFT. Pointing this at --clr-bg, as the light theme could,
+     would punch a black hole in a panel instead of raising the row. */
+  --clr-hover-surface: #1a1a1a;
+  /* A veil over an already-black page has to be darker than the page. */
+  --clr-veil: rgba(0, 0, 0, 0.78);
+  --clr-focus-ring: rgba(224, 122, 95, 0.32);
+
+  /* A drop shadow is invisible on black. Depth comes from a hairline instead. */
+  --shadow-xs: none;
+  --shadow-sm: 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-md: 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-lg: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.8);
 }
 
 /* ═══════════════════════════════════════════
@@ -1285,7 +1583,7 @@ body.admin-body.admin-dark-theme {
   background: transparent;
   border: none;
   color: var(--clr-text-secondary);
-  padding: 0.35rem 0.6rem;
+  padding: var(--space-1-5) var(--space-2-5);
   font-size: 0.85rem;
   border-radius: calc(var(--radius-sm) - 2px);
   cursor: pointer;
@@ -1304,22 +1602,22 @@ body.admin-body.admin-dark-theme {
 
 .view-toggle-btn:hover:not(.active) {
   color: var(--clr-text);
-  background: rgba(0,0,0,0.02);
+  background: var(--clr-hover-surface);
 }
 
 /* Grid layout containers */
 .grid-view-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
 }
 
 .grid-card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-lg);
-  padding: 1.25rem;
+  padding: var(--space-5);
   box-shadow: var(--shadow-xs);
   display: flex;
   flex-direction: column;
@@ -1336,8 +1634,8 @@ body.admin-body.admin-dark-theme {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
-  gap: 0.5rem;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
 }
 
 .grid-card-title {
@@ -1346,7 +1644,7 @@ body.admin-body.admin-dark-theme {
   color: var(--clr-text);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .grid-card-body {
@@ -1355,14 +1653,14 @@ body.admin-body.admin-dark-theme {
   color: var(--clr-text-secondary);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 .grid-card-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   word-break: break-all;
 }
 
@@ -1377,10 +1675,10 @@ body.admin-body.admin-dark-theme {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 0.75rem;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--clr-border-light);
   margin-top: auto;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -1398,13 +1696,13 @@ body.admin-body.admin-dark-theme {
 /* ═══════════════════════════════════════════
    LEAD FILTER BAR
    ═══════════════════════════════════════════ */
+/* No margin of its own: .admin-content spaces its children. */
 .lead-filter-bar {
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-md);
@@ -1414,7 +1712,7 @@ body.admin-body.admin-dark-theme {
 .lead-filter-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 .lead-filter-field span {
   font-size: 0.72rem;
@@ -1427,12 +1725,39 @@ body.admin-body.admin-dark-theme {
 .th-sort {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--space-1);
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
 .th-sort:hover { color: var(--clr-primary); }
-.th-sort i { font-size: 0.7rem; opacity: 0.5; }
+
+/* The glyph sits in a box of its own, centred.
+   Three things were pushing it out of place:
+   - it inherited the body's 1.6 line-height, so its box was two and a half
+     times the height of the glyph and the glyph floated inside it;
+   - Bootstrap nudges every icon down by -.125em to sit on a text baseline,
+     which is wrong inside a flex row that is already centring it;
+   - the th sets letter-spacing, which on a single glyph is just a gap tacked
+     onto its right-hand side.
+   The fixed 1em slot is what stops the header text jumping sideways when the
+   neutral up-down glyph is swapped for a single arrow. */
+.th-sort i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  font-size: 0.7rem;
+  line-height: 1;
+  letter-spacing: 0;
+  opacity: 0.4;
+}
+.th-sort i::before { vertical-align: 0; }
+
+/* Faded on a column you could sort by, solid on the one you did. A glyph that
+   looks the same either way tells you nothing about the order you are reading. */
+.th-sort.is-sorted { color: var(--clr-primary); }
+.th-sort.is-sorted i { opacity: 1; }
 
 /* ═══════════════════════════════════════════
    BULK ACTION BAR
@@ -1440,9 +1765,8 @@ body.admin-body.admin-dark-theme {
 .bulk-bar {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1rem;
-  margin-bottom: 0.85rem;
+  gap: var(--space-2-5);
+  padding: var(--space-2-5) var(--space-4);
   background: var(--clr-primary-light);
   border: 1px solid var(--clr-primary);
   border-radius: var(--radius-md);
@@ -1453,20 +1777,174 @@ body.admin-body.admin-dark-theme {
 .bulk-bar[hidden] { display: none; }
 
 /* ═══════════════════════════════════════════
-   LEAD DETAIL DRAWER
+   SETTINGS
+   A settings page is a list of decisions, not a list of inputs. These pieces
+   exist so each decision can carry its own consequence beside it, and so a
+   number of days does not arrive in a field wide enough for an email.
    ═══════════════════════════════════════════ */
+
+/* A panel header that says what the group is for, under its name. */
+.panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--clr-text-secondary);
+  margin-top: var(--space-1);
+  font-weight: 400;
+  max-width: 60ch;
+}
+
+/* One decision: what it is called, what it does, and the control. The help
+   text sits under the label rather than under the input, because it is what
+   you read before answering, not after. */
+.setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: var(--space-4) var(--space-6);
+  align-items: start;
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--clr-border-light);
+}
+.setting:first-child { padding-top: 0; }
+.setting:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.setting-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--clr-text);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+.setting-help {
+  font-size: 0.8rem;
+  color: var(--clr-text-secondary);
+  line-height: 1.55;
+  max-width: 60ch;
+}
+.setting-help code {
+  font-size: 0.76rem;
+  background: var(--clr-border-light);
+  padding: 0 var(--space-1);
+  border-radius: 3px;
+}
+
+/* A control the width of the answer it expects. A number of days in a field
+   wide enough for an email address is a field that has not been thought about. */
+.setting-control { display: flex; align-items: center; gap: var(--space-2); }
+
+/* A row works for "number, then unit". It does not work for a field that has
+   a message under it: the message became a second column, centred against the
+   middle of a twelve-row textarea. Anything taller than one line stacks. */
+.setting-control.is-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.setting-control .form-input,
+.setting-control .form-select,
+.setting-control .form-textarea { width: 100%; }
+.setting-control.is-short { max-width: 8rem; }
+.setting-unit { font-size: 0.82rem; color: var(--clr-text-muted); white-space: nowrap; }
+
+/* A setting whose answer is long enough to need the full width. */
+.setting.is-wide { grid-template-columns: 1fr; }
+.setting.is-wide .setting-control { max-width: none; }
+
+/* Placeholders as things you can click, not a list to copy by hand. */
+.placeholder-chips { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-top: var(--space-2); }
+.placeholder-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  padding: var(--space-0-5) var(--space-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-full);
+  background: var(--clr-surface);
+  color: var(--clr-text-secondary);
+  cursor: pointer;
+}
+.placeholder-chip:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
+
+/* What the recipient actually gets. A template full of {{braces}} cannot be
+   read as an email, and the whole point of editing it is the email. */
+.email-preview {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-bg);
+  padding: var(--space-4);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.email-preview-subject {
+  font-weight: 600;
+  color: var(--clr-text);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--clr-border-light);
+}
+.email-preview-body { white-space: pre-wrap; color: var(--clr-text-secondary); }
+
+/* A switch, for the settings that take effect the moment they are flipped. */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); }
+
+/* The save bar rides the bottom of the viewport while the form is dirty, so a
+   change made at the top of a long page can be saved without hunting for the
+   button. It only appears once something has changed -- a permanent bar is
+   just a button that has stopped meaning anything. */
+.save-bar {
+  position: sticky;
+  bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--clr-primary);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+}
+.save-bar[hidden] { display: none; }
+.save-bar-note { color: var(--clr-text-secondary); }
+
+/* A message about what just happened, above the thing it happened to. */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.alert-success { background: var(--clr-success-light); color: var(--clr-success); }
+.alert-error { background: var(--clr-danger-light); color: var(--clr-danger); }
+
+@media (max-width: 720px) {
+  .setting { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════
+   DETAIL DRAWER
+   A panel from the right, for reading one record without losing the list
+   behind it. Named for the shape, not for leads: the intake module shows its
+   answers in the same one.
+   ═══════════════════════════════════════════ */
+.drawer-backdrop,
 .lead-drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
+  background: var(--clr-veil);
   z-index: 900;
 }
+.drawer-backdrop[hidden],
 .lead-drawer-backdrop[hidden] { display: none; }
 
+.drawer,
 .lead-drawer {
   position: fixed;
   top: 0;
   right: 0;
+  /* A lead is a summary; an intake is 36 answers, which needs the room. */
   width: min(520px, 100vw);
   height: 100vh;
   background: var(--clr-surface);
@@ -1476,55 +1954,64 @@ body.admin-body.admin-dark-theme {
   display: flex;
   flex-direction: column;
 }
+.drawer[hidden],
 .lead-drawer[hidden] { display: none; }
+.drawer.drawer-wide { width: min(720px, 100vw); }
 
+.drawer-header,
 .lead-drawer-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.15rem 1.35rem;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-5);
   border-bottom: 1px solid var(--clr-border);
 }
+.drawer-header h2,
 .lead-drawer-header h2 { font-size: 1.05rem; margin: 0; }
-.lead-drawer-sub { font-size: 0.78rem; color: var(--clr-text-muted); margin-top: 0.2rem; }
+.drawer-sub,
+.lead-drawer-sub { font-size: 0.78rem; color: var(--clr-text-muted); margin-top: var(--space-1); }
 
-.lead-drawer-body { padding: 1.35rem; overflow-y: auto; flex: 1; }
+.drawer-body,
+.lead-drawer-body { padding: var(--space-5); overflow-y: auto; flex: 1; }
 
-.lead-drawer-section { margin-bottom: 1.75rem; }
+.drawer-section,
+.lead-drawer-section { margin-bottom: var(--space-section); }
+.drawer-section h3,
 .lead-drawer-section h3 {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--clr-text-muted);
-  margin: 0 0 0.65rem;
+  margin: 0 0 var(--space-2-5);
 }
 
-.lead-drawer-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.drawer-actions,
+.lead-drawer-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 
 .lead-dup-banner {
-  padding: 0.7rem 0.9rem;
-  margin-bottom: 1.25rem;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
   background: var(--clr-warning-light);
-  color: #b45309;
+  color: var(--clr-warning-text);
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
 }
 .lead-dup-banner[hidden] { display: none; }
 
-.lead-answers { display: grid; grid-template-columns: 40% 60%; gap: 0.4rem 0.75rem; margin: 0; }
+.lead-answers { display: grid; grid-template-columns: 40% 60%; gap: var(--space-1-5) var(--space-3); margin: 0; }
 .lead-answers dt { font-size: 0.78rem; color: var(--clr-text-muted); }
 .lead-answers dd { font-size: 0.85rem; margin: 0; word-break: break-word; }
 
-.lead-notes { list-style: none; padding: 0; margin: 1rem 0 0; }
+.lead-notes { list-style: none; padding: 0; margin: var(--space-4) 0 0; }
 .lead-notes li {
-  padding: 0.7rem 0.85rem;
-  margin-bottom: 0.5rem;
+  padding: var(--space-3) var(--space-3);
+  margin-bottom: var(--space-2);
   background: var(--clr-bg);
   border-radius: var(--radius-sm);
 }
-.lead-note-body { margin: 0 0 0.3rem; font-size: 0.85rem; }
+.lead-note-body { margin: 0 0 var(--space-1); font-size: 0.85rem; }
 .lead-note-meta { font-size: 0.72rem; color: var(--clr-text-muted); }
 
 /* Intake Data tab section headings */
@@ -1534,11 +2021,1127 @@ body.admin-body.admin-dark-theme {
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--clr-text-muted);
-  margin: 0 0 0.65rem;
-  padding-bottom: 0.4rem;
+  margin: 0 0 var(--space-2-5);
+  padding-bottom: var(--space-1-5);
   border-bottom: 1px solid var(--clr-border-light);
 }
 
 /* Client lifecycle: 'completed' means treatment finished, distinct from a
    completed session, so it reads teal rather than green. */
 .badge-client-completed { background: var(--clr-primary-light); color: var(--clr-primary); }
+
+/* ═══════════════════════════════════════════
+   SHARED PIECES THE PAGES USED TO REBUILD
+
+   Everything below existed already -- in a style attribute, in a string of
+   JavaScript, or in a <style> block on one page. Rebuilt by hand each time, at
+   a value picked by eye each time, which is why two panels side by side never
+   lined up inside. One definition, so they line up by construction.
+   ═══════════════════════════════════════════ */
+
+/* ─── Heading of a block inside a tab, with its action on the right ─── */
+.subsection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--clr-text);
+  margin: 0;
+}
+
+/* ─── The last cell of a table row: its buttons, right-aligned ───
+   Every page wrote `text-align:right` on the cell and a four-property
+   inline-flex on a div inside it. The row is what needs naming, not the
+   alignment, so this carries both. */
+.td-actions { text-align: right; white-space: nowrap; }
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Right-aligned column: on the header as well as the cells, or the label
+   floats over the left edge of the numbers underneath it. */
+.th-right, .td-right { text-align: right; }
+
+/* ─── One line of secondary explanation, under the thing it explains ─── */
+.hint {
+  font-size: 0.8rem;
+  color: var(--clr-text-muted);
+}
+
+/* ─── A number with its label under it, centred in its own tile ─── */
+.stat-tile { text-align: center; }
+.stat-tile-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--clr-text);
+  line-height: 1.2;
+}
+.stat-tile-value.is-paid { color: var(--clr-success); }
+.stat-tile-value.is-pending { color: var(--clr-warning-text); }
+.stat-tile-value.is-large { font-size: 2rem; }
+
+/* ─── A horizontal count card: icon, then the number and what it counts ─── */
+.stat-strip { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+
+.stat-strip-card {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+}
+
+/* Same 40px slot as the KPI cards use, so a page that shows both does not
+   show two sizes of the same thing. */
+.stat-strip-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+.stat-strip-icon.teal { background: var(--clr-primary-light); color: var(--clr-primary); }
+.stat-strip-icon.blue { background: var(--clr-info-light); color: var(--clr-info); }
+.stat-strip-icon.green { background: var(--clr-success-light); color: var(--clr-success); }
+.stat-strip-icon.amber { background: var(--clr-warning-light); color: var(--clr-warning); }
+
+.stat-strip-num { font-size: 1.35rem; font-weight: 700; color: var(--clr-text); line-height: 1.1; }
+.stat-strip-label { font-size: 0.72rem; color: var(--clr-text-secondary); }
+
+/* ─── A session in a list ───
+   The dashboard built this out of eleven style attributes inside a JavaScript
+   string, where no stylesheet and no theme could reach any of it. */
+.day-sessions {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--clr-border-light);
+}
+
+.session-list { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.session-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--clr-border-light);
+  border-radius: var(--radius-md);
+  background: var(--clr-bg);
+}
+
+.session-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.session-row-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-primary);
+}
+
+.session-row-body { flex: 1; min-width: 0; }
+
+.session-row-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--clr-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-row-meta {
+  font-size: 0.78rem;
+  color: var(--clr-text-secondary);
+  margin-top: var(--space-0-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.session-row-meta > * + *::before {
+  content: '·';
+  margin-right: var(--space-2);
+  color: var(--clr-text-muted);
+}
+
+.session-row-note {
+  font-size: 0.75rem;
+  color: var(--clr-text-secondary);
+  margin-top: var(--space-1-5);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--clr-primary);
+}
+
+/* One badge, at the end of the row, on the same line as the name it belongs
+   to. It used to be a column of two -- status over type -- which is what made
+   every row two lines tall on the right-hand side for no reading gained. */
+.session-row > .badge { flex-shrink: 0; margin-top: var(--space-0-5); }
+
+/* ─── The day you are looking at in a calendar ───
+   Lived in a <style> block halfway down the dashboard, next to the markup it
+   styled and out of reach of the sessions page, which draws the same grid. */
+.cal-cell.selected {
+  outline: 2px solid var(--clr-primary);
+  outline-offset: -2px;
+  z-index: 5;
+}
+
+/* ─── A filter control small enough to sit in a filter bar ───
+   These were reusing .status-select, which is the colour-coded control for a
+   record's status. A filter that paints itself teal is claiming to be one. */
+.form-select-sm, .form-input-sm {
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  height: var(--control-h);
+  padding: var(--space-1-5) var(--space-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  background: var(--clr-surface);
+  color: var(--clr-text);
+}
+.form-select-sm:focus, .form-input-sm:focus {
+  outline: none;
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px var(--clr-focus-ring);
+}
+
+/* ─── Tone modifiers ───
+   The bulk bar is teal because "selected" is a neutral state. When it carries
+   a failure or a warning instead, the colour has to follow the meaning -- and
+   three pages were recolouring it with a style attribute, in the dark theme's
+   blind spot. Same for a panel-title icon that flags its own panel. */
+.bulk-bar.is-danger {
+  background: var(--clr-danger-light);
+  border-color: var(--clr-danger);
+  color: var(--clr-danger);
+}
+.bulk-bar.is-warning {
+  background: var(--clr-warning-light);
+  border-color: var(--clr-warning);
+  color: var(--clr-warning-text);
+}
+.icon-warning { color: var(--clr-warning); }
+.icon-danger { color: var(--clr-danger); }
+
+/* ─── The session row, listed rather than carded ───
+   Same component, no fill: a rule between neighbours instead of a border
+   around each. The sessions page had this as a style attribute that fought
+   .activity-item for every property it set. */
+.session-row.is-plain {
+  align-items: center;
+  padding: var(--space-3) 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--clr-border-light);
+  border-radius: 0;
+}
+.session-row.is-plain:last-child { border-bottom: 0; }
+.session-row.is-plain .session-row-main { align-items: center; }
+
+.session-row-icon.teal { background: var(--clr-primary-light); color: var(--clr-primary); border-color: transparent; }
+.session-row-icon.amber { background: var(--clr-warning-light); color: var(--clr-warning); border-color: transparent; }
+
+/* The controls that act on the row. They are all --control-h tall, so they
+   share a midline instead of each finding their own. */
+.session-row-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* "+2" on a calendar day with more sessions than the cell can show. */
+.cal-more { font-size: 0.65rem; color: var(--clr-text-muted); }
+
+/* ─── Small shapes that four pages each built from scratch ─── */
+
+/* A dialog that asks one question does not need the width of one that shows
+   a form. */
+.modal-box.is-narrow { max-width: 420px; }
+
+/* A checkbox or radio and its label, on one line, the label not bolded --
+   it is an option, not a field name. */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 400;
+}
+
+/* The hint on its own line, under the control it belongs to. */
+.hint.is-block { display: block; margin-top: var(--space-1-5); }
+
+/* The action at the foot of the day-sessions dialog. */
+.modal-day-book { padding-top: var(--space-4); }
+
+/* The select-all column: wide enough for a checkbox, no wider. */
+.th-check { width: 36px; }
+
+/* ─── "Nothing matched" ───
+   Leads and clients each drew this twice -- once for the table, once for the
+   card grid -- out of four style attributes apiece, at two different paddings.
+   It is the same sentence in the same place; it should be the same shape. */
+.no-matches-card,
+.no-matches td {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--clr-text-muted);
+}
+.no-matches-card { grid-column: 1 / -1; }
+.no-matches i,
+.no-matches-card i {
+  font-size: 1.75rem;
+  display: block;
+  margin-bottom: var(--space-2);
+  opacity: 0.4;
+}
+.no-matches p,
+.no-matches-card p { margin: 0; font-size: 0.9rem; }
+
+/* ─── The message a lead wrote, revealed under its row ─── */
+.msg-cell { background: var(--clr-border-light); padding: var(--space-4) var(--space-6); }
+
+.msg-panel {
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border-light);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.msg-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-1);
+}
+
+.msg-body { margin: 0; font-size: 0.85rem; color: var(--clr-text); }
+
+/* ─── Card grid pieces ───
+   .grid-card-body already spaces its items with a gap. The pages added a
+   margin to every item on top of it, so cards on the same row disagreed about
+   where their third line sat. */
+.grid-card-date { font-size: 0.75rem; color: var(--clr-text-muted); }
+.grid-card-item .badge { flex-shrink: 0; }
+.grid-card-label { font-size: 0.8rem; font-weight: 500; color: var(--clr-text-secondary); }
+
+/* The card's own column, so the footer can be pushed to the bottom and every
+   card in a row ends at the same line. */
+.grid-card-inner { flex: 1; display: flex; flex-direction: column; }
+
+/* A person in a table cell: their initials, then their name. */
+.cell-person { display: flex; align-items: center; gap: var(--space-2-5); }
+
+/* The avatar at row scale. Three pages resized .sidebar-avatar by hand, which
+   is how a 32px circle ends up next to a 34px one. */
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--clr-primary-light);
+  color: var(--clr-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* ═══════════════════════════════════════════
+   CHARTS
+   The reports page drew all of this with style attributes, so the bars sat at
+   0.35rem from their labels, the funnel rows at 0.3rem and the concern list at
+   0.55rem -- three rhythms on one screen, none of them from the scale.
+   ═══════════════════════════════════════════ */
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  height: 160px;
+}
+
+.bar-chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.bar-chart-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--clr-text);
+  margin-bottom: var(--space-1-5);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Only the height is data. Everything else is the same on every bar. */
+.bar-chart-bar {
+  width: 100%;
+  background: var(--clr-primary);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.bar-chart-label {
+  font-size: 0.7rem;
+  color: var(--clr-text-muted);
+  margin-top: var(--space-1-5);
+  white-space: nowrap;
+}
+
+/* ─── A labelled proportion: name and value, with the bar under them ─── */
+.meter { margin-bottom: var(--space-4); }
+.meter:last-child { margin-bottom: 0; }
+
+.meter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+  font-size: 0.82rem;
+}
+.meter-name { font-weight: 500; }
+.meter-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.meter-fill { height: 100%; border-radius: var(--radius-full); }
+
+/* ─── A name and its number, one per line ─── */
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2-5) 0;
+  border-bottom: 1px solid var(--clr-border-light);
+  font-size: 0.85rem;
+}
+.kv-row:last-child { border-bottom: 0; }
+.kv-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ─── A headline figure with a rule under it ─── */
+.stat-tile.is-banner {
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--clr-border-light);
+}
+
+/* ─── A paragraph of explanation inside a panel ───
+   Five of these on the form builder each set their own size and leading with
+   a style attribute, on top of .td-muted, which is a table cell class. */
+.prose {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--clr-text-secondary);
+  max-width: 70ch;
+}
+
+/* The one control in a row that belongs at the far end of it. */
+.push-right { margin-left: auto; }
+
+/* A body that opens a list rather than closing one: it keeps the inset and
+   drops the bottom padding, so the table under it starts flush. */
+.panel-body-tight { padding: var(--space-4) var(--space-5) 0; }
+
+/* Fixed columns in the question list: the drag handle and the row button. */
+.th-handle { width: 44px; }
+.th-rowbtn { width: 90px; }
+
+/* ─── Form pieces the blog editor used to define for itself ─── */
+
+/* A field that needs the whole row: a long excerpt, a rich-text editor. */
+.form-group.is-full { grid-column: 1 / -1; }
+
+/* The buttons that commit or abandon a form, at its foot. */
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* A title cell that also shows the record's slug or subtitle underneath. */
+.td-title { max-width: 280px; }
+.td-title small {
+  display: block;
+  margin-top: var(--space-0-5);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--clr-text-muted);
+}
+
+/* The destructive one in a row of icon buttons. Neutral until you reach for
+   it, so a row of three does not read as a row of warnings. */
+.btn-icon.is-danger:hover {
+  background: var(--clr-danger-light);
+  color: var(--clr-danger);
+  border-color: var(--clr-danger);
+}
+
+/* ─── Quill ───
+   A third-party editor draws its own chrome. These four lines are only about
+   making its border and radius agree with every other field on the page. */
+#blogEditorContainer { height: 280px; }
+#blogEditorContainer .ql-toolbar {
+  border-color: var(--clr-border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+#blogEditorContainer .ql-container {
+  border-color: var(--clr-border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+}
+
+/* ═══════════════════════════════════════════
+   PROFILE & SCORES
+   ═══════════════════════════════════════════ */
+
+/* The way back to the list this record came from. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: 0.85rem;
+  color: var(--clr-text-muted);
+}
+.back-link:hover { color: var(--clr-text); }
+
+/* ─── A score out of a maximum ───
+   Three surfaces show the same number at three sizes; the size is the only
+   thing that differs, so it is the only thing named. */
+.score-text.is-lg { font-size: 1.1rem; }
+.score-text.is-xl { font-size: 1.3rem; font-weight: 700; }
+.score-text.is-hero { font-size: 2rem; font-weight: 700; }
+
+.score-bar { margin-top: var(--space-1); }
+.score-bar.is-compact { width: 80px; }
+
+/* The breakdown under an intake card: each questionnaire, then the total. */
+.score-box {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--clr-bg);
+  border: 1px solid var(--clr-border-light);
+  border-radius: var(--radius-sm);
+}
+.score-box-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-1-5);
+}
+.score-box-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.82rem;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--clr-border-light);
+}
+
+.detail-grid.is-thirds { grid-template-columns: repeat(3, 1fr); }
+
+/* ─── A form laid out as one row of controls ───
+   Merge, upload and payment each built this from five inline properties, and
+   each one picked a different gap, so the three forms on one page sat at three
+   different densities. */
+.form-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.form-inline .form-group { margin-bottom: 0; }
+.form-inline > * { flex: 0 0 auto; }
+.form-group.is-grow { flex: 1; min-width: 15rem; }
+.form-input.is-amount { width: 9rem; }
+
+/* Three tiles across, collapsing rather than squeezing. */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+@media (max-width: 720px) {
+  .stat-row { grid-template-columns: 1fr; }
+  .detail-grid.is-thirds { grid-template-columns: 1fr; }
+}
+
+/* A note's body: read as prose, not as a table cell. */
+.note-body { font-size: 0.88rem; line-height: 1.6; margin: 0; }
+
+/* Long free text in a cell truncates rather than stretching the column. */
+.td-clip {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A control in an inline form that should take the space the others do not. */
+.form-grow { flex: 1; min-width: 0; }
+
+/* ─── Settings ───
+   A settings page is read, not scanned, so its column is capped at a
+   comfortable measure. Three blocks set that cap by hand at the same value,
+   which means the next block added will not have it. */
+.settings-page { max-width: 980px; }
+
+/* The last setting in a group: no rule under it, the panel edge is the rule. */
+.setting.is-last { border-bottom: 0; padding-bottom: 0; }
+
+/* Two buttons side by side inside a setting's control slot. */
+.setting-control .btn-pair { display: flex; gap: var(--space-2); }
+
+/* A full-width action at the foot of a form. */
+.btn-block { width: 100%; justify-content: center; }
+
+/* The grid while the next month is on its way. Dimmed rather than emptied:
+   the month you are leaving stays legible until the one you asked for is
+   ready, and a second click cannot land on a day that is about to change. */
+.calendar-grid.is-loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS CONTROLS
+   A setting is a decision, and the three kinds of decision on this page want
+   three different controls. A number wants to show what it resolves to. A set
+   of times wants to be a set, not a string somebody types commas into. A
+   template wants to say when it is broken, before it is sent.
+   ═══════════════════════════════════════════ */
+
+/* ─── The answer, read back ───
+   "14" is a value; "a link sent today would expire on 8 Sep" is the decision.
+   Tinted and marked, so it reads as output rather than as more help text. */
+.setting-echo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-2-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--clr-primary-light);
+  color: var(--clr-primary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.setting-echo i { flex-shrink: 0; line-height: 1.5; }
+.setting-echo.is-warning { background: var(--clr-warning-light); color: var(--clr-warning-text); }
+.setting-echo.is-danger { background: var(--clr-danger-light); color: var(--clr-danger); }
+
+/* ─── Common answers, one click away ───
+   Most practices want 7, 14 or 30 days. Typing is still there for the ones who
+   want 21, but nobody should have to type the ordinary answer. The pill is the
+   filter pill: same shape, same active state, and "active" here honestly means
+   "this is the value in the box". */
+.setting-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-top: var(--space-2);
+}
+
+/* ─── A set of times, as a set ───
+   This was a text input holding "09:00,11:00,13:00". A typo in it removed a
+   slot from the appointment page, the questionnaire and the calendar at once,
+   silently, because bookingSlots() drops what it cannot parse. Times are added
+   through a real time picker, which cannot produce an unparseable one. */
+.time-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.time-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-full);
+  background: var(--clr-surface);
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--clr-text);
+}
+
+.time-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--clr-text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.time-chip-remove:hover { background: var(--clr-danger-light); color: var(--clr-danger); }
+
+.time-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.time-add .form-input { width: 9rem; }
+
+/* Nothing in the set. The practice cannot take a booking at all in this state,
+   which is worth saying plainly rather than showing an empty row. */
+.time-chips-empty {
+  font-size: 0.82rem;
+  color: var(--clr-danger);
+}
+
+/* ─── A field that is wrong, said next to the field ───
+   Not at the top of the page, and not after the email has already gone out. */
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--clr-danger);
+}
+.field-error[hidden] { display: none; }
+
+/* The placeholder the email cannot work without, marked as such in the row of
+   ones that are merely available. */
+.placeholder-chip.is-required {
+  border-color: var(--clr-primary);
+  color: var(--clr-primary);
+  font-weight: 600;
+}
+
+/* A count of what is about to be written, so Save is not a leap of faith. */
+.save-bar-note strong { color: var(--clr-text); }
+
+/* ═══════════════════════════════════════════
+   MAILBOX PREVIEW
+   The old preview was the subject in bold over the body in grey. That shows
+   the text, which was never the question -- the question is what lands in
+   somebody's inbox, and an inbox has a sender, a recipient, a time, and a
+   link that looks like a link. A template full of {{braces}} rendered as flat
+   grey text cannot answer it.
+   ═══════════════════════════════════════════ */
+.mailbox {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* The window strip. Not a mac-window pastiche: just enough chrome that the
+   panel below reads as somebody else's screen rather than as this one. */
+.mailbox-chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--clr-border-light);
+  background: var(--clr-bg);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+}
+.mailbox-chrome i { font-size: 0.85rem; }
+
+/* The subject is the loudest thing in a mailbox, so it is the loudest thing
+   here -- above the sender, the way every mail client sets it. */
+.mailbox-subject {
+  padding: var(--space-4) var(--space-5) 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--clr-text);
+}
+.mailbox-subject:empty::before {
+  content: '(no subject)';
+  color: var(--clr-text-muted);
+  font-weight: 400;
+}
+
+.mailbox-from {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+}
+
+.mailbox-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--clr-primary-light);
+  color: var(--clr-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.mailbox-who { min-width: 0; flex: 1; }
+.mailbox-sender {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--clr-text);
+}
+.mailbox-sender span { font-weight: 400; color: var(--clr-text-muted); }
+.mailbox-to { font-size: 0.78rem; color: var(--clr-text-muted); }
+
+.mailbox-time {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--clr-text-muted);
+  white-space: nowrap;
+}
+
+/* pre-wrap, because the template's own line breaks are the layout of the
+   email. Collapsing them here would preview a paragraph nobody will receive. */
+.mailbox-body {
+  padding: var(--space-2) var(--space-5) var(--space-5);
+  border-top: 1px solid var(--clr-border-light);
+  margin-top: var(--space-1);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--clr-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The one thing the old preview got most wrong. {{intake_link}} became a
+   string of grey text, so the preview never showed the only part of the email
+   anybody is going to click. */
+.mailbox-body a {
+  color: var(--clr-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mailbox-foot {
+  padding: var(--space-2-5) var(--space-5);
+  border-top: 1px solid var(--clr-border-light);
+  background: var(--clr-bg);
+  font-size: 0.75rem;
+  color: var(--clr-text-muted);
+}
+
+/* ─── The email editor's own rhythm ───
+   These rows carry a field, a row of chips and a message each, so the
+   generic .setting padding left them sitting at three different distances
+   from their own labels. One stack, one gap. */
+.mail-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.mail-field + .mail-field { margin-top: var(--space-6); }
+.mail-field > .setting-help { margin: 0; }
+.mail-field .placeholder-chips { margin-top: 0; }
+.mail-field .field-error { margin-top: 0; }
+
+/* ─── A heading that divides a long settings page ───
+   The email template is not the same size of decision as a number of days,
+   and the admin accounts are a different question again. A rule and a word,
+   rather than a tab that hides two thirds of the page. */
+.settings-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--clr-border);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+}
+.settings-section-head i { font-size: 0.95rem; }
+
+/* ─── A setting whose answers are a short list ───
+   A promise of "two working days" has four sensible answers and no sensible
+   free-text one. A number box invites 47, and 47 working days is not a reply
+   time anybody should be able to promise by typing it in by accident. */
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.choice-btn {
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: var(--control-h);
+  min-width: 2.75rem;
+  padding: var(--space-1-5) var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  background: var(--clr-surface);
+  color: var(--clr-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-variant-numeric: tabular-nums;
+}
+.choice-btn:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
+
+.choice-btn.active {
+  background: var(--clr-primary);
+  border-color: var(--clr-primary);
+  color: var(--clr-on-accent);
+  font-weight: 600;
+}
+.choice-btn:focus-visible {
+  outline: 2px solid var(--clr-primary);
+  outline-offset: 2px;
+}
+
+.choice-unit {
+  font-size: 0.82rem;
+  color: var(--clr-text-muted);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════
+   EMAILS PAGE
+   Five templates, each a subject and a fourteen-row body. Stacked down one
+   page that is a scroll, not a screen; the list is the navigation and one
+   email is open at a time.
+   ═══════════════════════════════════════════ */
+.mail-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.mail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  position: sticky;
+  top: calc(64px + var(--space-5));
+}
+
+.mail-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: var(--font-family);
+  text-align: left;
+  cursor: pointer;
+  color: var(--clr-text-secondary);
+  transition: all var(--transition-fast);
+}
+.mail-list-item:hover { background: var(--clr-hover-surface); color: var(--clr-text); }
+
+.mail-list-item.active {
+  background: var(--clr-surface);
+  border-color: var(--clr-border);
+  color: var(--clr-text);
+  box-shadow: var(--shadow-xs);
+}
+
+/* The icon carries the state, so the open email is legible without relying on
+   the fill alone. */
+.mail-list-item > i {
+  font-size: 1rem;
+  flex-shrink: 0;
+  color: var(--clr-text-muted);
+}
+.mail-list-item.active > i { color: var(--clr-primary); }
+
+.mail-list-text { min-width: 0; flex: 1; }
+.mail-list-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.mail-list-item.active .mail-list-label { font-weight: 600; }
+
+/* When it goes out, under what it is. The list answers "which email is this?"
+   and the question right behind it. */
+.mail-list-when {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--clr-text-muted);
+  line-height: 1.35;
+  margin-top: 1px;
+}
+
+/* An email missing something it cannot work without, flagged in the list --
+   the broken one is probably not the one on screen. */
+.mail-list-flag { flex-shrink: 0; color: var(--clr-danger); font-size: 0.85rem; }
+.mail-list-flag[hidden] { display: none; }
+
+.mail-pane[hidden] { display: none; }
+
+@media (max-width: 900px) {
+  .mail-layout { grid-template-columns: 1fr; }
+  /* Sticky against nothing, on a screen where the list is above the editor
+     rather than beside it. */
+  .mail-list { position: static; flex-direction: row; flex-wrap: wrap; }
+  .mail-list-item { width: auto; }
+  .mail-list-when { display: none; }
+}
+
+/* ═══════════════════════════════════════════
+   MOTION
+   ═══════════════════════════════════════════ */
+
+/* Rows, cells and list items move under the pointer all day. A hover that
+   snaps reads as a redraw; 150ms reads as a response. These are the surfaces
+   that were changing colour instantly because nothing told them not to. */
+.data-table tbody tr,
+.cal-cell,
+.activity-item,
+.kv-row,
+.grid-card-item {
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+/* A control being pressed should acknowledge the press before the request
+   comes back. Small enough not to shift anything around it. */
+.choice-btn:active,
+.filter-btn:active,
+.placeholder-chip:active,
+.time-chip-remove:active { transform: scale(0.96); }
+
+/* A disabled control has to look disabled, not just stop working. Three
+   places set this by hand and one of them did not set the cursor. */
+.btn:disabled,
+.choice-btn:disabled,
+.filter-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Reduced motion ───
+   This stylesheet animates modals, drawers, tab panels, calendar swaps and
+   every hover in the panel, and until now it asked nobody whether they wanted
+   that. Vestibular disorders are not a preference setting people enable for
+   fun. Everything still changes state; nothing travels to get there. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Transforms are the part that moves. Colour and opacity can still change,
+     which is what carries the meaning. */
+  .kpi-card:hover,
+  .grid-card:hover,
+  .choice-btn:active,
+  .filter-btn:active,
+  .placeholder-chip:active,
+  .btn:active { transform: none; }
+}
+
+/* ═══════════════════════════════════════════
+   EMAIL BACKGROUND
+   ═══════════════════════════════════════════ */
+.bg-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.bg-thumb {
+  width: 96px;
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--clr-border);
+  border-radius: var(--radius-sm);
+  background: var(--clr-bg) center / cover no-repeat;
+  color: var(--clr-text-muted);
+  font-size: 1.25rem;
+}
+/* Once there is a picture, the placeholder glyph and the dashes go. */
+.bg-thumb.has-image { border-style: solid; }
+.bg-thumb.has-image i { display: none; }
+
+.bg-picker-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* The preview's image, behind the white card. The card stays white in the dark
+   theme too, because the email it stands for is white in the recipient's
+   inbox whatever this panel looks like. */
+.mailbox-stage.has-bg {
+  padding: var(--space-5);
+  background-color: var(--clr-bg);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+.mailbox-stage.has-bg .mailbox-body {
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--space-5);
+  background: #ffffff;
+  color: #1f2937;
+}

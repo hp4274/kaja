@@ -37,7 +37,7 @@ function clientsUrl(array $filters, array $overrides = []) {
       <i class="bi bi-search"></i>
       <input type="text" name="q" placeholder="Search clients..." value="<?php echo htmlspecialchars($search); ?>" />
     </form>
-    <div class="view-toggle" data-page="clients" style="margin-left: 0.5rem;">
+    <div class="view-toggle" data-page="clients">
       <button class="view-toggle-btn" data-view="list" title="List View"><i class="bi bi-list-ul"></i></button>
       <button class="view-toggle-btn" data-view="grid" title="Grid View"><i class="bi bi-grid"></i></button>
     </div>
@@ -50,7 +50,7 @@ function clientsUrl(array $filters, array $overrides = []) {
       <div class="empty-state">
         <i class="bi bi-people"></i>
         <p>No clients found</p>
-        <p style="font-size:0.78rem;">Convert a lead to create your first client record.</p>
+        <p>Convert a lead to create your first client record.</p>
       </div>
     <?php else: ?>
       <div class="data-table-wrap">
@@ -79,8 +79,8 @@ function clientsUrl(array $filters, array $overrides = []) {
             <?php foreach ($clients as $c): ?>
               <tr class="client-item" data-name="<?php echo htmlspecialchars(strtolower($c['first_name'] . ' ' . $c['last_name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($c['email'])); ?>">
                 <td>
-                  <div style="display:flex;align-items:center;gap:0.65rem;">
-                    <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.75rem;"><?php echo strtoupper(substr($c['first_name'],0,1) . substr($c['last_name'],0,1)); ?></div>
+                  <div class="cell-person">
+                    <div class="avatar-sm"><?php echo strtoupper(substr($c['first_name'],0,1) . substr($c['last_name'],0,1)); ?></div>
                     <span class="td-name"><?php echo htmlspecialchars($c['first_name'] . ' ' . $c['last_name']); ?></span>
                   </div>
                 </td>
@@ -103,10 +103,10 @@ function clientsUrl(array $filters, array $overrides = []) {
                 </td>
               </tr>
             <?php endforeach; ?>
-            <tr id="clients-no-matches" style="display: none;">
-              <td colspan="8" style="text-align: center; padding: 2.5rem 1rem; color: var(--clr-text-muted);">
-                <i class="bi bi-search" style="font-size: 1.75rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
-                <p style="margin: 0; font-size: 0.9rem;">No clients match your search criteria</p>
+            <tr id="clients-no-matches" class="no-matches" style="display:none;">
+              <td colspan="8">
+                <i class="bi bi-search"></i>
+                <p>No clients match your search criteria</p>
               </td>
             </tr>
           </tbody>
@@ -120,40 +120,40 @@ function clientsUrl(array $filters, array $overrides = []) {
           $concernText = htmlspecialchars($c['concern'] ?: '-');
         ?>
           <div class="grid-card client-item" data-name="<?php echo htmlspecialchars(strtolower($c['first_name'] . ' ' . $c['last_name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($c['email'])); ?>">
-            <div style="flex:1; display:flex; flex-direction:column;">
+            <div class="grid-card-inner">
               <div class="grid-card-header">
                 <div class="grid-card-title">
-                  <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.75rem;margin-right:0.25rem;"><?php echo $initials; ?></div>
+                  <div class="avatar-sm"><?php echo $initials; ?></div>
                   <span><?php echo $fullName; ?></span>
                 </div>
                 <span class="badge <?php echo clientStatusBadgeClass($c['status']); ?>"><?php echo clientStatusLabel($c['status']); ?></span>
               </div>
-              <div class="grid-card-body" style="margin-top:0.5rem;">
-                <div class="grid-card-item" title="Email" style="margin-bottom:0.25rem;">
+              <div class="grid-card-body">
+                <div class="grid-card-item" title="Email">
                   <i class="bi bi-envelope"></i>
                   <a href="mailto:<?php echo htmlspecialchars($c['email']); ?>"><?php echo htmlspecialchars($c['email']); ?></a>
                 </div>
                 <?php if ($c['phone']): ?>
-                  <div class="grid-card-item" title="Phone" style="margin-bottom:0.25rem;">
+                  <div class="grid-card-item" title="Phone">
                     <i class="bi bi-telephone"></i>
                     <span><?php echo htmlspecialchars($c['phone']); ?></span>
                   </div>
                 <?php endif; ?>
-                <div class="grid-card-item" title="Primary Concern" style="margin-bottom:0.25rem;">
+                <div class="grid-card-item" title="Primary Concern">
                   <i class="bi bi-heart-pulse"></i>
                   <span>Concern: <?php echo $concernText; ?></span>
                 </div>
               </div>
             </div>
             <div class="grid-card-footer">
-              <span style="font-size:0.78rem;color:var(--clr-text-secondary);"><i class="bi bi-calendar3"></i> <?php echo $c['session_count']; ?> Sessions</span>
+              <span class="grid-card-label"><i class="bi bi-calendar3"></i> <?php echo $c['session_count']; ?> Sessions</span>
               <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
             </div>
           </div>
         <?php endforeach; ?>
-        <div id="clients-grid-no-matches" style="display: none; grid-column: 1 / -1; text-align: center; padding: 3.5rem 1.5rem; color: var(--clr-text-muted); width: 100%;">
-          <i class="bi bi-search" style="font-size: 2.25rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
-          <p style="margin: 0; font-size: 0.9rem;">No clients match your search criteria</p>
+        <div id="clients-grid-no-matches" class="no-matches-card" style="display:none;">
+          <i class="bi bi-search"></i>
+          <p>No clients match your search criteria</p>
         </div>
       </div>
     <?php endif; ?>

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../includes/intake-status.php';
 require_once __DIR__ . '/../../includes/mail-queue.php';
 require_once __DIR__ . '/../../includes/intake-data.php';
 require_once __DIR__ . '/../../includes/session-repo.php';
+require_once __DIR__ . '/../../includes/holidays.php';
 
 $db = getDbConnection();
 
@@ -27,15 +28,6 @@ $awaitingReview  = clientsAwaitingReview($db);
 
 $todaysSessions = sessionsBetween($db, date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
 
-// No-show rate is its own figure, not folded into cancellations. Measured
-// against sessions that actually reached an outcome: counting pending and
-// confirmed ones in the denominator would make the rate fall simply because
-// more sessions were booked.
-$outcomes = $db->query("SELECT `status`, COUNT(*) AS n FROM `sessions`
-                        WHERE `status` IN ('completed','no-show') GROUP BY `status`")
-               ->fetchAll(PDO::FETCH_KEY_PAIR);
-$finished   = array_sum($outcomes);
-$noShowRate = $finished > 0 ? round((($outcomes['no-show'] ?? 0) / $finished) * 100) : 0;
 $totalLeads      = $db->query("SELECT COUNT(*) FROM `leads`")->fetchColumn();
 $totalIntakes    = $db->query("SELECT COUNT(*) FROM `patient-intake`")->fetchColumn();
 $intakeRate      = $totalLeads > 0 ? round(($totalIntakes / $totalLeads) * 100) : 0;
@@ -49,6 +41,10 @@ $firstDay   = mktime(0,0,0,$month,1,$year);
 $daysInMonth= date('t', $firstDay);
 $startDow   = date('w', $firstDay); // 0=Sun
 $monthName  = date('F Y', $firstDay);
+
+// Days the practice is closed this month. The grid shows them shut so a
+// booking is never started on a day the guard is going to refuse.
+$monthHolidays = holidayDates($db, date('Y-m-01', $firstDay), date('Y-m-t', $firstDay));
 
 $calStmt = $db->prepare("
     SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as client_name
@@ -97,19 +93,13 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <div class="kpi-icon-wrap amber"><i class="bi bi-funnel"></i></div>
     <div class="kpi-label"><i class="bi bi-plus-circle"></i> New Leads</div>
     <div class="kpi-value"><?php echo $newLeads; ?></div>
-    <div class="kpi-sub">Last 30 days</div>
+    <div class="kpi-sub">Waiting for a reply</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-icon-wrap blue"><i class="bi bi-calendar-day"></i></div>
     <div class="kpi-label"><i class="bi bi-clock-history"></i> Today</div>
     <div class="kpi-value"><?php echo count($todaysSessions); ?></div>
     <div class="kpi-sub">Session<?php echo count($todaysSessions) === 1 ? '' : 's'; ?> today</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-icon-wrap amber"><i class="bi bi-person-x"></i></div>
-    <div class="kpi-label"><i class="bi bi-percent"></i> No-show rate</div>
-    <div class="kpi-value"><?php echo $noShowRate; ?>%</div>
-    <div class="kpi-sub">of <?php echo $finished; ?> finished session<?php echo $finished === 1 ? '' : 's'; ?></div>
   </div>
 </div>
 
@@ -120,9 +110,12 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <div class="panel-header">
       <div class="panel-title">Session Calendar</div>
       <div class="calendar-nav">
-        <a href="index.php?page=dashboard&cm=<?php echo $prevMonth; ?>&cy=<?php echo $prevYear; ?>" class="btn btn-icon" title="Previous"><i class="bi bi-chevron-left"></i></a>
-        <span class="calendar-title" style="padding:0 0.5rem;font-size:0.88rem;"><?php echo $monthName; ?></span>
-        <a href="index.php?page=dashboard&cm=<?php echo $nextMonth; ?>&cy=<?php echo $nextYear; ?>" class="btn btn-icon" title="Next"><i class="bi bi-chevron-right"></i></a>
+        <a href="index.php?page=dashboard&cm=<?php echo $prevMonth; ?>&cy=<?php echo $prevYear; ?>" class="btn btn-icon" title="Previous month" data-cal-nav><i class="bi bi-chevron-left"></i></a>
+        <span class="calendar-title"><?php echo $monthName; ?></span>
+        <a href="index.php?page=dashboard&cm=<?php echo $nextMonth; ?>&cy=<?php echo $nextYear; ?>" class="btn btn-icon" title="Next month" data-cal-nav><i class="bi bi-chevron-right"></i></a>
+        <!-- The dashboard showed a calendar you could not book from. Same modal
+             as the sessions page, so both surfaces book identically. -->
+        <button class="btn btn-primary btn-sm" type="button" onclick="openNewSessionModal(selectedCalendarDate())"><i class="bi bi-plus"></i> New</button>
       </div>
     </div>
     <div class="panel-body">
@@ -146,8 +139,13 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
           $isToday = ($day == date('j') && $month == date('n') && $year == date('Y'));
           $hasSessions = isset($calSessions[$day]);
           $isSelected = ($day === $defaultDay);
+          $cellDate   = date('Y-m-d', mktime(0, 0, 0, $month, $day, $year));
+          $isHoliday  = in_array($cellDate, $monthHolidays, true);
         ?>
-          <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isSelected ? ' selected' : ''); ?>" onclick="selectCalendarDay(this, <?php echo $day; ?>)">
+          <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isSelected ? ' selected' : '') . ($isHoliday ? ' holiday' : ''); ?>"
+               data-date="<?php echo $cellDate; ?>"
+               <?php echo $isHoliday ? 'data-holiday="1" title="Holiday - the practice is closed"' : ''; ?>
+               onclick="selectCalendarDay(this, <?php echo $day; ?>)">
             <div class="cal-date"><?php echo $day; ?></div>
             <?php if ($hasSessions): ?>
               <?php foreach ($calSessions[$day] as $cs): ?>
@@ -167,16 +165,11 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
         <?php endfor; ?>
       </div>
 
-      <!-- Spacing / Divider -->
-      <hr style="border:0; border-top:1px solid var(--clr-border-light); margin:1.5rem 0;" />
-
-      <!-- Day Sessions Inline Area -->
-      <div id="day-sessions-inline-area">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-          <h3 style="font-size:0.92rem; font-weight:600; color:var(--clr-text); margin:0;" id="inline-sessions-title">
-            Sessions
-          </h3>
-          <span id="inline-sessions-count" style="background:var(--clr-primary-light); color:var(--clr-primary); font-size:0.75rem; font-weight:600; padding:0.15rem 0.5rem; border-radius:var(--radius-full); min-width:20px; text-align:center;">0</span>
+      <!-- The day you picked, under the month you picked it from. -->
+      <div class="day-sessions" id="day-sessions-inline-area">
+        <div class="subsection-head">
+          <h3 class="subsection-title" id="inline-sessions-title">Sessions</h3>
+          <button class="btn btn-primary btn-sm" type="button" onclick="openNewSessionModal(selectedCalendarDate())"><i class="bi bi-plus"></i> Book</button>
         </div>
         <div id="inline-sessions-list">
           <!-- Populated dynamically via JavaScript -->
@@ -185,22 +178,14 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     </div>
   </div>
 
-  <style>
-  .cal-cell.selected {
-    outline: 2px solid var(--clr-primary);
-    outline-offset: -2px;
-    z-index: 5;
-  }
-  </style>
-
   <!-- Activity Feed -->
   <div class="panel">
     <div class="panel-header">
       <div class="panel-title">Recent Activity</div>
     </div>
-    <div class="panel-body" style="padding:0.75rem 1.25rem;">
+    <div class="panel-body is-list">
       <?php if (empty($activities)): ?>
-        <div class="empty-state" style="padding:2rem;">
+        <div class="empty-state">
           <i class="bi bi-clock-history"></i>
           <p>No activity yet</p>
         </div>
@@ -214,6 +199,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               'session_completed' => ['bi-check-circle', 'green'],
               'note_added' => ['bi-sticky', 'blue'],
               'fee_added' => ['bi-currency-rupee', 'amber'],
+              'fee_reminder_sent' => ['bi-cash-stack', 'amber'],
               'status_changed' => ['bi-arrow-repeat', 'teal'],
               'lead_confirmed' => ['bi-send-check', 'teal'],
               'intake_reminder_sent' => ['bi-bell', 'amber'],
@@ -252,7 +238,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
 <?php if ($queuedMail > 0): ?>
   <!-- A refused send is the one failure nobody notices: the database is
        correct, the screen said success, and the person never hears from us. -->
-  <div class="bulk-bar" style="background:var(--clr-danger-light); border-color:var(--clr-danger); color:var(--clr-danger);">
+  <div class="bulk-bar is-danger">
     <i class="bi bi-envelope-exclamation"></i>
     <?php echo (int) $queuedMail; ?> email(s) failed to send and are waiting for the hourly job to retry them.
   </div>
@@ -261,7 +247,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
 <?php if (!empty($awaitingReview)): ?>
 <div class="panel">
   <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-clipboard-check" style="color:var(--clr-warning);"></i> Intakes awaiting review</div>
+    <div class="panel-title"><i class="bi bi-clipboard-check icon-warning"></i> Intakes awaiting review</div>
   </div>
   <div class="panel-body-flush">
     <div class="data-table-wrap">
@@ -271,7 +257,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
             <tr>
               <td class="td-name"><?php echo htmlspecialchars($ar['first_name'] . ' ' . $ar['last_name']); ?></td>
               <td class="td-nowrap td-muted">submitted <?php echo $ar['intake_submitted_at'] ? date('d M Y', strtotime($ar['intake_submitted_at'])) : 'recently'; ?></td>
-              <td style="text-align:right;">
+              <td class="td-actions">
                 <a href="index.php?page=client-profile&id=<?php echo (int) $ar['id']; ?>" class="btn btn-primary btn-sm">Review</a>
               </td>
             </tr>
@@ -286,7 +272,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
 <?php if (!empty($stalledIntakes)): ?>
 <div class="panel">
   <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-hourglass-split" style="color:var(--clr-warning);"></i> Intake forms not finished</div>
+    <div class="panel-title"><i class="bi bi-hourglass-split icon-warning"></i> Intake forms not finished</div>
     <a href="index.php?page=intake&link_status=sent" class="btn btn-ghost btn-sm">View All <i class="bi bi-arrow-right"></i></a>
   </div>
   <div class="panel-body-flush">
@@ -311,7 +297,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
 <!-- Needs attention — new leads untouched past the aging threshold -->
 <div class="panel">
   <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-exclamation-triangle" style="color:var(--clr-danger);"></i> Needs attention</div>
+    <div class="panel-title"><i class="bi bi-exclamation-triangle icon-danger"></i> Needs attention</div>
     <a href="index.php?page=leads&status=new" class="btn btn-ghost btn-sm">View All <i class="bi bi-arrow-right"></i></a>
   </div>
   <div class="panel-body-flush">
@@ -323,7 +309,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
               <td class="td-name"><?php echo htmlspecialchars($p['name']); ?></td>
               <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($p['email']); ?>"><?php echo htmlspecialchars($p['email']); ?></a></td>
               <td class="td-nowrap td-muted">waiting since <?php echo date('d M Y', strtotime($p['created_at'])); ?></td>
-              <td style="text-align:right;">
+              <td class="td-actions">
                 <a href="index.php?page=leads&status=new" class="btn btn-primary btn-sm">Review</a>
               </td>
             </tr>
@@ -376,10 +362,33 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
   </div>
 </div>
 
+<!-- The month, as data rather than as statements. Changing month fetches
+     this page and reads this block out of the response, so the grid and the
+     sessions behind it stay in step without a reload. -->
+<script type="application/json" id="cal-data"><?php echo json_encode([
+    'month'      => sprintf('%04d-%02d', $year, $month),
+    'monthName'  => date('F', $firstDay),
+    'label'      => $monthName,
+    'defaultDay' => (int) $defaultDay,
+    'sessions'   => $calSessions,
+], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?></script>
+<script>window.CAL_MONTH = <?php echo json_encode(sprintf('%04d-%02d', $year, $month)); ?>;</script>
+
 <script>
-var calSessionsData = <?php echo json_encode($calSessions); ?>;
+var calData = JSON.parse(document.getElementById('cal-data').textContent);
+var calSessionsData = calData.sessions || {};
+var calMonthName = calData.monthName || '';
+
+// The day the therapist last clicked. Booking from this panel should land on
+// the day they are looking at, not on whatever today happens to be.
+var selectedCalendarDay = calData.defaultDay || 1;
+
+function selectedCalendarDate() {
+  return calendarDate(selectedCalendarDay);
+}
 
 function selectCalendarDay(element, day) {
+  selectedCalendarDay = day;
   // Remove selected class from all calendar cells
   var cells = document.querySelectorAll('.cal-cell');
   cells.forEach(function(c) {
@@ -392,27 +401,23 @@ function selectCalendarDay(element, day) {
   }
   
   // Update the title
-  var monthName = '<?php echo date('F', $firstDay); ?>';
-  document.getElementById('inline-sessions-title').textContent = 'Sessions for ' + monthName + ' ' + day;
+  document.getElementById('inline-sessions-title').textContent = 'Sessions for ' + calMonthName + ' ' + day;
   
   // Get sessions
   var sessions = calSessionsData[day] || [];
   
-  // Update badge count
-  document.getElementById('inline-sessions-count').textContent = sessions.length;
-  
   // Build HTML
   var html = '';
   if (sessions.length === 0) {
-    html += '<div class="empty-state" style="padding:1.5rem; text-align:center; color:var(--clr-text-muted);">';
-    html += '  <i class="bi bi-calendar-x" style="font-size:1.5rem; display:block; margin-bottom:0.5rem; color:var(--clr-text-muted);"></i>';
-    html += '  <p style="font-size:0.85rem; margin:0;">No sessions scheduled for this day</p>';
+    html += '<div class="empty-state">';
+    html += '  <i class="bi bi-calendar-x"></i>';
+    html += '  <p>No sessions scheduled for this day</p>';
     html += '</div>';
   } else {
-    html += '<div style="display:flex; flex-direction:column; gap:0.75rem;">';
+    html += '<div class="session-list">';
     sessions.forEach(function(s) {
       var clientName = escapeHtml(s.client_name || 'Unknown Client');
-      
+
       // Format time (e.g. "10:00:00") to 12-hour format
       var timeParts = s.start_time.split(' ')[1].split(':');
       var hours = parseInt(timeParts[0], 10);
@@ -421,48 +426,60 @@ function selectCalendarDay(element, day) {
       hours = hours % 12;
       hours = hours ? hours : 12;
       var timeStr = hours + ':' + minutes + ' ' + ampm;
-      
+
       var duration = Math.round((Date.parse(s.end_time.replace(' ', 'T')) - Date.parse(s.start_time.replace(' ', 'T'))) / 60000);
       var type = s.session_type;
       var status = s.status;
       var notes = s.notes || '';
-      
-      var typeBadgeClass = (type === 'online') ? 'badge-online' : 'badge-inperson';
-      var statusBadgeClass = 'badge-' + status;
-      
-      html += '<div style="display:flex; align-items:flex-start; justify-content:space-between; padding:0.75rem; border:1px solid var(--clr-border-light); border-radius:var(--radius-md); background:var(--clr-bg); transition:transform var(--transition-fast);">';
-      html += '  <div style="display:flex; align-items:flex-start; gap:0.75rem; flex:1; min-width:0;">';
-      html += '    <div style="margin-top:0.15rem; background:var(--clr-surface); color:var(--clr-primary); width:32px; height:32px; border-radius:var(--radius-sm); border:1px solid var(--clr-border); display:flex; align-items:center; justify-content:center; flex-shrink:0;">';
-      html += '      <i class="bi ' + (type === 'online' ? 'bi-camera-video' : 'bi-geo-alt') + '" style="font-size:0.95rem;"></i>';
+
+      var isOnline = (type === 'online');
+      var typeLabel = isOnline ? 'Online' : 'In person';
+
+      html += '<div class="session-row">';
+      html += '  <div class="session-row-main">';
+      html += '    <div class="session-row-icon" title="' + typeLabel + '">';
+      html += '      <i class="bi ' + (isOnline ? 'bi-camera-video' : 'bi-geo-alt') + '"></i>';
       html += '    </div>';
-      html += '    <div style="flex:1; min-width:0;">';
-      html += '      <div style="font-weight:600; font-size:0.88rem; color:var(--clr-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + clientName + '</div>';
-      html += '      <div style="font-size:0.78rem; color:var(--clr-text-secondary); margin-top:0.15rem; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">';
-      html += '        <span><i class="bi bi-clock"></i> ' + timeStr + '</span>';
-      html += '        <span style="color:var(--clr-text-muted);">•</span>';
+      html += '    <div class="session-row-body">';
+      html += '      <div class="session-row-name">' + clientName + '</div>';
+      html += '      <div class="session-row-meta">';
+      html += '        <span>' + timeStr + '</span>';
       html += '        <span>' + duration + ' min</span>';
+      html += '        <span>' + typeLabel + '</span>';
       html += '      </div>';
       if (notes) {
-        html += '      <div style="font-size:0.75rem; color:var(--clr-text-secondary); margin-top:0.35rem; font-style:italic; border-left:2px solid var(--clr-primary); padding-left:0.5rem;">Note: ' + escapeHtml(notes) + '</div>';
+        html += '      <div class="session-row-note">Note: ' + escapeHtml(notes) + '</div>';
       }
       html += '    </div>';
       html += '  </div>';
-      html += '  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.35rem; flex-shrink:0;">';
-      html += '    <span class="badge ' + statusBadgeClass + '">' + status + '</span>';
-      html += '    <span class="badge ' + typeBadgeClass + '">' + type + '</span>';
-      html += '  </div>';
+      html += '  <span class="badge badge-' + status + '">' + status + '</span>';
       html += '</div>';
     });
     html += '</div>';
   }
-  
+
   document.getElementById('inline-sessions-list').innerHTML = html;
 }
 
+function openSelectedDay() {
+  var cell = document.querySelector('.cal-cell.selected[data-date]');
+  selectCalendarDay(cell, selectedCalendarDay);
+}
+
 // Select default day on page load
-document.addEventListener('DOMContentLoaded', function() {
-  var defaultDay = <?php echo $defaultDay; ?>;
-  var selectedCell = document.querySelector('.cal-cell.selected');
-  selectCalendarDay(selectedCell, defaultDay);
+document.addEventListener('DOMContentLoaded', openSelectedDay);
+
+// ...and again whenever the month underneath it changes, against the sessions
+// that arrived with the new month rather than the ones that are no longer on
+// screen.
+document.addEventListener('calendar:monthchanged', function (e) {
+  calData = e.detail || {};
+  calSessionsData = calData.sessions || {};
+  calMonthName = calData.monthName || calMonthName;
+  selectedCalendarDay = calData.defaultDay || 1;
+  openSelectedDay();
 });
 </script>
+
+<!-- Booking modal, shared with the sessions page. See admin/includes/session-booking-modal.php -->
+<?php include __DIR__ . "/../includes/session-booking-modal.php"; ?>

@@ -48,10 +48,10 @@ function leadsUrl(array $filters, array $overrides = []) {
       <i class="bi bi-search"></i>
       <input type="text" name="q" placeholder="Search name, email or phone..." value="<?php echo htmlspecialchars($search); ?>" />
     </form>
-    <button class="btn btn-ghost btn-sm" id="toggle-lead-filters" type="button" style="margin-left:0.5rem;">
+    <button class="btn btn-ghost btn-sm" id="toggle-lead-filters" type="button">
       <i class="bi bi-funnel"></i> Filters
     </button>
-    <div class="view-toggle" data-page="leads" style="margin-left: 0.5rem;">
+    <div class="view-toggle" data-page="leads">
       <button class="view-toggle-btn" data-view="list" title="List View"><i class="bi bi-list-ul"></i></button>
       <button class="view-toggle-btn" data-view="grid" title="Grid View"><i class="bi bi-grid"></i></button>
     </div>
@@ -66,7 +66,7 @@ function leadsUrl(array $filters, array $overrides = []) {
   <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>" />
   <label class="lead-filter-field">
     <span>Source</span>
-    <select name="source" class="status-select">
+    <select name="source" class="form-select-sm">
       <option value="">All sources</option>
       <?php foreach ($sources as $src): ?>
         <option value="<?php echo htmlspecialchars($src); ?>" <?php echo $filters['source'] === $src ? 'selected' : ''; ?>><?php echo htmlspecialchars($src); ?></option>
@@ -75,11 +75,11 @@ function leadsUrl(array $filters, array $overrides = []) {
   </label>
   <label class="lead-filter-field">
     <span>From</span>
-    <input type="date" name="date_from" class="status-select" value="<?php echo htmlspecialchars($filters['date_from']); ?>" />
+    <input type="date" name="date_from" class="form-input-sm" value="<?php echo htmlspecialchars($filters['date_from']); ?>" />
   </label>
   <label class="lead-filter-field">
     <span>To</span>
-    <input type="date" name="date_to" class="status-select" value="<?php echo htmlspecialchars($filters['date_to']); ?>" />
+    <input type="date" name="date_to" class="form-input-sm" value="<?php echo htmlspecialchars($filters['date_to']); ?>" />
   </label>
   <button type="submit" class="btn btn-primary btn-sm">Apply</button>
   <a href="<?php echo leadsUrl(['status' => $statusFilter]); ?>" class="btn btn-ghost btn-sm">Clear</a>
@@ -106,17 +106,32 @@ function leadsUrl(array $filters, array $overrides = []) {
       <div class="empty-state">
         <i class="bi bi-funnel"></i>
         <p>No leads found</p>
-        <p style="font-size:0.78rem;">Leads will appear here when visitors submit the appointment or booking form.</p>
+        <p>Leads will appear here when visitors submit the appointment or booking form.</p>
       </div>
     <?php else: ?>
       <div class="data-table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width:36px;"><input type="checkbox" id="lead-select-all" title="Select all" /></th>
-              <th>
-                <a href="<?php echo leadsUrl($filters, ['sort' => 'date', 'dir' => ($filters['sort'] === 'date' && $filters['dir'] === 'desc') ? 'asc' : 'desc']); ?>" class="th-sort">
-                  Date <i class="bi bi-arrow-down-up"></i>
+              <th class="th-check"><input type="checkbox" id="lead-select-all" title="Select all" /></th>
+              <?php
+              // The header has to say which column is sorted and which way.
+              // Both used to print the same neutral glyph whatever the state,
+              // so the table was sorted and the header never admitted it.
+              $sortIcon = function ($column) use ($filters) {
+                  if ($filters['sort'] !== $column) { return 'bi-arrow-down-up'; }
+                  return $filters['dir'] === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down';
+              };
+              $ariaSort = function ($column) use ($filters) {
+                  if ($filters['sort'] !== $column) { return 'none'; }
+                  return $filters['dir'] === 'asc' ? 'ascending' : 'descending';
+              };
+              ?>
+              <th aria-sort="<?php echo $ariaSort('date'); ?>" data-sort-col="date">
+                <a href="<?php echo leadsUrl($filters, ['sort' => 'date', 'dir' => ($filters['sort'] === 'date' && $filters['dir'] === 'desc') ? 'asc' : 'desc']); ?>"
+                   class="th-sort <?php echo $filters['sort'] === 'date' ? 'is-sorted' : ''; ?>"
+                   data-sort="date" data-dir="<?php echo ($filters['sort'] === 'date' && $filters['dir'] === 'desc') ? 'asc' : 'desc'; ?>">
+                  Date <i class="bi <?php echo $sortIcon('date'); ?>"></i>
                 </a>
               </th>
               <th>Name</th>
@@ -124,12 +139,14 @@ function leadsUrl(array $filters, array $overrides = []) {
               <th>Phone</th>
               <th>Pref. Date & Time</th>
               <th>Preference</th>
-              <th>
-                <a href="<?php echo leadsUrl($filters, ['sort' => 'status', 'dir' => ($filters['sort'] === 'status' && $filters['dir'] === 'asc') ? 'desc' : 'asc']); ?>" class="th-sort">
-                  Status <i class="bi bi-arrow-down-up"></i>
+              <th aria-sort="<?php echo $ariaSort('status'); ?>" data-sort-col="status">
+                <a href="<?php echo leadsUrl($filters, ['sort' => 'status', 'dir' => ($filters['sort'] === 'status' && $filters['dir'] === 'asc') ? 'desc' : 'asc']); ?>"
+                   class="th-sort <?php echo $filters['sort'] === 'status' ? 'is-sorted' : ''; ?>"
+                   data-sort="status" data-dir="<?php echo ($filters['sort'] === 'status' && $filters['dir'] === 'asc') ? 'desc' : 'asc'; ?>">
+                  Status <i class="bi <?php echo $sortIcon('status'); ?>"></i>
                 </a>
               </th>
-              <th style="text-align:right;">Actions</th>
+              <th class="th-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -141,7 +158,7 @@ function leadsUrl(array $filters, array $overrides = []) {
               $hasClient = !empty($l['client_id']);
               $isClosed  = (leadStatusIsTerminal($ls) || $ls === 'converted');
             ?>
-              <tr id="lead-row-<?php echo $l['id']; ?>" class="lead-item" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
+              <tr id="lead-row-<?php echo $l['id']; ?>" class="lead-item" data-created="<?php echo htmlspecialchars($l['created_at']); ?>" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
                 <td><input type="checkbox" class="lead-select" value="<?php echo $l['id']; ?>" /></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($l['created_at'])); ?></td>
                 <td class="td-name"><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></td>
@@ -160,39 +177,41 @@ function leadsUrl(array $filters, array $overrides = []) {
                     <span class="badge badge-aging" title="Untouched for more than <?php echo LEAD_AGING_HOURS; ?> hours"><i class="bi bi-exclamation-triangle-fill"></i> Aging</span>
                   <?php endif; ?>
                 </td>
-                <td style="text-align:right; white-space:nowrap;">
-                  <div style="display:inline-flex; align-items:center; gap:0.5rem; justify-content:flex-end;">
+                <td class="td-actions">
+                  <div class="row-actions">
                     <?php if ($hasClient): ?>
-                      <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
+                      <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
                     <?php endif; ?>
                     <?php if (!$isClosed): ?>
                       <button class="btn btn-success btn-sm" data-lead-contact="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'contacted')" title="Mark as contacted" <?php echo $ls === 'new' ? '' : 'hidden'; ?>>
                         <i class="bi bi-telephone"></i> Contact
                       </button>
+                      <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo ($ls === 'new' || $ls === 'contacted') ? '' : 'hidden'; ?>>
+                        <i class="bi bi-send-check"></i> Accept
+                      </button>
                       <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted') ? 'hidden' : ''; ?>>
                         <i class="bi bi-x-lg"></i> Reject
                       </button>
-                      <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo $ls === 'contacted' ? '' : 'hidden'; ?>>
-                        <i class="bi bi-send-check"></i> Confirm
-                      </button>
                     <?php endif; ?>
-                    <button class="btn btn-icon btn-sm" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message" style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--clr-border); background:var(--clr-surface); cursor:pointer; color:var(--clr-text-muted); border-radius:var(--radius-sm);">
+                    <button class="btn btn-icon" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message">
                       <i class="bi bi-chat-text"></i>
                     </button>
                   </div>
                 </td>
               </tr>
               <tr id="msg-row-<?php echo $l['id']; ?>" style="display:none;">
-                <td colspan="9" style="background:#f9fafb; padding:1rem 1.5rem;">
-                  <strong style="font-size:0.78rem;color:var(--clr-text-muted);text-transform:uppercase;">Message</strong>
-                  <p style="margin-top:0.25rem;font-size:0.88rem;"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
+                <!-- A token, not a fixed grey: a hardcoded near-white here is
+                     a white band across the page in the dark theme. -->
+                <td colspan="9" class="msg-cell">
+                  <strong class="msg-label">Message</strong>
+                  <p class="msg-body"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
                 </td>
               </tr>
             <?php endforeach; ?>
-            <tr id="leads-no-matches" style="display: none;">
-              <td colspan="9" style="text-align: center; padding: 2.5rem 1rem; color: var(--clr-text-muted);">
-                <i class="bi bi-search" style="font-size: 1.75rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
-                <p style="margin: 0; font-size: 0.9rem;">No leads match your search criteria</p>
+            <tr id="leads-no-matches" class="no-matches" style="display:none;">
+              <td colspan="9">
+                <i class="bi bi-search"></i>
+                <p>No leads match your search criteria</p>
               </td>
             </tr>
           </tbody>
@@ -209,38 +228,38 @@ function leadsUrl(array $filters, array $overrides = []) {
           $hasClient = !empty($l['client_id']);
           $isClosed  = (leadStatusIsTerminal($ls) || $ls === 'converted');
         ?>
-          <div class="grid-card lead-item" id="lead-card-<?php echo $l['id']; ?>" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
-            <div style="flex: 1; display: flex; flex-direction: column;">
+          <div class="grid-card lead-item" id="lead-card-<?php echo $l['id']; ?>" data-created="<?php echo htmlspecialchars($l['created_at']); ?>" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
+            <div class="grid-card-inner">
               <div class="grid-card-header">
                 <div class="grid-card-title">
-                  <i class="bi bi-person-badge" style="color:var(--clr-primary); font-size:1.1rem;"></i>
+                  <i class="bi bi-person-badge"></i>
                   <span><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></span>
                 </div>
-                <div style="font-size:0.75rem;color:var(--clr-text-muted);"><?php echo date('d M Y', strtotime($l['created_at'])); ?></div>
+                <div class="grid-card-date"><?php echo date('d M Y', strtotime($l['created_at'])); ?></div>
               </div>
-              <div class="grid-card-body" style="margin-top: 0.5rem;">
-                <div class="grid-card-item" title="Email" style="margin-bottom:0.25rem;">
+              <div class="grid-card-body">
+                <div class="grid-card-item" title="Email">
                   <i class="bi bi-envelope"></i>
                   <a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a>
                 </div>
                 <?php if ($l['phone']): ?>
-                  <div class="grid-card-item" title="Phone" style="margin-bottom:0.25rem;">
+                  <div class="grid-card-item" title="Phone">
                     <i class="bi bi-telephone"></i>
                     <span><?php echo htmlspecialchars(($l['country_code'] ?? '') . ' ' . $l['phone']); ?></span>
                   </div>
                 <?php endif; ?>
                 <?php if ($prefDateStr): ?>
-                  <div class="grid-card-item" title="Preferred Date" style="margin-bottom:0.25rem;">
+                  <div class="grid-card-item" title="Preferred Date">
                     <i class="bi bi-calendar-event"></i>
                     <span>Pref: <?php echo $prefDateStr; ?></span>
                   </div>
                 <?php endif; ?>
-                <div class="grid-card-item" style="margin-bottom:0.25rem; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
-                  <span style="display:inline-flex; align-items:center; gap:0.35rem;"><i class="bi bi-camera-video"></i> Preference: <span class="badge badge-<?php echo $preference; ?>"><?php echo $preference ?: '-'; ?></span></span>
+                <div class="grid-card-item">
+                  <span class="grid-card-label"><i class="bi bi-camera-video"></i> Preference: <span class="badge badge-<?php echo $preference; ?>"><?php echo $preference ?: '-'; ?></span></span>
                 </div>
-                <div class="grid-card-item" style="margin-top: 0.25rem;">
+                <div class="grid-card-item">
                   <i class="bi bi-flag"></i>
-                  <span style="font-size:0.8rem; font-weight:500; color:var(--clr-text-secondary); margin-right: 0.35rem;">Status:</span>
+                  <span class="grid-card-label">Status:</span>
                   <span class="badge <?php echo leadStatusBadgeClass($ls); ?>" data-lead-badge="<?php echo $l['id']; ?>"><?php echo leadStatusLabel($ls); ?></span>
                   <?php if (leadIsAging($l)): ?>
                     <span class="badge badge-aging" title="Untouched for more than <?php echo LEAD_AGING_HOURS; ?> hours"><i class="bi bi-exclamation-triangle-fill"></i> Aging</span>
@@ -248,38 +267,38 @@ function leadsUrl(array $filters, array $overrides = []) {
                 </div>
                 
                 <!-- Card Message Collapsible -->
-                <div id="grid-msg-<?php echo $l['id']; ?>" style="display:none; background:var(--clr-bg); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--clr-border-light); margin-top:0.75rem;">
-                  <strong style="font-size:0.7rem;color:var(--clr-text-muted);text-transform:uppercase;display:block;margin-bottom:0.15rem;">Message</strong>
-                  <p style="font-size:0.8rem; margin:0; line-height:1.4; color:var(--clr-text);"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
+                <div id="grid-msg-<?php echo $l['id']; ?>" class="msg-panel" style="display:none;">
+                  <strong class="msg-label">Message</strong>
+                  <p class="msg-body"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
                 </div>
               </div>
             </div>
-            <div class="grid-card-footer" style="margin-top: 1rem;">
-              <button class="btn btn-icon btn-sm" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message" style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--clr-border); background:var(--clr-surface); cursor:pointer; color:var(--clr-text-muted); border-radius:var(--radius-sm);">
+            <div class="grid-card-footer">
+              <button class="btn btn-icon" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message">
                 <i class="bi bi-chat-text"></i>
               </button>
               <?php if ($hasClient): ?>
-                <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.25rem;"><i class="bi bi-eye"></i> View Client</a>
+                <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
               <?php endif; ?>
               <?php if (!$isClosed): ?>
-                <div style="display:inline-flex; align-items:center; gap:0.5rem; flex-wrap:wrap; justify-content:flex-end;">
+                <div class="row-actions">
                   <button class="btn btn-success btn-sm" data-lead-contact="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'contacted')" title="Mark as contacted" <?php echo $ls === 'new' ? '' : 'hidden'; ?>>
                     <i class="bi bi-telephone"></i> Contact
                   </button>
+                  <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo ($ls === 'new' || $ls === 'contacted') ? '' : 'hidden'; ?>>
+                    <i class="bi bi-send-check"></i> Accept
+                  </button>
                   <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted') ? 'hidden' : ''; ?>>
                     <i class="bi bi-x-lg"></i> Reject
-                  </button>
-                  <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo $ls === 'contacted' ? '' : 'hidden'; ?>>
-                    <i class="bi bi-send-check"></i> Confirm
                   </button>
                 </div>
               <?php endif; ?>
             </div>
           </div>
         <?php endforeach; ?>
-        <div id="leads-grid-no-matches" style="display: none; grid-column: 1 / -1; text-align: center; padding: 3.5rem 1.5rem; color: var(--clr-text-muted); width: 100%;">
-          <i class="bi bi-search" style="font-size: 2.25rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
-          <p style="margin: 0; font-size: 0.9rem;">No leads match your search criteria</p>
+        <div id="leads-grid-no-matches" class="no-matches-card" style="display:none;">
+          <i class="bi bi-search"></i>
+          <p>No leads match your search criteria</p>
         </div>
       </div>
     <?php endif; ?>
@@ -303,9 +322,8 @@ function leadsUrl(array $filters, array $overrides = []) {
       <h3>Actions</h3>
       <div class="lead-drawer-actions">
         <select class="status-select" id="drawer-status"></select>
-        <button class="btn btn-primary btn-sm" id="drawer-confirm"><i class="bi bi-send-check"></i> Confirm</button>
+        <button class="btn btn-primary btn-sm" id="drawer-confirm"><i class="bi bi-send-check"></i> Accept</button>
         <button class="btn btn-danger btn-sm" id="drawer-reject"><i class="bi bi-x-lg"></i> Reject</button>
-        <button class="btn btn-ghost btn-sm" id="drawer-spam"><i class="bi bi-slash-circle"></i> Mark Spam</button>
       </div>
     </section>
 
@@ -317,8 +335,8 @@ function leadsUrl(array $filters, array $overrides = []) {
     <section class="lead-drawer-section">
       <h3>Notes</h3>
       <form id="drawer-note-form">
-        <textarea id="drawer-note-input" rows="2" placeholder="Add a note..." class="form-control"></textarea>
-        <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.5rem;">Add note</button>
+        <textarea id="drawer-note-input" rows="2" placeholder="Add a note..." class="form-textarea"></textarea>
+        <button type="submit" class="btn btn-primary btn-sm">Add note</button>
       </form>
       <ul class="lead-notes" id="drawer-notes"></ul>
     </section>
@@ -339,20 +357,29 @@ function toggleMessage(id) {
   if (gridMsg) gridMsg.style.display = gridMsg.style.display === 'none' ? 'block' : 'none';
 }
 
-var LEAD_STATUSES = ['new', 'contacted', 'confirmed', 'converted', 'rejected', 'spam'];
+var LEAD_STATUSES = ['new', 'contacted', 'confirmed', 'converted', 'rejected'];
+
+// The labels PHP prints on first render, so a badge updated in the browser
+// does not suddenly disagree with the one beside it.
+var LEAD_STATUS_LABELS = <?php
+    echo json_encode(array_combine(leadStatuses(), array_map('leadStatusLabel', leadStatuses())));
+?>;
 
 // Status is display-only; the action buttons are the sole way to change it.
 // A lead has a row AND a card live at the same time, so update both.
-//   new       -> Contact + Reject
-//   contacted -> Convert + Reject
-//   converted, rejected, spam -> no status actions left
+//   new       -> Contact + Accept + Reject
+//   contacted -> Accept + Reject
+//   converted, rejected -> no status actions left
+// Accept is offered on a new lead too: being contacted first is a thing that
+// may or may not have happened, and clicking a step that did not happen is how
+// a status stops describing anything real.
 function syncLeadStatusUI(id, status) {
   document.querySelectorAll('[data-lead-badge="' + id + '"]').forEach(function(badge) {
     LEAD_STATUSES.forEach(function(s) { badge.classList.remove('badge-' + s); });
     badge.classList.add('badge-' + status);
-    badge.textContent = status;
+    badge.textContent = LEAD_STATUS_LABELS[status] || status;
   });
-  var closed = (status === 'rejected' || status === 'spam' || status === 'converted');
+  var closed = (status === 'rejected' || status === 'converted');
 
   document.querySelectorAll('[data-lead-contact="' + id + '"]').forEach(function(btn) {
     btn.hidden = (status !== 'new');
@@ -361,7 +388,7 @@ function syncLeadStatusUI(id, status) {
     btn.hidden = closed;
   });
   document.querySelectorAll('[data-lead-convert="' + id + '"]').forEach(function(btn) {
-    btn.hidden = (status !== 'contacted');
+    btn.hidden = (status !== 'new' && status !== 'contacted');
   });
 }
 
@@ -439,7 +466,9 @@ function updateLeadStatus(id, status) {
 // Named confirmLeadAction, not confirmLead: window.confirm is what the dialog
 // below calls, and shadowing it would break every other confirm on the page.
 function confirmLeadAction(id, name) {
-  if (!confirm('Confirm "' + name + '" and send the intake link?')) return;
+  // No dialog. The button says Accept, the toast says what happened, and the
+  // lead's own row shows the new state a moment later -- a prompt in between
+  // is a second click for a decision that was already made by the first.
   var fd = new FormData();
   fd.append('action', 'confirm');
   fd.append('id', id);
@@ -461,12 +490,14 @@ function confirmLeadAction(id, name) {
     .then(function(data) {
       if (data.success) {
         if (data.already) {
-          showToast('Lead was already confirmed');
-        } else if (data.intake_link_sent === false) {
-          // Client, token and lead are all correct; only the email failed.
-          showToast('Confirmed, but the intake email could not be sent', 'error');
+          showToast('This lead was already accepted');
+        } else if (data.intake_sending) {
+          // The client, the token and the lead are all written by the time this
+          // arrives; the email is still going out behind it. A send that fails
+          // lands in the mail queue, which the dashboard counts.
+          showToast('Accepted — sending the intake link');
         } else {
-          showToast('Lead confirmed — intake link sent');
+          showToast('Accepted');
         }
         setTimeout(function() { location.reload(); }, 800);
       } else {
@@ -549,10 +580,9 @@ function renderLeadDrawer(data) {
     sel.appendChild(o);
   });
 
-  var closed = (lead.status === 'rejected' || lead.status === 'spam' || lead.status === 'converted');
-  document.getElementById('drawer-confirm').hidden = (lead.status !== 'contacted');
+  var closed = (lead.status === 'rejected' || lead.status === 'converted');
+  document.getElementById('drawer-confirm').hidden = (lead.status !== 'new' && lead.status !== 'contacted');
   document.getElementById('drawer-reject').hidden  = closed;
-  document.getElementById('drawer-spam').hidden    = closed;
 
   var dl = document.getElementById('drawer-answers');
   dl.innerHTML = '';
@@ -603,9 +633,6 @@ function renderDrawerNotes(notes) {
   document.getElementById('drawer-reject').addEventListener('click', function() {
     updateLeadStatus(DRAWER_LEAD_ID, 'rejected');
   });
-  document.getElementById('drawer-spam').addEventListener('click', function() {
-    updateLeadStatus(DRAWER_LEAD_ID, 'spam');
-  });
   document.getElementById('drawer-confirm').addEventListener('click', function() {
     confirmLeadAction(DRAWER_LEAD_ID, document.getElementById('drawer-name').textContent);
   });
@@ -643,31 +670,60 @@ function renderDrawerNotes(notes) {
     return Array.from(document.querySelectorAll('.lead-select:checked')).map(function(cb) { return cb.value; });
   }
 
+  /** The rows a click on the header would actually sweep in: visible ones. */
+  function selectable() {
+    return Array.prototype.slice.call(document.querySelectorAll('.lead-select'))
+      .filter(function (cb) {
+        var row = cb.closest('tr');
+        return !row || row.style.display !== 'none';
+      });
+  }
+
   function refresh() {
     var n = selected().length;
     countEl.textContent = n + ' selected';
     bar.hidden = (n === 0);
+
+    if (!selectAll) return;
+
+    // Three states, not two. A ticked header box while only four of twenty
+    // rows are selected says "everything", and the next bulk action is taken
+    // on that belief. The dash is the browser's own way of saying "some".
+    var rows  = selectable();
+    var picked = rows.filter(function (cb) { return cb.checked; }).length;
+
+    selectAll.checked       = (rows.length > 0 && picked === rows.length);
+    selectAll.indeterminate = (picked > 0 && picked < rows.length);
+    selectAll.title = selectAll.checked ? 'Clear the selection'
+                    : (selectAll.indeterminate ? picked + ' of ' + rows.length + ' selected'
+                                               : 'Select all');
   }
 
   document.addEventListener('change', function(e) {
     if (e.target.classList && e.target.classList.contains('lead-select')) refresh();
   });
 
+  // The search hides rows, and "all" means all the rows you can see -- so the
+  // header has to be recomputed when the visible set changes, not only when a
+  // box is ticked.
+  window.refreshLeadSelection = refresh;
+
   if (selectAll) {
     selectAll.addEventListener('change', function() {
-      document.querySelectorAll('.lead-select').forEach(function(cb) {
-        // Only rows still visible after a search should be swept in — a hidden
-        // row is not something the admin can see they are about to change.
-        var row = cb.closest('tr');
-        if (!row || row.style.display !== 'none') cb.checked = selectAll.checked;
-      });
+      // Clicking the dash clears rather than selects: a partial selection is
+      // one the admin built by hand, and the click that follows is far more
+      // often "start again" than "take the other sixteen too".
+      var want = selectAll.indeterminate ? false : selectAll.checked;
+
+      // Only rows still visible after a search are swept in -- a hidden row is
+      // not something the admin can see they are about to change.
+      selectable().forEach(function (cb) { cb.checked = want; });
       refresh();
     });
   }
 
   document.getElementById('lead-bulk-clear').addEventListener('click', function() {
     document.querySelectorAll('.lead-select').forEach(function(cb) { cb.checked = false; });
-    if (selectAll) selectAll.checked = false;
     refresh();
   });
 
@@ -774,11 +830,113 @@ function renderDrawerNotes(notes) {
         if (listNoMatch) listNoMatch.style.setProperty('display', 'none', 'important');
         if (gridNoMatch) gridNoMatch.style.setProperty('display', 'none', 'important');
       }
+
+      if (window.refreshLeadSelection) window.refreshLeadSelection();
     });
 
     if (searchInput.value) {
       searchInput.dispatchEvent(new Event('input'));
     }
   }
+})();
+</script>
+
+<script>
+/**
+ * Sorting, done in the page.
+ *
+ * The column headers were plain links: every click threw away the whole page
+ * and asked the server for the same rows in a different order, which lost the
+ * scroll position, closed the open drawer and cleared any selection. Nothing
+ * about the rows changes when they are sorted, so nothing needs to be fetched.
+ *
+ * The links keep their href, so this is an enhancement rather than a
+ * replacement: without JavaScript the server still sorts, and the URL is kept
+ * in step with history.replaceState so a refresh or a shared link lands on the
+ * same order.
+ */
+(function () {
+  var table = document.querySelector('.data-table');
+  var tbody = table ? table.querySelector('tbody') : null;
+  if (!tbody) return;
+
+  // The same order the SQL uses. Alphabetical would read confirmed,
+  // contacted, converted, new -- which describes nothing.
+  var PIPELINE = ['new', 'contacted', 'confirmed', 'converted', 'rejected'];
+
+  function keyOf(el, column) {
+    if (column === 'status') {
+      var at = PIPELINE.indexOf(el.dataset.status || '');
+      return at === -1 ? PIPELINE.length : at;
+    }
+    return el.dataset.created || '';   // "YYYY-MM-DD HH:MM:SS" sorts as text
+  }
+
+  function compare(a, b, column, dir) {
+    var ka = keyOf(a, column), kb = keyOf(b, column);
+    if (ka === kb) {
+      // A stable second key, so two leads with the same status keep a
+      // predictable order instead of shuffling on every click.
+      ka = a.dataset.created; kb = b.dataset.created;
+      return ka < kb ? 1 : (ka > kb ? -1 : 0);
+    }
+    var out = ka < kb ? -1 : 1;
+    return dir === 'asc' ? out : -out;
+  }
+
+  function sortBy(column, dir) {
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.lead-item'));
+    rows.sort(function (a, b) { return compare(a, b, column, dir); });
+    rows.forEach(function (row) {
+      tbody.appendChild(row);
+      // Each lead has a hidden message row directly after it. Moving the lead
+      // without it would leave the message attached to whichever lead landed
+      // in that slot -- the wrong message under the wrong name.
+      var msg = document.getElementById('msg-row-' + row.id.replace('lead-row-', ''));
+      if (msg) tbody.appendChild(msg);
+    });
+
+    var cards = document.querySelector('.grid-view-container');
+    if (cards) {
+      Array.prototype.slice.call(cards.querySelectorAll('.lead-item'))
+        .sort(function (a, b) { return compare(a, b, column, dir); })
+        .forEach(function (card) { cards.appendChild(card); });
+    }
+
+    markHeaders(column, dir);
+    rememberInUrl(column, dir);
+  }
+
+  /** The header says what it did: which column, which way, next click's way. */
+  function markHeaders(column, dir) {
+    table.querySelectorAll('th[data-sort-col]').forEach(function (th) {
+      var link   = th.querySelector('.th-sort');
+      var isThis = th.dataset.sortCol === column;
+      var icon   = link.querySelector('i');
+
+      th.setAttribute('aria-sort', isThis ? (dir === 'asc' ? 'ascending' : 'descending') : 'none');
+      link.classList.toggle('is-sorted', isThis);
+      icon.className = 'bi ' + (isThis ? (dir === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down')
+                                       : 'bi-arrow-down-up');
+      // The next click on this header flips it; on the other one it starts
+      // from the direction that column defaults to.
+      link.dataset.dir = isThis ? (dir === 'asc' ? 'desc' : 'asc')
+                                : (th.dataset.sortCol === 'date' ? 'desc' : 'asc');
+    });
+  }
+
+  function rememberInUrl(column, dir) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('sort', column);
+    url.searchParams.set('dir', dir);
+    history.replaceState(null, '', url.toString());
+  }
+
+  table.querySelectorAll('.th-sort').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      sortBy(link.dataset.sort, link.dataset.dir);
+    });
+  });
 })();
 </script>

@@ -24,9 +24,28 @@ require_once __DIR__ . '/../../includes/settings.php';
 require_once __DIR__ . '/../../includes/session-repo.php';
 require_once __DIR__ . '/../../includes/session-recurring.php';
 require_once __DIR__ . '/../../includes/session-mail.php';
+require_once __DIR__ . '/../../includes/holidays.php';
 
 $db     = getDbConnection();
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
+
+/**
+ * Every date the booking form is asking for, in calendar order.
+ *
+ * The form posts session_dates only when the therapist ctrl- or shift-clicked
+ * more than one day on the calendar. Its absence must keep the single-date
+ * path exactly as it was, so it falls back to the single posted date.
+ */
+function postedDates() {
+    $many = trim($_POST['session_dates'] ?? '');
+    if ($many !== '') {
+        $dates = array_values(array_unique(array_filter(array_map('trim', explode(',', $many)))));
+        sort($dates);
+        return $dates;
+    }
+    $one = trim($_POST['session_date'] ?? '');
+    return $one === '' ? [] : [$one];
+}
 
 /** A date input plus a time input is one instant. */
 function postedStart($dateKey = 'session_date', $timeKey = 'session_time') {
@@ -56,8 +75,16 @@ try {
     switch ($action) {
         case 'add_session':
             $clientId = intval($_POST['client_id'] ?? 0);
+            $dates    = postedDates();
+            $time     = trim($_POST['session_time'] ?? '');
             $start    = postedStart();
-            $duration = intval($_POST['duration_minutes'] ?? getSettingInt('default_session_duration', 60));
+            // Both booking forms post this as `duration`. Reading it under any
+            // other name silently discards it and books every session at the
+            // default length, which is what happened here until now.
+            $duration = intval($_POST['duration'] ?? 0);
+            if ($duration < 1) {
+                $duration = getSettingInt('default_session_duration', 60);
+            }
             $type     = trim($_POST['session_type'] ?? 'online');
             $notes    = trim($_POST['notes'] ?? '');
             $repeat   = trim($_POST['repeat'] ?? '');
@@ -68,6 +95,56 @@ try {
             }
 
             try {
+                if (count($dates) > 1) {
+                    // One session per picked day, at the same time. Repeat is
+                    // disabled in the UI while several days are selected: the
+                    // two are different ways of asking for more sessions and
+                    // combining them means neither input reads as it looks.
+                    $ids     = [];
+                    $clashed = [];
+                    foreach ($dates as $d) {
+                        $ts = strtotime($d . ' ' . $time);
+                        if ($ts === false) { continue; }
+                        try {
+                            $ids[] = createSession($db, $clientId, date('Y-m-d H:i:s', $ts), $duration, $type);
+                        } catch (Throwable $e) {
+                            // One clashing day must not lose the other four.
+                            // Kept as a plain date: the browser groups the list
+                            // into "Aug (2, 9)" for display.
+                            $clashed[] = date('Y-m-d', $ts);
+                        }
+                    }
+
+                    if (!$ids) {
+                        echo json_encode(['success' => false,
+                                          'error' => 'None of the selected dates could be booked: '
+                                                     . implode(', ', array_map(function ($d) {
+                                                           return date('d M', strtotime($d));
+                                                       }, $clashed))]);
+                        exit;
+                    }
+
+                    if ($notes !== '') {
+                        $noteStmt = $db->prepare('UPDATE `sessions` SET `notes` = :n WHERE `id` = :id');
+                        foreach ($ids as $nid) {
+                            $noteStmt->execute([':n' => $notes, ':id' => $nid]);
+                        }
+                    }
+
+                    $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_scheduled',:d,'client',:rid)")
+                       ->execute([':d' => count($ids) . ' session(s) booked for ' . sessionLabel($db, $ids[0]), ':rid' => $clientId]);
+
+                    foreach ($ids as $mid) {
+                        if (fetchSession($db, $mid)['status'] === 'confirmed') {
+                            sendSessionMail($db, $mid, 'confirmation');
+                        }
+                    }
+
+                    echo json_encode(['success' => true, 'session_id' => $ids[0],
+                                      'booked' => count($ids), 'skipped' => $clashed]);
+                    exit;
+                }
+
                 if ($repeat !== '' && $repeat !== 'none') {
                     $endType  = trim($_POST['repeat_end_type'] ?? 'count');
                     $endValue = trim($_POST['repeat_end_value'] ?? '4');
@@ -109,6 +186,47 @@ try {
 
             echo json_encode(['success' => true, 'session_id' => $sessionId,
                               'booked' => $booked, 'mail_sent' => $mailed]);
+            break;
+
+        case 'set_holiday':
+            // Close or reopen the days picked on the calendar. Sessions already
+            // standing on a closed day are left exactly where they are and
+            // reported back: cancelling somebody's appointment as a side effect
+            // of a calendar click is not a thing the therapist can undo.
+            $dates = postedDates();
+            $on    = ($_POST['on'] ?? '1') !== '0';
+            $why   = trim($_POST['reason'] ?? '');
+
+            if (!$dates) {
+                echo json_encode(['success' => false, 'error' => 'Pick at least one date first']);
+                exit;
+            }
+
+            $booked  = $on ? sessionsOnDates($db, $dates) : [];
+            $changed = $on
+                ? markHolidays($db, $dates, $why, $_SESSION['user_id'] ?? null)
+                : clearHolidays($db, $dates);
+
+            if (!$changed) {
+                echo json_encode(['success' => false, 'error' => 'Those are not valid dates']);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES (:a,:d,'holiday',NULL)")
+               ->execute([
+                   ':a' => $on ? 'holiday_marked' : 'holiday_cleared',
+                   ':d' => count($changed) . ' day(s) ' . ($on ? 'marked a holiday' : 'reopened')
+                         . ': ' . implode(', ', $changed) . ($why !== '' ? ' (' . $why . ')' : ''),
+               ]);
+
+            echo json_encode([
+                'success'  => true,
+                'dates'    => $changed,
+                'on'       => $on,
+                // The count, not the rows: the caller only needs to know that
+                // something is standing there and how much of it.
+                'sessions' => count($booked),
+            ]);
             break;
 
         case 'update_status':

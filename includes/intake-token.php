@@ -18,6 +18,7 @@
 
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/email-templates.php';
 
 /**
  * Absolute base URL of the install, with trailing slash.
@@ -183,7 +184,7 @@ function sendIntakeLinkEmail($toEmail, $recipientName, $url, $expiresAt) {
 
     // Headers are the mailer's job now; it has to set From to the
     // authenticated account regardless, because Gmail rewrites it anyway.
-    return sendMail($toEmail, $subject, $body, $practiceEmail);
+    return sendMail($toEmail, $subject, $body, $practiceEmail, emailBackgroundUrl('lead_confirmed'));
 }
 
 /**
@@ -199,16 +200,21 @@ function sendIntakeReminderEmail($toEmail, $recipientName, $url, $expiresAt) {
     $greeting      = $greetingName !== '' ? $greetingName : 'there';
     $expiryLabel   = date('d M Y', strtotime($expiresAt));
 
-    $subject = "A reminder about your intake form - {$practiceName}";
+    $vars = [
+        'name'          => $greeting,
+        'intake_link'   => $url,
+        'expires'       => $expiryLabel,
+        'practice_name' => $practiceName,
+    ];
 
-    $body  = "Hello {$greeting},\n\n";
-    $body .= "We are still holding your intake questionnaire open. It takes about ten minutes:\n\n";
-    $body .= $url . "\n\n";
-    $body .= "This link is unique to you, so please do not forward it. It expires on {$expiryLabel}.\n\n";
-    $body .= "If you no longer need an appointment, you can ignore this message.\n\n";
-    $body .= "Best regards,\n{$practiceName}";
+    // Copy comes from Settings, the same as every other mail the practice
+    // sends. This block was a heredoc, so the one message a lead gets chased
+    // with was the one message nobody could reword without a deploy.
+    $subject = renderNotificationTemplate(getSetting('notify_intake_reminder_subject'), $vars);
+    $body    = renderNotificationTemplate(getSetting('notify_intake_reminder_body'), $vars);
+
 
     // Headers are the mailer's job now; it has to set From to the
     // authenticated account regardless, because Gmail rewrites it anyway.
-    return sendMail($toEmail, $subject, $body, $practiceEmail);
+    return sendMail($toEmail, $subject, $body, $practiceEmail, emailBackgroundUrl('intake_reminder'));
 }

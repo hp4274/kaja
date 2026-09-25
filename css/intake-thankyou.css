@@ -1,0 +1,264 @@
+/* ==========================================================================
+   Intake confirmation page
+   --------------------------------------------------------------------------
+   Loads after site-overrides.css so the tokens it reads (--ra-brown,
+   --ra-cream, --ra-amber, --font-body) are the final site values, not the
+   pre-override ones.
+
+   Everything is scoped under .itk-page. The page reuses the site navbar and
+   footer, and those bring broad selectors with them; scoping keeps this file
+   from reaching into them and keeps section spacing from being cancelled by
+   an element-level rule further up the cascade.
+   ========================================================================== */
+
+.itk-page {
+  --itk-ink: var(--ra-brown, #00373e);
+  --itk-muted: rgba(0, 55, 62, 0.72);
+  --itk-ground: var(--ra-cream, #f7f6f4);
+  --itk-surface: #ffffff;
+  --itk-hairline: rgba(0, 55, 62, 0.12);
+
+  /* The AA-safe form of --ra-amber (#e6845c). The site accent is a 2.4:1
+     colour against white, which is fine behind a shape and not fine as text.
+     This is the same hue carried down until it clears 4.5:1, so the step
+     ordinals can be read rather than merely seen. */
+  --itk-accent-ink: #b85c33;
+
+  background: var(--itk-ground);
+  /* The navbar is position:fixed, so the first line of type needs clearance
+     of its own rather than inheriting a section padding that assumes a hero. */
+  padding: 148px 20px 96px;
+  font-family: var(--font-body, "Quicksand", sans-serif);
+  color: var(--itk-ink);
+}
+
+.itk-shell {
+  /* ~60 characters at this size: long enough to read as prose, short enough
+     that the eye never has to hunt for the start of the next line. */
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.itk-card {
+  background: var(--itk-surface);
+  border: 1px solid var(--itk-hairline);
+  border-radius: 28px;
+  padding: 56px 52px 48px;
+  box-shadow: 0 18px 50px rgba(0, 55, 62, 0.06);
+}
+
+/* --- Opening ------------------------------------------------------------ */
+
+.itk-eyebrow {
+  margin: 0 0 22px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--itk-muted);
+}
+
+/* The title is a couplet: the personal half in full ink, the substantive half
+   stepped back. One family, hierarchy from weight and colour alone. */
+.itk-title {
+  margin: 0 0 26px;
+  font-family: var(--font-heading, "Quicksand", sans-serif);
+  font-size: clamp(1.75rem, 1.3rem + 1.9vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--itk-ink);
+}
+
+.itk-title span {
+  display: block;
+  font-weight: 500;
+  color: var(--itk-muted);
+}
+
+.itk-lede {
+  margin: 0 0 14px;
+  font-size: 1.02rem;
+  font-weight: 400;
+  line-height: 1.75;
+  color: var(--itk-muted);
+}
+
+.itk-note {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.75;
+  color: var(--itk-ink);
+}
+
+.itk-rule {
+  height: 1px;
+  margin: 40px 0;
+  border: 0;
+  background: var(--itk-hairline);
+}
+
+/* --- What happens next -------------------------------------------------- */
+
+.itk-label {
+  margin: 0 0 26px;
+  font-family: var(--font-heading, "Quicksand", sans-serif);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--itk-muted);
+}
+
+/* Numbered because the content genuinely is ordered: nothing in step two can
+   happen before step one does, and the reader is being told when to expect
+   what. The ordinals are the list's own numbers, not applied decoration. */
+.itk-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: itk-step;
+}
+
+.itk-step {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: 0 18px;
+  padding-bottom: 26px;
+}
+
+.itk-step:last-child {
+  padding-bottom: 0;
+}
+
+.itk-step::before {
+  counter-increment: itk-step;
+  content: "0" counter(itk-step);
+  font-family: var(--font-heading, "Quicksand", sans-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--itk-accent-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.itk-step h3 {
+  margin: 0 0 5px;
+  font-family: var(--font-heading, "Quicksand", sans-serif);
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--itk-ink);
+}
+
+.itk-step p {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--itk-muted);
+}
+
+/* --- Closing ------------------------------------------------------------ */
+
+.itk-after-text {
+  margin: 0 0 28px;
+  font-size: 0.94rem;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--itk-muted);
+}
+
+.itk-after-text a,
+.itk-step p a {
+  color: var(--itk-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.itk-back {
+  display: inline-block;
+  padding: 13px 28px;
+  border-radius: 50px;
+  background: var(--itk-ink);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.itk-back:hover,
+.itk-back:focus {
+  opacity: 0.88;
+  color: #ffffff;
+}
+
+.itk-page a:focus-visible {
+  outline: 2px solid var(--itk-accent-ink);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* --- Arrival ------------------------------------------------------------ */
+
+/* One reveal on load, staggered down the page in reading order. The delays
+   are applied to the two blocks and the three steps only: five moving pieces,
+   not every element on the page. */
+.itk-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: itk-rise 480ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+.itk-reveal-1 { animation-delay: 60ms; }
+.itk-step.itk-reveal:nth-child(1) { animation-delay: 260ms; }
+.itk-step.itk-reveal:nth-child(2) { animation-delay: 320ms; }
+.itk-step.itk-reveal:nth-child(3) { animation-delay: 380ms; }
+.itk-reveal-2 { animation-delay: 460ms; }
+
+@keyframes itk-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itk-reveal {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* --- Small screens ------------------------------------------------------ */
+
+@media (max-width: 560px) {
+  .itk-page {
+    padding: 120px 16px 72px;
+  }
+
+  .itk-card {
+    padding: 40px 26px 36px;
+    border-radius: 22px;
+  }
+
+  .itk-rule {
+    margin: 32px 0;
+  }
+
+  .itk-step {
+    grid-template-columns: 2.4rem 1fr;
+    gap: 0 12px;
+  }
+
+  .itk-back {
+    display: block;
+    text-align: center;
+  }
+}

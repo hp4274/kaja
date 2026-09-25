@@ -48,123 +48,25 @@ if (isset($_GET['edit'])) {
 <!-- Quill CSS -->
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet" />
 
-<style>
-/* ── Blog Manager Styles ── */
-.blog-stats { display:flex; gap:1rem; margin-bottom:1.25rem; flex-wrap:wrap; }
-.blog-stat-card {
-  flex:1; min-width:140px; padding:1rem 1.25rem;
-  background:var(--clr-surface); border:1px solid var(--clr-border);
-  border-radius:var(--radius-md); display:flex; align-items:center; gap:0.85rem;
-}
-.blog-stat-icon {
-  width:42px; height:42px; border-radius:var(--radius-sm);
-  display:flex; align-items:center; justify-content:center; font-size:1.15rem;
-}
-.blog-stat-icon.total   { background:var(--clr-info-light); color:var(--clr-info); }
-.blog-stat-icon.pub     { background:var(--clr-success-light); color:var(--clr-success); }
-.blog-stat-icon.draft   { background:var(--clr-warning-light); color:var(--clr-warning); }
-.blog-stat-num  { font-size:1.35rem; font-weight:700; color:var(--clr-text); line-height:1; }
-.blog-stat-label{ font-size:0.72rem; color:var(--clr-text-secondary); margin-top:2px; }
-
-/* Editor panel */
-.blog-editor-panel {
-  background:var(--clr-surface); border:1px solid var(--clr-border);
-  border-radius:var(--radius-md); padding:1.5rem; margin-bottom:1.5rem;
-}
-.blog-editor-panel h3 { font-size:1rem; font-weight:600; margin-bottom:1.25rem; color:var(--clr-text); }
-.blog-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
-.blog-form-grid .full { grid-column:1/-1; }
-.blog-form-group label {
-  display:block; font-size:0.78rem; font-weight:500; color:var(--clr-text-secondary); margin-bottom:0.3rem;
-}
-.blog-form-group input,
-.blog-form-group select,
-.blog-form-group textarea {
-  width:100%; padding:0.55rem 0.75rem; border:1px solid var(--clr-border);
-  border-radius:var(--radius-sm); font-size:0.85rem; font-family:var(--font-family);
-  background:var(--clr-bg); color:var(--clr-text); transition:border var(--transition-fast);
-}
-.blog-form-group input:focus,
-.blog-form-group select:focus,
-.blog-form-group textarea:focus {
-  outline:none; border-color:var(--clr-primary);
-}
-.blog-form-group textarea { resize:vertical; min-height:70px; }
-
-/* Quill editor container */
-#blogEditorContainer { height:280px; margin-bottom:0.5rem; border-radius:var(--radius-sm); }
-#blogEditorContainer .ql-toolbar { border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-color:var(--clr-border); }
-#blogEditorContainer .ql-container { border-radius:0 0 var(--radius-sm) var(--radius-sm); border-color:var(--clr-border); font-size:0.9rem; }
-
-.blog-form-actions { display:flex; gap:0.65rem; margin-top:1rem; }
-.blog-form-actions .btn {
-  padding:0.55rem 1.25rem; border:none; border-radius:var(--radius-sm);
-  font-size:0.82rem; font-weight:500; cursor:pointer; transition:all var(--transition-fast);
-  display:inline-flex; align-items:center; gap:0.4rem;
-}
-.btn-publish  { background:var(--clr-primary); color:#fff; }
-.btn-publish:hover { background:var(--clr-primary-hover); }
-.btn-draft    { background:var(--clr-bg); color:var(--clr-text); border:1px solid var(--clr-border) !important; }
-.btn-draft:hover { background:var(--clr-border-light); }
-.btn-cancel   { background:transparent; color:var(--clr-text-secondary); }
-.btn-cancel:hover { color:var(--clr-danger); }
-
-/* Table */
-.blog-table { width:100%; border-collapse:collapse; }
-.blog-table th {
-  text-align:left; padding:0.7rem 1rem; font-size:0.72rem; font-weight:600;
-  text-transform:uppercase; letter-spacing:0.03em; color:var(--clr-text-muted);
-  border-bottom:1px solid var(--clr-border);
-}
-.blog-table td {
-  padding:0.75rem 1rem; font-size:0.82rem; color:var(--clr-text);
-  border-bottom:1px solid var(--clr-border-light); vertical-align:middle;
-}
-.blog-table tr:hover td { background:var(--clr-bg); }
-.blog-title-cell { font-weight:500; max-width:280px; }
-.blog-title-cell small { display:block; color:var(--clr-text-muted); font-size:0.72rem; font-weight:400; margin-top:2px; }
-
-.status-badge {
-  display:inline-block; padding:0.2rem 0.6rem; border-radius:var(--radius-full);
-  font-size:0.7rem; font-weight:600; text-transform:capitalize;
-}
-.status-badge.published { background:var(--clr-success-light); color:var(--clr-success); }
-.status-badge.draft     { background:var(--clr-warning-light); color:var(--clr-warning); }
-
-.blog-cat-badge {
-  display:inline-block; padding:0.18rem 0.55rem; border-radius:var(--radius-full);
-  font-size:0.7rem; font-weight:500; background:var(--clr-primary-light); color:var(--clr-primary);
-}
-
-.blog-actions { display:flex; gap:0.35rem; }
-.blog-actions button {
-  background:none; border:1px solid var(--clr-border); border-radius:var(--radius-sm);
-  padding:0.3rem 0.5rem; cursor:pointer; font-size:0.78rem; color:var(--clr-text-secondary);
-  transition:all var(--transition-fast);
-}
-.blog-actions button:hover { border-color:var(--clr-primary); color:var(--clr-primary); }
-.blog-actions button.del:hover { border-color:var(--clr-danger); color:var(--clr-danger); }
-
-@media (max-width:768px) {
-  .blog-form-grid { grid-template-columns:1fr; }
-  .blog-table th:nth-child(4), .blog-table td:nth-child(4),
-  .blog-table th:nth-child(5), .blog-table td:nth-child(5) { display:none; }
-}
-</style>
+<!-- The blog manager used to carry its own stylesheet: its own table, its own
+     form fields, its own badges and its own buttons, at padding values that
+     matched nothing else in the panel. Everything it needs is a shared
+     component now; only the Quill container, which is a third-party widget,
+     still needs styling of its own, and that lives in dashboard.css. -->
 
 <!-- Stats -->
-<div class="blog-stats">
-  <div class="blog-stat-card">
-    <div class="blog-stat-icon total"><i class="bi bi-file-earmark-text"></i></div>
-    <div><div class="blog-stat-num" id="stat-total"><?php echo $totalCount; ?></div><div class="blog-stat-label">Total Posts</div></div>
+<div class="stat-strip">
+  <div class="stat-strip-card">
+    <div class="stat-strip-icon blue"><i class="bi bi-file-earmark-text"></i></div>
+    <div><div class="stat-strip-num" id="stat-total"><?php echo $totalCount; ?></div><div class="stat-strip-label">Total Posts</div></div>
   </div>
-  <div class="blog-stat-card">
-    <div class="blog-stat-icon pub"><i class="bi bi-check-circle"></i></div>
-    <div><div class="blog-stat-num" id="stat-published"><?php echo $publishedCount; ?></div><div class="blog-stat-label">Published</div></div>
+  <div class="stat-strip-card">
+    <div class="stat-strip-icon green"><i class="bi bi-check-circle"></i></div>
+    <div><div class="stat-strip-num" id="stat-published"><?php echo $publishedCount; ?></div><div class="stat-strip-label">Published</div></div>
   </div>
-  <div class="blog-stat-card">
-    <div class="blog-stat-icon draft"><i class="bi bi-pencil"></i></div>
-    <div><div class="blog-stat-num" id="stat-draft"><?php echo $draftCount; ?></div><div class="blog-stat-label">Drafts</div></div>
+  <div class="stat-strip-card">
+    <div class="stat-strip-icon amber"><i class="bi bi-pencil"></i></div>
+    <div><div class="stat-strip-num" id="stat-draft"><?php echo $draftCount; ?></div><div class="stat-strip-label">Drafts</div></div>
   </div>
 </div>
 
@@ -181,29 +83,30 @@ if (isset($_GET['edit'])) {
       <i class="bi bi-search"></i>
       <input type="text" name="q" placeholder="Search posts..." value="<?php echo htmlspecialchars($search); ?>" />
     </form>
-    <button type="button" class="btn-publish" style="margin-left:0.5rem; padding:0.45rem 1rem; border:none; border-radius:var(--radius-sm); font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;" onclick="toggleEditor(true)">
+    <button type="button" class="btn btn-primary btn-sm" onclick="toggleEditor(true)">
       <i class="bi bi-plus-lg"></i> New Post
     </button>
   </div>
 </div>
 
 <!-- Editor Panel (hidden by default) -->
-<div class="blog-editor-panel" id="blogEditorPanel" style="display:none;">
-  <h3 id="editorTitle"><i class="bi bi-pencil-square"></i> New Blog Post</h3>
+<div class="panel" id="blogEditorPanel" hidden>
+  <div class="panel-body">
+  <h3 class="subsection-title" id="editorTitle"><i class="bi bi-pencil-square"></i> New Blog Post</h3>
   <form id="blogForm" onsubmit="return false;">
-    <input type="hidden" id="blogId" value="" />
-    <div class="blog-form-grid">
-      <div class="blog-form-group">
-        <label for="blogTitleInput">Title *</label>
-        <input type="text" id="blogTitleInput" placeholder="e.g. Understanding anxiety loops" required />
+    <input class="form-input" type="hidden" id="blogId" value="" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="blogTitleInput">Title *</label>
+        <input class="form-input" type="text" id="blogTitleInput" placeholder="e.g. Understanding anxiety loops" required />
       </div>
-      <div class="blog-form-group">
-        <label for="blogSlug">URL Slug *</label>
-        <input type="text" id="blogSlug" placeholder="auto-generated-from-title" />
+      <div class="form-group">
+        <label class="form-label" for="blogSlug">URL Slug *</label>
+        <input class="form-input" type="text" id="blogSlug" placeholder="auto-generated-from-title" />
       </div>
-      <div class="blog-form-group">
-        <label for="blogCategory">Category *</label>
-        <select id="blogCategory">
+      <div class="form-group">
+        <label class="form-label" for="blogCategory">Category *</label>
+        <select class="form-select" id="blogCategory">
           <option value="Anxiety">Anxiety</option>
           <option value="Relationships">Relationships</option>
           <option value="Self-Growth">Self-Growth</option>
@@ -211,33 +114,34 @@ if (isset($_GET['edit'])) {
           <option value="Mindfulness">Mindfulness</option>
         </select>
       </div>
-      <div class="blog-form-group">
-        <label for="blogReadTime">Read Time (minutes)</label>
-        <input type="number" id="blogReadTime" value="5" min="1" max="60" />
+      <div class="form-group">
+        <label class="form-label" for="blogReadTime">Read Time (minutes)</label>
+        <input class="form-input" type="number" id="blogReadTime" value="5" min="1" max="60" />
       </div>
-      <div class="blog-form-group">
-        <label for="blogCoverImage">Cover Image URL</label>
-        <input type="text" id="blogCoverImage" placeholder="https://images.unsplash.com/..." />
+      <div class="form-group">
+        <label class="form-label" for="blogCoverImage">Cover Image URL</label>
+        <input class="form-input" type="text" id="blogCoverImage" placeholder="https://images.unsplash.com/..." />
       </div>
-      <div class="blog-form-group">
-        <label for="blogImageFile">Or Upload Cover Image (Resized to 1200x800px)</label>
-        <input type="file" id="blogImageFile" accept="image/*" />
+      <div class="form-group">
+        <label class="form-label" for="blogImageFile">Or Upload Cover Image (Resized to 1200x800px)</label>
+        <input class="form-input" type="file" id="blogImageFile" accept="image/*" />
       </div>
-      <div class="blog-form-group full">
-        <label for="blogExcerpt">Excerpt *</label>
-        <textarea id="blogExcerpt" rows="2" placeholder="A short summary shown on the blog listing page..."></textarea>
+      <div class="form-group is-full">
+        <label class="form-label" for="blogExcerpt">Excerpt *</label>
+        <textarea class="form-textarea" id="blogExcerpt" rows="2" placeholder="A short summary shown on the blog listing page..."></textarea>
       </div>
-      <div class="blog-form-group full">
-        <label>Content *</label>
+      <div class="form-group is-full">
+        <label class="form-label">Content *</label>
         <div id="blogEditorContainer"></div>
       </div>
     </div>
-    <div class="blog-form-actions">
-      <button type="button" class="btn btn-publish" onclick="saveBlog('published')"><i class="bi bi-send"></i> Publish</button>
-      <button type="button" class="btn btn-draft" onclick="saveBlog('draft')"><i class="bi bi-file-earmark"></i> Save as Draft</button>
-      <button type="button" class="btn btn-cancel" onclick="toggleEditor(false)"><i class="bi bi-x-lg"></i> Cancel</button>
+    <div class="form-actions">
+      <button type="button" class="btn btn-primary" onclick="saveBlog('published')"><i class="bi bi-send"></i> Publish</button>
+      <button type="button" class="btn btn-ghost" onclick="saveBlog('draft')"><i class="bi bi-file-earmark"></i> Save as Draft</button>
+      <button type="button" class="btn btn-ghost" onclick="toggleEditor(false)"><i class="bi bi-x-lg"></i> Cancel</button>
     </div>
   </form>
+  </div>
 </div>
 
 <!-- Blog List -->
@@ -247,11 +151,11 @@ if (isset($_GET['edit'])) {
       <div class="empty-state">
         <i class="bi bi-pencil-square"></i>
         <p>No blog posts found</p>
-        <p style="font-size:0.78rem;">Click "New Post" to create your first blog article.</p>
+        <p>Click "New Post" to create your first blog article.</p>
       </div>
     <?php else: ?>
-      <div style="overflow-x:auto;">
-        <table class="blog-table">
+      <div class="data-table-wrap">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -259,27 +163,27 @@ if (isset($_GET['edit'])) {
               <th>Status</th>
               <th>Read Time</th>
               <th>Date</th>
-              <th style="text-align:right;">Actions</th>
+              <th class="th-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             <?php foreach ($blogs as $b): ?>
               <tr>
-                <td class="blog-title-cell">
+                <td class="td-name td-title">
                   <?php echo htmlspecialchars($b['title']); ?>
                   <small>/<?php echo htmlspecialchars($b['slug']); ?></small>
                 </td>
-                <td><span class="blog-cat-badge"><?php echo htmlspecialchars($b['category']); ?></span></td>
-                <td><span class="status-badge <?php echo $b['status']; ?>"><?php echo $b['status']; ?></span></td>
+                <td><span class="badge badge-category"><?php echo htmlspecialchars($b['category']); ?></span></td>
+                <td><span class="badge badge-<?php echo $b['status']; ?>"><?php echo $b['status']; ?></span></td>
                 <td><?php echo $b['read_time']; ?> min</td>
                 <td><?php echo date('M j, Y', strtotime($b['created_at'])); ?></td>
-                <td>
-                  <div class="blog-actions" style="justify-content:flex-end;">
-                    <button onclick="editBlog(<?php echo $b['id']; ?>)" title="Edit"><i class="bi bi-pencil"></i></button>
-                    <button onclick="toggleBlogStatus(<?php echo $b['id']; ?>)" title="Toggle Status">
+                <td class="td-actions">
+                  <div class="row-actions">
+                    <button class="btn btn-icon" onclick="editBlog(<?php echo $b['id']; ?>)" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-icon" onclick="toggleBlogStatus(<?php echo $b['id']; ?>)" title="<?php echo $b['status']==='published' ? 'Unpublish' : 'Publish'; ?>">
                       <i class="bi bi-<?php echo $b['status']==='published' ? 'eye-slash' : 'eye'; ?>"></i>
                     </button>
-                    <button class="del" onclick="deleteBlog(<?php echo $b['id']; ?>, '<?php echo addslashes(htmlspecialchars($b['title'])); ?>')" title="Delete"><i class="bi bi-trash3"></i></button>
+                    <button class="btn btn-icon is-danger" onclick="deleteBlog(<?php echo $b['id']; ?>, '<?php echo addslashes(htmlspecialchars($b['title'])); ?>')" title="Delete"><i class="bi bi-trash3"></i></button>
                   </div>
                 </td>
               </tr>
@@ -338,7 +242,7 @@ if (isset($_GET['edit'])) {
   window.toggleEditor = function(show) {
     var panel = document.getElementById('blogEditorPanel');
     if (show) {
-      panel.style.display = 'block';
+      panel.hidden = false;
       initQuill();
       if (!document.getElementById('blogId').value) {
         resetForm();
@@ -346,7 +250,7 @@ if (isset($_GET['edit'])) {
       }
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
-      panel.style.display = 'none';
+      panel.hidden = true;
       resetForm();
     }
   };

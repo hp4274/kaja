@@ -22,6 +22,7 @@ USE `kaja_db`;
 --  13  settings           key/value configuration
 --  14  form_questions     the editable intake question set, per version
 --  15  intake_links       tokenised, single-use intake invitations
+--  16  holidays           days the practice is closed
 
 -- 1. Short Intakes Table (Intake)
 CREATE TABLE IF NOT EXISTS `intake` (
@@ -127,10 +128,14 @@ CREATE TABLE IF NOT EXISTS `leads` (
     `message` TEXT DEFAULT NULL,
     -- Which public form produced this lead: 'home', 'appointment', 'intake'.
     `source` VARCHAR(50) NOT NULL,
-    -- new -> contacted -> confirmed -> converted, with rejected/spam as
-    -- terminal side-exits reachable from any state. Only Confirm advances a
-    -- lead automatically; every other move is a manual admin action.
-    `status` ENUM('new','contacted','confirmed','converted','rejected','spam') NOT NULL DEFAULT 'new',
+    -- new -> contacted -> confirmed -> converted, with rejected as the
+    -- terminal side-exit reachable from any state. Only Accept advances a lead
+    -- automatically; every other move is a manual admin action.
+    --
+    -- There is no 'spam' any more: it was a second word for "this is not going
+    -- anywhere", and two terminal states that need the same handling are one
+    -- state with extra steps. Anything that was spam is rejected.
+    `status` ENUM('new','contacted','confirmed','converted','rejected') NOT NULL DEFAULT 'new',
     `client_id` INT DEFAULT NULL,
     -- No staff table exists; this is here so attribution has somewhere to go
     -- the day a second user is added.
@@ -385,6 +390,19 @@ CREATE TABLE IF NOT EXISTS `intake_links` (
         FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+-- 16. Holidays Table (days the practice is closed)
+-- A holiday is a date, not a session, so it gets its own table rather than a
+-- placeholder row in `sessions`. The date is the primary key: a day is either
+-- closed or it is not, and marking it twice must not make two of it.
+CREATE TABLE IF NOT EXISTS `holidays` (
+    `holiday_date` DATE NOT NULL PRIMARY KEY,
+    `reason` VARCHAR(255) DEFAULT NULL,
+    `created_by` INT DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_holidays_user`
+        FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- Seed default settings.
 -- Generated from settingDefaults() in includes/settings.php, which is the
 -- authority. tests/test_settings_seed.php asserts the two stay in step, because
@@ -394,6 +412,8 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
     ('intake_token_expiry_days', '14'),
     ('intake_form_version', '2'),
     ('admin_reminder_hours', '48'),
+    ('intake_reply_days', '2'),
+    ('booking_slots', '09:00,11:00,13:00,15:00,17:00'),
     ('default_session_duration', '60'),
     ('buffer_minutes', '0'),
     ('min_notice_hours', '24'),
@@ -406,6 +426,30 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
     ('practice_video_link', ''),
     ('session_reminder_hours', '24'),
     ('practice_timezone', 'Asia/Kolkata'),
+    ('notify_fee_reminder_subject', 'Outstanding balance - {{practice_name}}'),
+    ('notify_fee_reminder_body', 'Hello {{client_name}},
+
+This is a gentle reminder that {{amount_due}} is currently outstanding on your account, the earliest of it from {{oldest_date}}.
+
+If you have already paid, please ignore this message - it may have crossed with your payment.
+
+If anything about this is wrong, or you would like to arrange a different way to settle it, just reply to this email.
+
+Best regards,
+{{practice_name}}'),
+    ('notify_intake_reminder_subject', 'A reminder about your intake form - {{practice_name}}'),
+    ('notify_intake_reminder_body', 'Hello {{name}},
+
+We are still holding your intake questionnaire open. It takes about ten minutes:
+
+{{intake_link}}
+
+This link is unique to you, so please do not forward it. It expires on {{expires}}.
+
+If you no longer need an appointment, you can ignore this message.
+
+Best regards,
+{{practice_name}}'),
     ('notify_session_confirmed_subject', 'Your session on {{session_time}} - {{practice_name}}'),
     ('notify_session_confirmed_body', 'Hello {{client_name}},\n\nYour session is confirmed for {{session_time}}.\n\nFormat: {{session_type}}\nJoining link: {{video_link}}\n\nIf you need to change or cancel it, just reply to this email.\n\nBest regards,\n{{practice_name}}'),
     ('notify_session_cancelled_subject', 'Your session on {{session_time}} has been cancelled'),
@@ -415,6 +459,12 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
     ('upload_max_mb', '10'),
     ('upload_allowed_types', 'pdf,jpg,jpeg,png,doc,docx'),
     ('document_storage_path', ''),
+    ('notify_lead_confirmed_bg', ''),
+    ('notify_intake_reminder_bg', ''),
+    ('notify_fee_reminder_bg', ''),
+    ('notify_session_confirmed_bg', ''),
+    ('notify_session_cancelled_bg', ''),
+    ('notify_session_reminder_bg', ''),
     ('site_base_url', '')
 ON DUPLICATE KEY UPDATE `setting_value`=VALUES(`setting_value`);
 

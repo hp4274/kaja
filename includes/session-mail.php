@@ -13,6 +13,7 @@ require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/mail-queue.php';
 require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/session-repo.php';
+require_once __DIR__ . '/email-templates.php';
 
 /** The variables every session template can use. */
 function sessionMailVars(PDO $db, $sessionId) {
@@ -49,9 +50,9 @@ function sessionMailVars(PDO $db, $sessionId) {
  */
 function sendSessionMail(PDO $db, $sessionId, $kind) {
     $keys = [
-        'confirmation' => ['notify_session_confirmed_subject', 'notify_session_confirmed_body'],
-        'cancellation' => ['notify_session_cancelled_subject', 'notify_session_cancelled_body'],
-        'reminder'     => ['notify_session_reminder_subject',  'notify_session_reminder_body'],
+        'confirmation' => ['notify_session_confirmed_subject', 'notify_session_confirmed_body', 'session_confirmed'],
+        'cancellation' => ['notify_session_cancelled_subject', 'notify_session_cancelled_body', 'session_cancelled'],
+        'reminder'     => ['notify_session_reminder_subject',  'notify_session_reminder_body',  'session_reminder'],
     ];
     if (!isset($keys[$kind])) {
         throw new InvalidArgumentException('Unknown session mail kind: ' . $kind);
@@ -65,15 +66,18 @@ function sendSessionMail(PDO $db, $sessionId, $kind) {
     $subject = renderNotificationTemplate(getSetting($keys[$kind][0]), $payload['vars']);
     $body    = renderNotificationTemplate(getSetting($keys[$kind][1]), $payload['vars']);
 
-    if (sendMail($payload['to'], $subject, $body)) {
+    $background = emailBackgroundUrl($keys[$kind][2]);
+
+    if (sendMail($payload['to'], $subject, $body, null, $background)) {
         return true;
     }
 
     queueFailedMail([
-        'to'      => $payload['to'],
-        'subject' => $subject,
-        'body'    => $body,
-        'kind'    => 'session_mail',
+        'to'         => $payload['to'],
+        'subject'    => $subject,
+        'body'       => $body,
+        'kind'       => 'session_mail',
+        'background' => $background,
     ], 'mail() returned false');
 
     return false;

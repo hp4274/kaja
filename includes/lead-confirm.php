@@ -45,7 +45,7 @@ function confirmLead(PDO $db, $leadId, $userId = null) {
 
     if (!leadCanTransition($lead['status'], 'confirmed')) {
         throw new RuntimeException(
-            'A ' . leadStatusLabel($lead['status']) . ' lead cannot be confirmed.'
+            'A ' . leadStatusLabel($lead['status']) . ' lead cannot be accepted.'
         );
     }
 

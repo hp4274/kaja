@@ -50,6 +50,16 @@ function columnExists(PDO $db, $table, $column) {
  * ADD INDEX IF NOT EXISTS is not portable across the MySQL/MariaDB builds this
  * ships on, so the presence check happens here instead.
  */
+/** The declared type of a column, so an ENUM can be inspected before it is changed. */
+function columnType(PDO $db, $table, $column) {
+    $stmt = $db->prepare("
+        SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c
+    ");
+    $stmt->execute([':t' => $table, ':c' => $column]);
+    return $stmt->fetchColumn();
+}
+
 function indexExists(PDO $db, $table, $index) {
     $stmt = $db->prepare("
         SELECT COUNT(*) FROM information_schema.STATISTICS
@@ -565,6 +575,37 @@ try {
                     KEY `idx_version` (`form_version`)
                 ) ENGINE=InnoDB
             ");
+        }
+    );
+
+    // ---- holidays --------------------------------------------------------
+    // Days the practice is closed. Its own table, keyed by the date: a day is
+    // either closed or it is not, and marking it twice must not make two of it.
+    step('create table `holidays`', !tableExists($db, 'holidays'),
+        function (PDO $db) {
+            $db->exec("
+                CREATE TABLE `holidays` (
+                    `holiday_date` DATE NOT NULL PRIMARY KEY,
+                    `reason` VARCHAR(255) DEFAULT NULL,
+                    `created_by` INT DEFAULT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT `fk_holidays_user`
+                        FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+                ) ENGINE=InnoDB
+            ");
+        }
+    );
+
+    // ---- leads.status: drop 'spam' -------------------------------------
+    // It was a second word for "this is not going anywhere". Rows are moved
+    // before the column narrows, or MySQL would silently blank them.
+    step("retire 'spam' from `leads`.`status`",
+        strpos((string) columnType($db, 'leads', 'status'), "'spam'") !== false,
+        function (PDO $db) {
+            $db->exec("UPDATE `leads` SET `status` = 'rejected' WHERE `status` = 'spam'");
+            $db->exec("ALTER TABLE `leads` MODIFY `status`
+                       ENUM('new','contacted','confirmed','converted','rejected')
+                       NOT NULL DEFAULT 'new'");
         }
     );
 
