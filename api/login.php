@@ -36,6 +36,7 @@ try {
 
     if ($user && password_verify($password, $user['password'])) {
         // Password is correct, set session
+        session_regenerate_id(true);
         $_SESSION['logged_in'] = true;
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
@@ -48,5 +49,5 @@ try {
     }
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => publicError($e)]);
 }

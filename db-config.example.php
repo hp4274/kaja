@@ -1,37 +1,82 @@
 <?php
 /**
- * Database Connection Configuration -- EXAMPLE
+ * Database + secrets configuration -- TEMPLATE. The one place config lives.
  *
- * Copy this to db-config.php and fill in the credentials, then run
- * `php tools/generate-key.php` and paste its line in place of the empty
- * INTAKE_ENCRYPTION_KEY below. db-config.php is gitignored on purpose: it
- * holds both the database password and the intake encryption key.
+ * Copy to db-config.php (gitignored, never committed) on each install.
+ *
+ * PRODUCTION: leave the blanks and set real values as environment variables
+ * (Apache SetEnv, PHP-FPM env[], or the host panel) so no secret sits in the
+ * web root:
+ *
+ *   APP_ENV  DB_HOST  DB_NAME  DB_USER  DB_PASS
+ *   INTAKE_ENCRYPTION_KEY  SMTP_HOST  SMTP_PORT  SMTP_USER  SMTP_PASS
+ *
+ * APP_ENV is production unless the code sits under a XAMPP folder (override with
+ * the APP_ENV variable). Not derived from the Host header: a client controls that. Production refuses to start with a root or
+ * blank-password database login, and logs an error if the encryption key is
+ * missing.
+ *
+ * LOCAL DEV: fill the values; a XAMPP path is detected as development.
+ * Key: `php tools/generate-key.php`, once, never changed. Back it up outside
+ * the database -- a DB backup alone cannot restore the encrypted intake data.
+ * Gmail SMTP_PASS must be an App Password: https://myaccount.google.com/apppasswords
  */
 
-// Guarded so a caller that has already chosen a database — the test bootstrap
-// pointing at kaja_db_test, for one — is not overridden here.
-if (!defined('DB_HOST')) { define('DB_HOST', 'localhost'); }
-if (!defined('DB_NAME')) { define('DB_NAME', 'kaja_db'); }
-if (!defined('DB_USER')) { define('DB_USER', 'root'); }
-if (!defined('DB_PASS')) { define('DB_PASS', ''); } // Default empty password for local development
+$_local = [
+    'APP_ENV'               => stripos(__DIR__, 'xampp') !== false ? 'development' : 'production',
+    'DB_HOST'               => 'localhost',
+    'DB_NAME'               => '',
+    'DB_USER'               => '',
+    'DB_PASS'               => '',
+    'INTAKE_ENCRYPTION_KEY' => '',
+    'SMTP_HOST'             => 'smtp.gmail.com',
+    'SMTP_PORT'             => 587,
+    'SMTP_USER'             => '',
+    'SMTP_PASS'             => '',
+];
 
-// Encryption key for clients.intake_data (AES-256-GCM). Generated once by
-// tools/generate-key.php. This file is untracked; back the key up somewhere
-// other than the database, because a database backup alone cannot restore it.
-if (!defined('INTAKE_ENCRYPTION_KEY')) {
-    define('INTAKE_ENCRYPTION_KEY', '');
+// Environment wins over this file. Guarded so a caller that already chose a
+// value (a CLI tool pointing DB_NAME elsewhere) is not overridden.
+foreach ($_local as $_k => $_v) {
+    if (defined($_k)) { continue; }
+    $_env = getenv($_k);
+    $_val = ($_env !== false && $_env !== '') ? $_env : $_v;
+    define($_k, $_k === 'SMTP_PORT' ? (int) $_val : $_val);
+}
+unset($_local, $_k, $_v, $_env, $_val);
+
+define('APP_DEBUG', APP_ENV === 'development');
+ini_set('display_errors', APP_DEBUG ? '1' : '0');
+ini_set('log_errors', '1');
+
+function configFail($why) {
+    error_log('[config] ' . $why);
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, $why . "\n"); exit(1); }
+    http_response_code(500);
+    exit('Service unavailable.');
 }
 
-// Outbound SMTP. Kept here rather than in the settings table on purpose: a
-// password that round-trips through a web form and a database has two more
-// places to leak from. This file is gitignored.
-//
-// For Gmail this must be an App Password, not the account password:
-// https://myaccount.google.com/apppasswords
-if (!defined('SMTP_HOST')) { define('SMTP_HOST', 'smtp.gmail.com'); }
-if (!defined('SMTP_PORT')) { define('SMTP_PORT', 587); }
-if (!defined('SMTP_USER')) { define('SMTP_USER', ''); }
-if (!defined('SMTP_PASS')) { define('SMTP_PASS', ''); }
+if (!APP_DEBUG) {
+    if (DB_NAME === '' || DB_USER === '' || DB_USER === 'root' || DB_PASS === '') {
+        configFail('production needs DB_NAME, DB_USER (not root) and DB_PASS');
+    }
+    if (strlen(INTAKE_ENCRYPTION_KEY) < 64) {
+        // Only intake needs the key; log loudly rather than take the site down.
+        error_log('[config] INTAKE_ENCRYPTION_KEY missing (php tools/generate-key.php)');
+    }
+}
+
+/**
+ * Message safe to show a client. Domain errors pass through; database errors
+ * carry table and column names, so they are logged and masked.
+ */
+function publicError(Throwable $e) {
+    if ($e instanceof PDOException) {
+        error_log('[db] ' . $e->getMessage());
+        return 'A database error occurred.';
+    }
+    return $e->getMessage();
+}
 
 function getDbConnection() {
     try {
@@ -43,13 +88,10 @@ function getDbConnection() {
         ];
         return new PDO($dsn, DB_USER, DB_PASS, $options);
     } catch (PDOException $e) {
-        // Return JSON error response to AJAX requests
+        error_log('[db] connection failed: ' . $e->getMessage());
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'error' => 'Database connection failed: ' . $e->getMessage()
-        ]);
+        echo json_encode(['success' => false, 'error' => 'Service temporarily unavailable.']);
         exit;
     }
 }

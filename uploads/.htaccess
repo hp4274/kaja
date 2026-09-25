@@ -1,0 +1,4 @@
+# Uploads are images only. Never execute a script from here.
+<FilesMatch "(?i)\.(php[0-9]?|phtml|phar)$">
+    Require all denied
+</FilesMatch>

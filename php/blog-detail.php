@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/db-config.php';
+require_once __DIR__ . '/../db-config.php';
 $db = getDbConnection();
 
 $slug = isset($_GET['slug']) ? trim($_GET['slug']) : '';

@@ -42,7 +42,7 @@ try {
             } catch (RuntimeException $e) {
                 // The message is written for the person uploading; the reasons
                 // are all things they can fix (size, type, a failed transfer).
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 

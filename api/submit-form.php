@@ -254,5 +254,5 @@ try {
             sendResponse(false, 'Unsupported form type.', 400);
     }
 } catch (PDOException $e) {
-    sendResponse(false, 'Database transaction failed: ' . $e->getMessage(), 500);
+    sendResponse(false, publicError($e), 500);
 }

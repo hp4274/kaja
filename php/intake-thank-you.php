@@ -17,7 +17,7 @@
 
 session_start();
 
-require_once __DIR__ . '/includes/settings.php';
+require_once __DIR__ . '/../includes/settings.php';
 
 $done = isset($_SESSION['intake_done']) ? $_SESSION['intake_done'] : null;
 

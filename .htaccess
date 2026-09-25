@@ -16,9 +16,16 @@ DirectoryIndex index.html index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Server-side code and data are never fetched over HTTP.
+    RewriteRule ^(includes|admin/includes|tools|storage|cron|database|\.git)(/|$) - [F,L]
+
+    # .html pages sit at the root. PHP pages live in php/, but public URLs stay
+    # flat (/intake.php?token=...), so bookmarks and already-emailed links work.
+    RewriteRule ^(blogs|blog-detail|intake|intake-thank-you|dashboard)\.php$ php/$1.php [L,QSA]
+
     # Friendly page routes (matches vercel.json)
     RewriteRule ^about/?$ about.html [L,QSA]
-    RewriteRule ^blogs/?$ blogs.php [L,QSA]
+    RewriteRule ^blogs/?$ php/blogs.php [L,QSA]
     RewriteRule ^appointment/?$ appointment.html [L,QSA]
     RewriteRule ^intake-form/?$ intake-form.html [L,QSA]
     RewriteRule ^admin/?$ admin/index.php [L,QSA]
@@ -37,6 +44,13 @@ DirectoryIndex index.html index.php
         Deny from all
     </IfModule>
 </FilesMatch>
+
+# Admin session cookie: not readable from JS, not sent cross-site, no fixation.
+<IfModule mod_php.c>
+    php_flag  session.cookie_httponly on
+    php_flag  session.use_strict_mode on
+    php_value session.cookie_samesite Lax
+</IfModule>
 
 # ------------------------------------------------------------------------------
 # Security Headers

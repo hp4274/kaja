@@ -101,7 +101,7 @@
 
     setFeedback("pending", "Submitting request...");
 
-    fetch("submit-form.php", {
+    fetch("api/submit-form.php", {
       method: "POST",
       body: new FormData(form)
     })

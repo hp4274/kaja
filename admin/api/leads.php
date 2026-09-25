@@ -164,7 +164,7 @@ try {
                 $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
                 $result = confirmLead($db, $id, $userId);
             } catch (Throwable $e) {
-                echo json_encode(['success'=>false,'error'=>$e->getMessage()]);
+                echo json_encode(['success'=>false,'error'=>publicError($e)]);
                 exit;
             }
 
@@ -288,5 +288,5 @@ try {
     }
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['success'=>false,'error'=>'Database error: '.$e->getMessage()]);
+    echo json_encode(['success'=>false,'error'=>publicError($e)]);
 }

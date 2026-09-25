@@ -1,7 +1,5 @@
-# Holds the database credentials AND the intake encryption key.
-# Copy db-config.example.php to db-config.php on each install, then run
-# `php tools/generate-key.php` once and paste the key in.
-
+# db-config.php is tracked on purpose (the app needs it to reach the database).
+# db-config.example.php is the blank template.
 
 # Queued leads, stored documents, and logs (contain sensitive client/PHI data)
 /storage/queue/

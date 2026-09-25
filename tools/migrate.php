@@ -6,22 +6,17 @@
  * this never drops or rewrites existing data. Run it once against an existing
  * kaja_db. (schema.sql already contains all of this for fresh installs.)
  *
- *   CLI:     php migrate.php
- *   Browser: /Kaja/migrate.php  (requires an admin session)
+ *   php tools/migrate.php
+ *
+ * Command line only: a schema-changing script has no business being web-reachable.
  */
 
-$isCli = (php_sapi_name() === 'cli');
-
-if (!$isCli) {
-    session_start();
-    if (empty($_SESSION['logged_in'])) {
-        http_response_code(403);
-        exit('Forbidden. Log in to the admin panel first, or run this from the command line.');
-    }
-    header('Content-Type: text/plain; charset=utf-8');
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    exit('Command line only.');
 }
 
-require_once __DIR__ . '/db-config.php';
+require_once dirname(__DIR__) . '/db-config.php';
 
 $db = getDbConnection();
 $applied = [];
@@ -177,7 +172,7 @@ try {
 
     // ---- 6. seed settings ------------------------------------------------
     // INSERT IGNORE so an operator's edited values are never overwritten.
-    require_once __DIR__ . '/includes/settings.php';
+    require_once dirname(__DIR__) . '/includes/settings.php';
     $seed = $db->prepare("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES (:k, :v)");
     $seeded = 0;
     foreach (settingDefaults() as $key => $value) {

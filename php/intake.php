@@ -18,14 +18,14 @@
 
 session_start();
 
-require_once __DIR__ . '/db-config.php';
-require_once __DIR__ . '/includes/settings.php';
-require_once __DIR__ . '/includes/intake-token.php';
-require_once __DIR__ . '/includes/intake-repo.php';
-require_once __DIR__ . '/includes/lead-repo.php';
-require_once __DIR__ . '/includes/intake-extra-questions.php';
+require_once __DIR__ . '/../db-config.php';
+require_once __DIR__ . '/../includes/settings.php';
+require_once __DIR__ . '/../includes/intake-token.php';
+require_once __DIR__ . '/../includes/intake-repo.php';
+require_once __DIR__ . '/../includes/lead-repo.php';
+require_once __DIR__ . '/../includes/intake-extra-questions.php';
 
-define('INTAKE_FORM_FILE', __DIR__ . '/patient-intake-form.html');
+define('INTAKE_FORM_FILE', __DIR__ . '/../patient-intake-form.html');
 
 $token     = isset($_GET['token']) ? trim($_GET['token']) : '';
 $isAdmin   = !empty($_SESSION['logged_in']);
@@ -69,7 +69,7 @@ if ($html === false) {
 }
 
 $formTypeInput = '<input type="hidden" name="form_type" value="patient_intake" />';
-$fetchTarget   = 'fetch("submit-form.php"';
+$fetchTarget   = 'fetch("api/submit-form.php"';
 
 // Fail closed if the template no longer contains what we need to gate.
 if (strpos($html, $formTypeInput) === false || strpos($html, $fetchTarget) === false) {
@@ -88,7 +88,7 @@ if ($adminMode) {
 }
 
 $html = str_replace($formTypeInput, $injected, $html);
-$html = str_replace($fetchTarget, 'fetch("submit_intake.php"', $html);
+$html = str_replace($fetchTarget, 'fetch("api/submit_intake.php"', $html);
 
 // Pinned from the link when there is one, exactly as submit_intake.php does:
 // the form someone is shown and the schema their answers are checked against
@@ -127,8 +127,8 @@ $boot  = [
     'token'     => $token,
     'draft'     => array_merge($prefill, $draft),
     'endpoints' => [
-        'markFilled' => 'mark_filled.php',
-        'saveDraft'  => 'save_draft.php',
+        'markFilled' => 'api/mark_filled.php',
+        'saveDraft'  => 'api/save_draft.php',
     ],
 ];
 

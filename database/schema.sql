@@ -443,10 +443,8 @@ Best regards,
     ('site_base_url', '')
 ON DUPLICATE KEY UPDATE `setting_value`=VALUES(`setting_value`);
 
--- Seed default admin user (Username: admin, Password: admin123)
-INSERT INTO `users` (`username`, `password`, `email`)
-VALUES ('admin', '$2y$10$kMAlSbqecZQA5DxrPyg4C.3JLHKE/aCxmuFsbvw.h.4aZL/3CQizi', 'admin@rewire.com')
-ON DUPLICATE KEY UPDATE `password`=VALUES(`password`);
+-- No admin is seeded (a known default password is a backdoor). Create the first
+-- login with: php tools/create-admin.php <username> <email>
 
 -- Seed existing blog posts
 INSERT INTO `blogs` (`title`, `slug`, `excerpt`, `content`, `category`, `read_time`, `cover_image`, `status`, `created_at`) VALUES

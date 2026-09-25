@@ -165,7 +165,7 @@ try {
                     $booked    = 1;
                 }
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
@@ -245,7 +245,7 @@ try {
                 // required to ask whenever the session belongs to a series.
                 $targets = applyToScope($db, $sessionId, $scope);
             } catch (InvalidArgumentException $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
@@ -336,7 +336,7 @@ try {
 
                 rescheduleSession($db, $sessionId, $start, $duration);
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 

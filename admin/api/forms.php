@@ -43,7 +43,7 @@ try {
             try {
                 updateFormQuestion($db, $id, $fields);
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
@@ -68,7 +68,7 @@ try {
             try {
                 $added = addFormQuestion($db, $version, $section, $label);
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
@@ -95,7 +95,7 @@ try {
             try {
                 $n = reorderFormQuestions($db, $version, $section, $ids);
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
@@ -115,7 +115,7 @@ try {
             try {
                 $order = normaliseFormOrder($db, $version);
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
@@ -131,7 +131,7 @@ try {
             try {
                 $new = publishNewFormVersion($db, $from);
             } catch (Throwable $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 

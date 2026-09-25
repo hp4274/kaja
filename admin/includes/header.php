@@ -7,7 +7,7 @@
     <h1 class="admin-header-title"><?php echo htmlspecialchars($pageTitle); ?></h1>
   </div>
   <div class="admin-header-right">
-    <a href="../logout.php" class="btn-header-action">
+    <a href="../api/logout.php" class="btn-header-action">
       <i class="bi bi-box-arrow-right"></i> Logout
     </a>
   </div>

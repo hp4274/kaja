@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/db-config.php';
+require_once __DIR__ . '/../db-config.php';
 $db = getDbConnection();
 
 // Fetch all published blog posts

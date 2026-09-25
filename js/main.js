@@ -312,7 +312,7 @@
       bff.style.color = "#00373e";
       bff.textContent = "Submitting request...";
       
-      fetch("submit-form.php", {
+      fetch("api/submit-form.php", {
         method: "POST",
         body: formData
       })
