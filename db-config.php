@@ -31,8 +31,8 @@ $_local = [
     'INTAKE_ENCRYPTION_KEY' => '',
     'SMTP_HOST'             => 'smtp.gmail.com',
     'SMTP_PORT'             => 587,
-    'SMTP_USER'             => '',
-    'SMTP_PASS'             => '',
+    'SMTP_USER'             => 'harshlpatel.4274@gmail.com',
+    'SMTP_PASS'             => 'ttkb isjs vgah pcem',',
 ];
 
 // Environment wins over this file. Guarded so a caller that already chose a
