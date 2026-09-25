@@ -3,8 +3,20 @@
 # `php tools/generate-key.php` once and paste the key in.
 /db-config.php
 
-# Queued leads and failed mail. Both contain personal data.
+# Queued leads, stored documents, and logs (contain sensitive client/PHI data)
 /storage/queue/
+/storage/documents/
+/storage/logs/
 
-# Local scratch
+# Local scratch and test artifacts
 /_backup_pre_formfix/
+/docs/
+/.reticle/
+/.playwright-mcp/
+*.log
+*.yml
+*.yaml
+
+# All Markdown documentation files (workspace rule)
+*.md
+**/*.md

@@ -1,0 +1,49 @@
+# ==============================================================================
+# Rewire With Kajal / Kaja Portal - Apache Server Configuration
+# ==============================================================================
+
+# Set default directory index
+DirectoryIndex index.html index.php
+
+# Prevent directory browsing
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# URL Rewriting & Clean Routes
+# ------------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Friendly page routes (matches vercel.json)
+    RewriteRule ^about/?$ about.html [L,QSA]
+    RewriteRule ^blogs/?$ blogs.php [L,QSA]
+    RewriteRule ^appointment/?$ appointment.html [L,QSA]
+    RewriteRule ^intake-form/?$ intake-form.html [L,QSA]
+    RewriteRule ^admin/?$ admin/index.php [L,QSA]
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# Security & Access Restrictions
+# ------------------------------------------------------------------------------
+# Block direct web access to sensitive configuration, database schemas, and documentation
+<FilesMatch "(schema\.sql|db-config\.php|db-config\.example\.php|\.md|\.yml|\.yaml|\.log|\.git|\.gemini|\.reticle)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# ------------------------------------------------------------------------------
+# Security Headers
+# ------------------------------------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
