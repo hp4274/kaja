@@ -1,28 +1,3 @@
--- Drop Database if exists to ensure clean schema rebuild
-DROP DATABASE IF EXISTS `kaja_db`;
-CREATE DATABASE `kaja_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `kaja_db`;
-
--- Tables are created in dependency order, so a foreign key never points at a
--- table that does not exist yet. That is why `users` comes before `leads`,
--- and `clients` before everything that hangs off it.
---
---   1  intake             short contact-form messages
---   2  patient-intake     the questionnaire archive (legacy; see clients.intake_data)
---   3  users              admin logins
---   4  leads              public form submissions
---   5  lead_notes         append-only notes on a lead
---   6  clients            the people in treatment
---   7  sessions           appointments
---   8  client_notes       append-only clinical and administrative notes
---   9  client_fees        the manual payment ledger
---  10  client_documents   metadata only; the files live outside the project
---  11  activity_log       the audit trail every module writes to
---  12  blogs              public site content
---  13  settings           key/value configuration
---  14  form_questions     the editable intake question set, per version
---  15  intake_links       tokenised, single-use intake invitations
---  16  holidays           days the practice is closed
 
 -- 1. Short Intakes Table (Intake)
 CREATE TABLE IF NOT EXISTS `intake` (
