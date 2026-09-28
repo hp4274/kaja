@@ -147,7 +147,42 @@ function emailTemplates() {
                 'practice_name' => $practice,
             ],
         ],
+
+        'form_submitted' => [
+            'label'       => 'Form submitted',
+            'icon'        => 'bi-check2-circle',
+            'trigger'     => 'When a visitor submits the booking form or the intake questionnaire',
+            'blurb'       => 'A short receipt so a visitor knows their submission actually arrived, separate from the lead-acceptance mail.',
+            'subject_key' => 'notify_form_submitted_subject',
+            'body_key'    => 'notify_form_submitted_body',
+            'bg_key'      => 'notify_form_submitted_bg',
+            'to'          => 'the visitor',
+            'required'    => [],
+            'vars'        => [
+                'name'          => 'Ananya',
+                'practice_name' => $practice,
+            ],
+        ],
     ];
+}
+
+/**
+ * Receipt mailed straight back to whoever just submitted a public form.
+ *
+ * Separate from sendIntakeLinkEmail(): that one only fires once the therapist
+ * accepts a lead by hand, which can be hours later. This is the "yes, it
+ * arrived" reply a visitor gets the moment they submit.
+ */
+function sendFormSubmittedEmail($toEmail, $name) {
+    $vars = [
+        'name'          => trim((string) $name) !== '' ? trim((string) $name) : 'there',
+        'practice_name' => getSetting('practice_name'),
+    ];
+
+    $subject = renderNotificationTemplate(getSetting('notify_form_submitted_subject'), $vars);
+    $body    = renderNotificationTemplate(getSetting('notify_form_submitted_body'), $vars);
+
+    return sendMail($toEmail, $subject, $body, getSetting('practice_email'), emailBackgroundUrl('form_submitted'));
 }
 
 /** Every settings key the Emails page is allowed to write. */

@@ -189,7 +189,10 @@ try {
             $clientId = intval($_POST['client_id'] ?? 0);
             $amount = floatval($_POST['amount'] ?? 0);
             $feeDate = trim($_POST['fee_date'] ?? '');
-            $description = trim($_POST['description'] ?? '');
+            // Column is VARCHAR(255); unlike `reference` below this one was
+            // never capped, so a longer note threw a PDOException and the
+            // whole request came back as a masked 500.
+            $description = mb_substr(trim($_POST['description'] ?? ''), 0, 255);
             $status = trim($_POST['status'] ?? 'pending');
             // The Payments tab was the only way to record these; it was the
             // same table shown twice, so they belong on the fee itself.

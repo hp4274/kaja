@@ -17,6 +17,7 @@ require_once dirname(__DIR__) . '/db-config.php';
 require_once dirname(__DIR__) . '/includes/settings.php';
 require_once dirname(__DIR__) . '/includes/lead-queue.php';
 require_once dirname(__DIR__) . '/includes/intake-token.php';
+require_once dirname(__DIR__) . '/includes/mail-queue.php';
 
 /**
  * Look for this person in BOTH leads and clients before inserting.
@@ -159,6 +160,17 @@ try {
                     sendResponse(true, 'Your appointment request has been received. We will be in touch shortly.');
                 }
                 sendResponse(false, 'We could not record your request just now. Please try again, or email us directly.', 500);
+            }
+
+            // Best-effort receipt to the visitor. Queued on failure like every
+            // other outbound mail; never blocks or downgrades the response
+            // below, since the lead is already saved and correct.
+            if (!sendFormSubmittedEmail($email, $name)) {
+                queueFailedMail([
+                    'to'   => $email,
+                    'name' => $name,
+                    'kind' => 'form_submitted',
+                ], 'SMTP send failed');
             }
 
             sendResponse(true, 'Your appointment request has been submitted successfully.');

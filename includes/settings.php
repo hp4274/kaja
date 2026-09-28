@@ -166,6 +166,20 @@ Best regards,
             "Best regards,
 {{practice_name}}",
 
+        // Sent the moment a visitor submits the booking form or the intake
+        // questionnaire — separate from notify_lead_confirmed, which only
+        // goes out once the therapist accepts the lead by hand.
+        'notify_form_submitted_subject'    => 'We have received your submission - {{practice_name}}',
+        'notify_form_submitted_body'       =>
+            "Hello {{name}},
+
+" .
+            "Thank you, your submission has reached us. We will be in touch shortly.
+
+" .
+            "Best regards,
+{{practice_name}}",
+
         // Uploads. Shared with Patient Intake the day it gains a file
         // question -- one setting, two consumers.
         'upload_max_mb'         => '10',
@@ -185,6 +199,7 @@ Best regards,
         'notify_session_confirmed_bg' => '',
         'notify_session_cancelled_bg' => '',
         'notify_session_reminder_bg' => '',
+        'notify_form_submitted_bg' => '',
         'site_base_url'            => '',
     ];
 }

@@ -48,6 +48,9 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
             return sendMail($payload['to'], $payload['subject'], $payload['body'],
                             null, $payload['background'] ?? '');
         }
+        if (($payload['kind'] ?? '') === 'form_submitted') {
+            return sendFormSubmittedEmail($payload['to'], $payload['name']);
+        }
         if (($payload['kind'] ?? '') === 'intake_review') {
             return sendMail($payload['to'],
                 'Intake ready for review - ' . $payload['name'],

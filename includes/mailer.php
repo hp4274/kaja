@@ -145,8 +145,11 @@ function sendMail($to, $subject, $body, $replyTo = null, $background = '') {
     }
 
     // Normalise to CRLF, then dot-stuff: a body line that is a single dot
-    // would otherwise end the message early.
-    $normalised = str_replace(["\r\n", "\r", "\n"], "\r\n", $payload);
+    // would otherwise end the message early. One preg pass: an array
+    // str_replace runs its searches in turn, so text already CRLF (a textarea
+    // saved into Settings) came out as CR CR LF CR LF, which ends every MIME
+    // part's headers after the first line.
+    $normalised = preg_replace('/\r\n|\r|\n/', "\r\n", $payload);
     $stuffed    = preg_replace('/^\./m', '..', $normalised);
 
     fwrite($socket, implode("\r\n", $headers) . "\r\n\r\n" . $stuffed . "\r\n.\r\n");
@@ -224,7 +227,7 @@ function mailMultipartBody($boundary, $text, $background) {
         return '--' . $boundary . "\r\n"
             . 'Content-Type: ' . $type . '; charset=UTF-8' . "\r\n"
             . 'Content-Transfer-Encoding: quoted-printable' . "\r\n\r\n"
-            . quoted_printable_encode(str_replace(["\r\n", "\r", "\n"], "\r\n", $content)) . "\r\n";
+            . quoted_printable_encode(preg_replace('/\r\n|\r|\n/', "\r\n", $content)) . "\r\n";
     };
 
     return $part('text/plain', $text)

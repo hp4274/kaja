@@ -247,6 +247,16 @@ if ($notifyTo) {
     }
 }
 
+// Receipt to whoever just filled the form in, separate from the review
+// notice above: that one tells the therapist, this one tells the client.
+if (!sendFormSubmittedEmail($values['email'], $values['first_name'])) {
+    queueFailedMail([
+        'to'   => $values['email'],
+        'name' => $values['first_name'],
+        'kind' => 'form_submitted',
+    ], 'mail() returned false');
+}
+
 // ---------------------------------------------------------------------------
 // 5. Hand the browser somewhere to go.
 // ---------------------------------------------------------------------------
