@@ -498,6 +498,44 @@ a:hover { color: var(--clr-primary-dark); }
   gap: var(--space-5);
 }
 
+/* The sessions page: the calendar earns the whole row now that Upcoming
+   Sessions sits below it instead of squeezed into a 380px sidebar next to
+   it -- both were cramped, dates and names running into each other. */
+.content-grid.is-stacked {
+  grid-template-columns: 1fr;
+}
+
+.is-calendar-lg .cal-cell { padding: var(--space-3); }
+.is-calendar-lg .cal-date { font-size: 0.9rem; }
+.is-calendar-lg .cal-slot-time { width: 34px; font-size: 0.68rem; }
+.is-calendar-lg .cal-slot-pill { font-size: 0.72rem; padding: 3px var(--space-2); }
+
+/* Dashboard, below the calendar: the lists that used to run full-width down
+   the page now share a row with Recent Activity, which moved out from
+   beside the calendar to fit here instead. */
+.dashboard-lower-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: var(--space-5);
+  align-items: stretch;
+}
+.dashboard-lower-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+/* Recent Activity fills the column instead of stopping at its own content --
+   stretched to the same bottom edge as the last card on the left. */
+.dashboard-lower-right { display: flex; }
+.dashboard-lower-right .panel { display: flex; flex-direction: column; flex: 1; }
+.dashboard-lower-right .panel-body { flex: 1; min-height: 0; }
+
+@media (max-width: 1100px) {
+  .dashboard-lower-grid { grid-template-columns: 1fr; }
+  .dashboard-lower-right .panel { flex: none; }
+}
+
 /* ═══════════════════════════════════════════
    DATA TABLES
    ═══════════════════════════════════════════ */
@@ -641,6 +679,12 @@ a:hover { color: var(--clr-primary-dark); }
 }
 .btn i::before { vertical-align: 0; }
 
+/* bootstrap-icons draws bi-plus with the glyph sitting low in its own box --
+   every other icon in the set is centred, this one alone reads as dropped a
+   couple of pixels below the button's text baseline. */
+.btn i.bi-plus,
+.btn i.bi-arrow-right { transform: translateY(-1px); }
+
 .btn-primary {
   background: var(--clr-primary);
   color: var(--clr-on-accent);
@@ -774,11 +818,9 @@ a:hover { color: var(--clr-primary-dark); }
 .cal-cell {
   background: var(--clr-surface);
   padding: var(--space-2);
-  height: 78px;
   cursor: pointer;
   transition: background var(--transition-fast);
   position: relative;
-  overflow: hidden;
 }
 
 .cal-cell:hover { background: var(--clr-hover-surface); }
@@ -788,60 +830,67 @@ a:hover { color: var(--clr-primary-dark); }
   background: var(--clr-primary-light);
 }
 
+/* A past day with nothing on it: not a click target, so it does not invite
+   one. Unlike a holiday it is not a decision anyone made -- just a date that
+   has gone by -- so it is muted rather than hatched. */
+.cal-cell.is-past-empty {
+  cursor: default;
+  opacity: 0.45;
+}
+.cal-cell.is-past-empty:hover { background: var(--clr-surface); }
+
 .cal-date {
   font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--clr-text);
-  margin-bottom: var(--space-1);
-}
-
-.cal-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 2px;
-}
-
-.cal-dot.teal { background: var(--clr-primary); }
-.cal-dot.green { background: var(--clr-success); }
-.cal-dot.amber { background: var(--clr-warning); }
-.cal-dot.red { background: var(--clr-danger); }
-
-/* A day with exactly one active session names them; two or more collapse to
-   a count. Both are positioned out of the flow, in a fixed-height cell -- the
-   number badge used to sit inline below the date and grow that one cell
-   taller than its neighbours, throwing every row after it out of alignment. */
-.cal-count {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--clr-primary);
-  color: #fff;
-  font-size: 0.7rem;
   font-weight: 600;
-  line-height: 1;
+  color: var(--clr-text);
+  margin-bottom: var(--space-2);
 }
 
-.cal-solo-name {
-  position: absolute;
-  left: var(--space-2);
-  right: var(--space-2);
-  bottom: var(--space-1-5);
-  display: block;
+/*
+ * The mini-schedule inside a day: every bookable time of day, always in the
+ * same order, so every cell in the grid holds the same number of rows and
+ * the grid never has one day taller than its neighbours -- the count badge
+ * this replaced could not make that promise, since it only appeared on days
+ * with something to count.
+ */
+.cal-slot-list { display: flex; flex-direction: column; gap: 3px; }
+
+.cal-slot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.cal-slot-time {
+  width: 30px;
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  color: var(--clr-text-muted);
+}
+
+.cal-slot-pill {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
   font-size: 0.65rem;
-  color: var(--clr-text-secondary);
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.cal-slot-pill.is-free {
+  background: var(--clr-hover-surface);
+  color: var(--clr-text-muted);
+  justify-content: center;
+}
+.cal-slot-pill.is-booked { background: var(--clr-info-light); color: var(--clr-info); }
+.cal-slot-pill.is-blocked { background: var(--clr-warning-light); color: var(--clr-warning-text); }
+.cal-slot-pill.is-cancelled { background: var(--clr-danger-light); color: var(--clr-danger); }
+.cal-slot-pill.is-holiday { background: var(--clr-success-light); color: var(--clr-success); }
 
 /* ─── Day modal: per-slot availability ─── */
 .availability-list { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
@@ -854,6 +903,49 @@ a:hover { color: var(--clr-primary-dark); }
 }
 .availability-time { width: 80px; flex-shrink: 0; font-size: 0.85rem; color: var(--clr-text); }
 .availability-row .badge { flex-grow: 1; }
+
+/* A free/blocked slot is one on/off fact, not two separate actions --
+   removing the block IS reopening it, so a switch replaces the old
+   "Block" / "Reopen" button pair. */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--clr-border);
+  border-radius: 999px;
+  transition: background var(--transition-fast);
+}
+.switch-track::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--transition-fast);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.switch input:checked + .switch-track { background: var(--clr-danger); }
+.switch input:checked + .switch-track::before { transform: translateX(16px); }
+.switch input:disabled + .switch-track { opacity: 0.5; cursor: default; }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--clr-primary); outline-offset: 2px; }
 
 /* ═══════════════════════════════════════════
    ACTIVITY FEED
@@ -1217,12 +1309,12 @@ a:hover { color: var(--clr-primary-dark); }
 .search-bar {
   display: flex;
   align-items: center;
-  min-height: var(--control-h);
+  height: var(--control-h);
   gap: var(--space-2);
   background: var(--clr-bg);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1-5) var(--space-3);
   max-width: 320px;
 }
 
@@ -1301,6 +1393,24 @@ a:hover { color: var(--clr-primary-dark); }
   font-size: 0.78rem;
   color: var(--clr-text-secondary);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pagination-size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.pagination-size select {
+  font-size: 0.78rem;
+  color: var(--clr-text-secondary);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-1-5);
+  cursor: pointer;
 }
 
 .pagination-links {
@@ -2188,7 +2298,12 @@ body.admin-body.admin-dark-theme {
 
 /* Right-aligned column: on the header as well as the cells, or the label
    floats over the left edge of the numbers underneath it. */
-.th-right, .td-right { text-align: right; }
+/* .data-table th sets text-align: left at higher specificity (element +
+   class beats class alone), which silently overrode this everywhere it was
+   used inside a data table -- the header text stayed left while the row
+   buttons under it right-aligned. */
+.th-right, .td-right,
+.data-table th.th-right, .data-table td.td-right { text-align: right; }
 
 /* ─── One line of secondary explanation, under the thing it explains ─── */
 .hint {
@@ -2398,9 +2513,6 @@ body.admin-body.admin-dark-theme {
   gap: var(--space-2);
   flex-shrink: 0;
 }
-
-/* "+2" on a calendar day with more sessions than the cell can show. */
-.cal-more { font-size: 0.65rem; color: var(--clr-text-muted); }
 
 /* ─── Small shapes that four pages each built from scratch ─── */
 
@@ -2758,7 +2870,8 @@ body.admin-body.admin-dark-theme {
 /* The grid while the next month is on its way. Dimmed rather than emptied:
    the month you are leaving stays legible until the one you asked for is
    ready, and a second click cannot land on a day that is about to change. */
-.calendar-grid.is-loading {
+.calendar-grid.is-loading,
+#leads-panel.is-loading {
   opacity: 0.5;
   pointer-events: none;
   transition: opacity var(--transition-fast);

@@ -264,16 +264,13 @@ function setSessionStatus(PDO $db, $sessionId, $status) {
 }
 
 /** Cancelling always records why. A cancellation with no reason is a mystery. */
-function cancelSession(PDO $db, $sessionId, $reason) {
+function cancelSession(PDO $db, $sessionId, $reason = '') {
     $reason = trim((string) $reason);
-    if ($reason === '') {
-        throw new InvalidArgumentException('A cancellation needs a reason.');
-    }
 
     setSessionStatus($db, $sessionId, 'cancelled');
 
     $db->prepare('UPDATE `sessions` SET `cancelled_reason` = :r WHERE `id` = :id')
-       ->execute([':r' => mb_substr($reason, 0, 500), ':id' => (int) $sessionId]);
+       ->execute([':r' => $reason === '' ? null : mb_substr($reason, 0, 500), ':id' => (int) $sessionId]);
 
     return true;
 }

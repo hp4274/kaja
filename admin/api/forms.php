@@ -164,6 +164,23 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+        case 'delete_template':
+            $version = intval($_POST['version'] ?? 0);
+            $name    = formTemplateName($db, $version);
+
+            try {
+                deleteFormVersion($db, $version);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
+                exit;
+            }
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_deleted',:d,'form',NULL)")
+               ->execute([':d' => 'Deleted intake form "' . $name . '" (version ' . $version . ')']);
+
+            echo json_encode(['success' => true]);
+            break;
+
         default:
             echo json_encode(['success' => false, 'error' => 'Unknown action']);
     }

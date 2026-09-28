@@ -542,3 +542,40 @@ function publishNewFormVersion(PDO $db, $fromVersion, $name = null) {
 
     return $next;
 }
+
+/**
+ * Remove a variant an admin created. Refused for anything that is not
+ * safely removable:
+ *   - a shipped version (1, 2, ...): its schema lives in code, not the
+ *     database, and would just reappear the next time this page seeds it.
+ *   - the current default: something else has to become the fallback first,
+ *     or a lead accepted without a choice would be sent nothing.
+ *   - a version already in use: someone's real answers or an outstanding
+ *     link are pinned to these exact questions.
+ */
+function deleteFormVersion(PDO $db, $version) {
+    $version = (int) $version;
+
+    if (in_array($version, intakeSchemaVersions(), true)) {
+        throw new InvalidArgumentException('The forms this install ships with cannot be deleted.');
+    }
+    if ($version === getSettingInt('intake_form_version', 1)) {
+        throw new InvalidArgumentException('This is the default form. Make another one the default first.');
+    }
+    if (formVersionIsInUse($db, $version)) {
+        throw new InvalidArgumentException('This form has real answers or an outstanding link against it and cannot be deleted.');
+    }
+    if (!formVersionExists($db, $version)) {
+        throw new InvalidArgumentException('That form does not exist.');
+    }
+
+    $db->beginTransaction();
+    try {
+        $db->prepare('DELETE FROM `form_questions` WHERE `form_version` = :v')->execute([':v' => $version]);
+        $db->prepare('DELETE FROM `form_templates` WHERE `form_version` = :v')->execute([':v' => $version]);
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}

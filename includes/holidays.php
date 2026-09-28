@@ -105,7 +105,8 @@ function sessionsOnDates(PDO $db, array $dates) {
     }
     $in   = implode(',', array_fill(0, count($clean), '?'));
     $stmt = $db->prepare('
-        SELECT s.`id`, s.`start_time`, CONCAT(c.`first_name`, " ", c.`last_name`) AS client_name
+        SELECT s.`id`, s.`client_id`, s.`start_time`, s.`end_time`, s.`session_type`,
+               CONCAT(c.`first_name`, " ", c.`last_name`) AS client_name
         FROM `sessions` s
         LEFT JOIN `clients` c ON c.`id` = s.`client_id`
         WHERE DATE(s.`start_time`) IN (' . $in . ')

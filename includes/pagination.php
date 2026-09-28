@@ -11,7 +11,24 @@
  * routing between sections.
  */
 
-function paginate(array $rows, $perPage = 20) {
+/** The row-count choices the dropdown in paginationHtml() offers. */
+function paginationSizeOptions() {
+    return [10, 20, 50];
+}
+
+/**
+ * $defaultPerPage is only the fallback: a page size picked from the dropdown
+ * arrives as `pp` and overrides it, same as `p` already overrides the
+ * current page. Anything not in paginationSizeOptions() is ignored rather
+ * than trusted -- a stray `pp` value should not be able to force an
+ * unbounded row count through a URL.
+ */
+function paginate(array $rows, $defaultPerPage = 20) {
+    $perPage = isset($_GET['pp']) ? (int) $_GET['pp'] : $defaultPerPage;
+    if (!in_array($perPage, paginationSizeOptions(), true)) {
+        $perPage = $defaultPerPage;
+    }
+
     $total   = count($rows);
     $pages   = max(1, (int) ceil($total / $perPage));
     $current = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;
@@ -43,15 +60,25 @@ function paginationHtml(array $pager, callable $urlFn) {
     $from  = ($page - 1) * $pager['perPage'] + 1;
     $to    = min($page * $pager['perPage'], $pager['total']);
 
-    $link = function ($target, $label, $disabled) use ($urlFn) {
+    // pp travels on every page-number/prev/next link, not just the dropdown --
+    // otherwise a page the caller's own $filters does not already echo back
+    // (every list page but the one it was picked on) would silently reset to
+    // the default size on the very next click.
+    $link = function ($target, $label, $disabled) use ($urlFn, $pager) {
         if ($disabled) {
             return '<span class="btn btn-ghost btn-sm pagination-edge is-disabled" aria-disabled="true">' . $label . '</span>';
         }
-        return '<a class="btn btn-ghost btn-sm pagination-edge" href="' . htmlspecialchars($urlFn(['p' => $target])) . '">' . $label . '</a>';
+        return '<a class="btn btn-ghost btn-sm pagination-edge" href="' . htmlspecialchars($urlFn(['p' => $target, 'pp' => $pager['perPage']])) . '">' . $label . '</a>';
     };
 
     $out  = '<nav class="pagination" aria-label="Pagination">';
-    $out .= '<span class="pagination-summary">' . $from . '-' . $to . ' of ' . $pager['total'] . '</span>';
+    $out .= '<span class="pagination-summary">' . $from . '-' . $to . ' of ' . $pager['total'];
+    $out .= '<label class="pagination-size"><span>Show</span><select onchange="location.href=this.value">';
+    foreach (paginationSizeOptions() as $opt) {
+        $out .= '<option value="' . htmlspecialchars($urlFn(['pp' => $opt, 'p' => 1])) . '"'
+              . ($opt === $pager['perPage'] ? ' selected' : '') . '>' . $opt . '</option>';
+    }
+    $out .= '</select></label></span>';
     $out .= '<div class="pagination-links">';
     $out .= $link(max(1, $page - 1), '<i class="bi bi-chevron-left"></i> Prev', $page <= 1);
 
@@ -59,7 +86,7 @@ function paginationHtml(array $pager, callable $urlFn) {
     for ($i = 1; $i <= $pages; $i++) {
         if ($i === 1 || $i === $pages || abs($i - $page) <= $window) {
             $out .= '<a class="pagination-num' . ($i === $page ? ' active' : '') . '" href="'
-                  . htmlspecialchars($urlFn(['p' => $i])) . '"' . ($i === $page ? ' aria-current="page"' : '') . '>' . $i . '</a>';
+                  . htmlspecialchars($urlFn(['p' => $i, 'pp' => $pager['perPage']])) . '"' . ($i === $page ? ' aria-current="page"' : '') . '>' . $i . '</a>';
         } elseif (abs($i - $page) === $window + 1) {
             $out .= '<span class="pagination-ellipsis">...</span>';
         }

@@ -190,43 +190,133 @@ try {
             break;
 
         case 'set_holiday':
-            // Close or reopen the days picked on the calendar. Sessions already
-            // standing on a closed day are left exactly where they are and
-            // reported back: cancelling somebody's appointment as a side effect
-            // of a calendar click is not a thing the therapist can undo.
-            $dates = postedDates();
-            $on    = ($_POST['on'] ?? '1') !== '0';
-            $why   = trim($_POST['reason'] ?? '');
+            // Close or reopen the days picked on the calendar.
+            //
+            // Reopening never touches a session. Closing used to leave a
+            // session sitting on a day nobody is coming in for, reported back
+            // as an afterthought -- silently booking someone into a day the
+            // practice will not be open is worse than asking first. The admin
+            // now gets a real choice per batch: skip the days that still have
+            // someone on them, or cancel those sessions (with the usual
+            // cancellation mail) and move each one to the next available week at the same
+            // time.
+            $dates   = postedDates();
+            $on      = ($_POST['on'] ?? '1') !== '0';
+            $why     = trim($_POST['reason'] ?? '');
+            $resolve = trim($_POST['resolve'] ?? '');
 
             if (!$dates) {
                 echo json_encode(['success' => false, 'error' => 'Pick at least one date first']);
                 exit;
             }
 
-            $booked  = $on ? sessionsOnDates($db, $dates) : [];
-            $changed = $on
-                ? markHolidays($db, $dates, $why, $_SESSION['user_id'] ?? null)
-                : clearHolidays($db, $dates);
+            if (!$on) {
+                $changed = clearHolidays($db, $dates);
+                if (!$changed) {
+                    echo json_encode(['success' => false, 'error' => 'Those are not valid dates']);
+                    exit;
+                }
+                $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('holiday_cleared',:d,'holiday',NULL)")
+                   ->execute([':d' => count($changed) . ' day(s) reopened: ' . implode(', ', $changed)]);
+                echo json_encode(['success' => true, 'dates' => $changed, 'on' => false, 'sessions' => 0]);
+                exit;
+            }
 
+            $conflicts = sessionsOnDates($db, $dates);
+
+            if ($conflicts && $resolve === '') {
+                // Nothing written yet -- the caller shows this and asks.
+                $byDate = [];
+                foreach ($conflicts as $c) {
+                    $d = date('Y-m-d', strtotime($c['start_time']));
+                    $byDate[$d][] = [
+                        'id'   => (int) $c['id'],
+                        'name' => trim($c['client_name']) ?: 'Unknown',
+                        'time' => date('h:i A', strtotime($c['start_time'])),
+                    ];
+                }
+                echo json_encode(['success' => false, 'needs_resolution' => true, 'conflicts' => $byDate]);
+                exit;
+            }
+
+            $datesToMark = $dates;
+            $rescheduled = 0;
+            $cancelled   = 0;
+
+            if ($conflicts && $resolve === 'skip') {
+                $conflictDates = array_values(array_unique(array_map(function ($c) {
+                    return date('Y-m-d', strtotime($c['start_time']));
+                }, $conflicts)));
+                $datesToMark = array_values(array_diff($dates, $conflictDates));
+                if (!$datesToMark) {
+                    echo json_encode(['success' => false, 'error' => 'Every picked date has a session on it']);
+                    exit;
+                }
+            } elseif ($conflicts && $resolve === 'reschedule') {
+                foreach ($conflicts as $c) {
+                    $sid = (int) $c['id'];
+                    try {
+                        cancelSession($db, $sid, 'Practice closed that day; moved to the next available week.');
+                        sendSessionMail($db, $sid, 'cancellation');
+                        $cancelled++;
+
+                        $duration = (int) round((strtotime($c['end_time']) - strtotime($c['start_time'])) / 60);
+
+                        // The following week at the same time first; if that
+                        // is also a holiday or already taken, keep walking a
+                        // week at a time rather than giving up on the first
+                        // clash -- a run of closed or booked-out weeks should
+                        // not turn into "not rescheduled" when a free one is
+                        // sitting right after it.
+                        $newId = null;
+                        for ($weeksOut = 1; $weeksOut <= 8; $weeksOut++) {
+                            $candidate = date('Y-m-d H:i:s', strtotime($c['start_time'] . ' +' . $weeksOut . ' weeks'));
+                            try {
+                                $newId = createSession($db, (int) $c['client_id'], $candidate, $duration, $c['session_type']);
+                                break;
+                            } catch (Throwable $e) {
+                                continue;
+                            }
+                        }
+
+                        if ($newId !== null) {
+                            $rescheduled++;
+                            if (fetchSession($db, $newId)['status'] === 'confirmed') {
+                                sendSessionMail($db, $newId, 'confirmation');
+                            }
+                        }
+                        // Eight weeks out with nothing free: the cancellation
+                        // still stands, it is just not auto-rebooked. The
+                        // therapist sees it was not rescheduled and can pick
+                        // a time by hand.
+                    } catch (Throwable $e) {
+                        // Already cancelled or completed since the page loaded.
+                    }
+                }
+            }
+            // Any other $resolve value (or no conflicts at all) marks the
+            // dates exactly as before.
+
+            $changed = markHolidays($db, $datesToMark, $why, $_SESSION['user_id'] ?? null);
             if (!$changed) {
                 echo json_encode(['success' => false, 'error' => 'Those are not valid dates']);
                 exit;
             }
 
-            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES (:a,:d,'holiday',NULL)")
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('holiday_marked',:d,'holiday',NULL)")
                ->execute([
-                   ':a' => $on ? 'holiday_marked' : 'holiday_cleared',
-                   ':d' => count($changed) . ' day(s) ' . ($on ? 'marked a holiday' : 'reopened')
-                         . ': ' . implode(', ', $changed) . ($why !== '' ? ' (' . $why . ')' : ''),
+                   ':d' => count($changed) . ' day(s) marked a holiday: ' . implode(', ', $changed)
+                         . ($cancelled ? " ({$cancelled} session(s) cancelled, {$rescheduled} rescheduled to the next available week)" : '')
+                         . ($why !== '' ? ' (' . $why . ')' : ''),
                ]);
 
             echo json_encode([
-                'success'  => true,
-                'dates'    => $changed,
-                'on'       => $on,
-                // The count, not the rows: the caller only needs to know that
-                // something is standing there and how much of it.
-                'sessions' => count($booked),
+                'success'     => true,
+                'dates'       => $changed,
+                'on'          => true,
+                'sessions'    => 0,
+                'cancelled'   => $cancelled,
+                'rescheduled' => $rescheduled,
             ]);
             break;
 
@@ -242,16 +332,11 @@ try {
             $date = date('Y-m-d', $ts);
 
             // Blocking a slot that already holds a session cancels it first --
-            // a blocked slot and a booked slot cannot both be true of the same
-            // time. Anything without a reason stays exactly as un-cancellable
-            // as it is everywhere else in the admin.
+            // a blocked slot and a booked slot cannot both be true of the
+            // same time.
             $occupied = sessionAtSlot($db, $date, $time);
             $cancelled = false;
             if ($occupied) {
-                if ($reason === '') {
-                    echo json_encode(['success' => false, 'error' => 'A session is booked here -- give a reason to cancel it and block the slot']);
-                    exit;
-                }
                 cancelSession($db, $occupied['id'], $reason);
                 sendSessionMail($db, $occupied['id'], 'cancellation');
                 $cancelled = true;
@@ -283,6 +368,44 @@ try {
                ->execute([':d' => $date . ' ' . bookingSlotLabel($time) . ' reopened']);
 
             echo json_encode(['success' => true]);
+            break;
+
+        case 'cancel_sessions_on_dates':
+            // The multi-select bar's other bulk action: cancel whatever is
+            // booked on the picked dates without blocking the slot behind
+            // it, so the time stays open for someone else.
+            $dates = postedDates();
+            if (!$dates) {
+                echo json_encode(['success' => false, 'error' => 'Pick at least one date first']);
+                exit;
+            }
+
+            $in   = implode(',', array_fill(0, count($dates), '?'));
+            $stmt = $db->prepare("
+                SELECT `id` FROM `sessions`
+                WHERE DATE(`start_time`) IN ($in) AND `status` NOT IN ('cancelled','no-show')
+            ");
+            $stmt->execute($dates);
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $changed = 0;
+            foreach ($ids as $sid) {
+                try {
+                    cancelSession($db, $sid);
+                    sendSessionMail($db, $sid, 'cancellation');
+                    $changed++;
+                } catch (Throwable $e) {
+                    // Already moved on since the page loaded; not this
+                    // request's problem.
+                }
+            }
+
+            if ($changed) {
+                $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('session_status_changed',:d,'session',NULL)")
+                   ->execute([':d' => $changed . ' session(s) cancelled across ' . count($dates) . ' date(s)']);
+            }
+
+            echo json_encode(['success' => true, 'changed' => $changed]);
             break;
 
         case 'update_status':

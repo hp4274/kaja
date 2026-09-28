@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../includes/intake-data.php';
 require_once __DIR__ . '/../../includes/session-repo.php';
 require_once __DIR__ . '/../../includes/holidays.php';
 require_once __DIR__ . '/../../includes/blocked-slots.php';
+require_once __DIR__ . '/../../includes/calendar-cell.php';
 
 $db = getDbConnection();
 
@@ -106,9 +107,9 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
 </div>
 
 <!-- Calendar + Activity -->
-<div class="content-grid">
-  <!-- Calendar -->
-  <div class="panel">
+<!-- Calendar: its own full-width row now, wide enough that a date and the
+     name sitting under it stop competing with a sidebar for room. -->
+<div class="panel is-calendar-lg">
     <div class="panel-header">
       <div class="panel-title">Session Calendar</div>
       <div class="calendar-nav">
@@ -137,12 +138,14 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
           <div class="cal-cell other-month"><div class="cal-date">&nbsp;</div></div>
         <?php endfor; ?>
 
+        <?php $todayStr = date('Y-m-d'); ?>
         <?php for ($day = 1; $day <= $daysInMonth; $day++):
           $isToday = ($day == date('j') && $month == date('n') && $year == date('Y'));
           $hasSessions = isset($calSessions[$day]);
           $isSelected = ($day === $defaultDay);
           $cellDate   = date('Y-m-d', mktime(0, 0, 0, $month, $day, $year));
           $isHoliday  = in_array($cellDate, $monthHolidays, true);
+          $isPast     = $cellDate < $todayStr;
         ?>
           <?php
           $activeCount = 0;
@@ -153,22 +156,17 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
                   }
               }
           }
-          $soloName = $activeCount === 1
-              ? current(array_filter($calSessions[$day], function ($cs) {
-                    return !in_array($cs['status'], ['cancelled', 'no-show'], true);
-                }))['client_name']
-              : null;
+          // Same rule as the sessions calendar: an empty past day is a fact,
+          // not something to click into.
+          $clickable = !$isPast || $activeCount > 0;
+          $slotRows  = calendarSlotRows($hasSessions ? $calSessions[$day] : [], $monthBlocked[$cellDate] ?? [], $isHoliday);
           ?>
-          <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isSelected ? ' selected' : '') . ($isHoliday ? ' holiday' : ''); ?>"
-               data-date="<?php echo $cellDate; ?>"
-               <?php echo $isHoliday ? 'data-holiday="1" title="Holiday - the practice is closed"' : ''; ?>
-               onclick="selectCalendarDay(this, <?php echo $day; ?>)">
+          <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isSelected ? ' selected' : '') . ($isHoliday ? ' holiday' : '') . (!$clickable ? ' is-past-empty' : ''); ?>"
+               <?php echo $clickable ? 'data-date="' . $cellDate . '"' : ''; ?>
+               <?php echo $isHoliday ? 'data-holiday="1" title="Holiday - the practice is closed"' : ($clickable ? '' : 'title="Nothing to manage on a past day"'); ?>
+               <?php echo $clickable ? 'onclick="selectCalendarDay(this, ' . $day . ')"' : ''; ?>>
             <div class="cal-date"><?php echo $day; ?></div>
-            <?php if ($activeCount === 1 && $soloName): ?>
-              <span class="cal-solo-name"><?php echo htmlspecialchars($soloName); ?></span>
-            <?php elseif ($activeCount > 1): ?>
-              <span class="cal-count"><?php echo $activeCount; ?></span>
-            <?php endif; ?>
+            <?php echo calendarSlotRowsHtml($slotRows); ?>
           </div>
         <?php endfor; ?>
 
@@ -198,63 +196,6 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     </div>
   </div>
 
-  <!-- Activity Feed -->
-  <div class="panel">
-    <div class="panel-header">
-      <div class="panel-title">Recent Activity</div>
-    </div>
-    <div class="panel-body is-list">
-      <?php if (empty($activities)): ?>
-        <div class="empty-state">
-          <i class="bi bi-clock-history"></i>
-          <p>No activity yet</p>
-        </div>
-      <?php else: ?>
-        <ul class="activity-list">
-          <?php foreach ($activities as $act):
-            $iconMap = [
-              'lead_created' => ['bi-funnel', 'amber'],
-              'client_converted' => ['bi-person-check', 'green'],
-              'session_scheduled' => ['bi-calendar-plus', 'teal'],
-              'session_completed' => ['bi-check-circle', 'green'],
-              'note_added' => ['bi-sticky', 'blue'],
-              'fee_added' => ['bi-currency-rupee', 'amber'],
-              'fee_reminder_sent' => ['bi-cash-stack', 'amber'],
-              'status_changed' => ['bi-arrow-repeat', 'teal'],
-              'lead_confirmed' => ['bi-send-check', 'teal'],
-              'intake_reminder_sent' => ['bi-bell', 'amber'],
-              'intake_submitted' => ['bi-clipboard-check', 'green'],
-              'intake_reviewed' => ['bi-clipboard-check', 'green'],
-              'clients_merged' => ['bi-arrow-left-right', 'teal'],
-              'session_rescheduled' => ['bi-calendar-event', 'amber'],
-              'session_status_changed' => ['bi-calendar-check', 'teal'],
-              'client_archived' => ['bi-archive', 'amber'],
-              'document_uploaded' => ['bi-file-earmark-arrow-up', 'blue'],
-              'document_downloaded' => ['bi-file-earmark-arrow-down', 'blue'],
-              'document_archived' => ['bi-file-earmark-x', 'amber'],
-            ];
-            $ic = $iconMap[$act['action']] ?? ['bi-circle', 'teal'];
-            $timeAgo = '';
-            $diff = time() - strtotime($act['created_at']);
-            if ($diff < 60) $timeAgo = 'Just now';
-            elseif ($diff < 3600) $timeAgo = floor($diff/60) . 'm ago';
-            elseif ($diff < 86400) $timeAgo = floor($diff/3600) . 'h ago';
-            else $timeAgo = date('d M, h:i A', strtotime($act['created_at']));
-          ?>
-            <li class="activity-item">
-              <div class="activity-icon <?php echo $ic[1]; ?>"><i class="bi <?php echo $ic[0]; ?>"></i></div>
-              <div>
-                <div class="activity-text"><?php echo htmlspecialchars($act['description']); ?></div>
-                <div class="activity-time"><?php echo $timeAgo; ?></div>
-              </div>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      <?php endif; ?>
-    </div>
-  </div>
-</div>
-
 <?php if ($queuedMail > 0): ?>
   <!-- A refused send is the one failure nobody notices: the database is
        correct, the screen said success, and the person never hears from us. -->
@@ -263,6 +204,11 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <?php echo (int) $queuedMail; ?> email(s) failed to send and are waiting for the hourly job to retry them.
   </div>
 <?php endif; ?>
+
+<!-- Below the calendar: the lists on the left, Recent Activity fitted in
+     beside them on the right instead of stealing the calendar's row. -->
+<div class="dashboard-lower-grid">
+<div class="dashboard-lower-left">
 
 <?php if (!empty($awaitingReview)): ?>
 <div class="panel">
@@ -371,7 +317,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($l['created_at'])); ?></td>
                 <td class="td-name"><?php echo htmlspecialchars($l['name']); ?></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a></td>
-                <td><span class="badge badge-<?php echo htmlspecialchars($l['preference'] ?? ''); ?>"><?php echo htmlspecialchars($l['preference'] ?? '-'); ?></span></td>
+                <td><span class="badge <?php echo leadPreferenceBadgeClass($l['preference'] ?? ''); ?>"><?php echo htmlspecialchars($l['preference'] ?? '-'); ?></span></td>
                 <td><span class="badge <?php echo leadStatusBadgeClass($l['status'] ?? 'new'); ?>"><?php echo leadStatusLabel($l['status'] ?? 'new'); ?></span></td>
               </tr>
             <?php endforeach; ?>
@@ -381,6 +327,68 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <?php endif; ?>
   </div>
 </div>
+
+</div><!-- /dashboard-lower-left -->
+
+<div class="dashboard-lower-right">
+  <!-- Activity Feed -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Recent Activity</div>
+    </div>
+    <div class="panel-body is-list is-scroll">
+      <?php if (empty($activities)): ?>
+        <div class="empty-state">
+          <i class="bi bi-clock-history"></i>
+          <p>No activity yet</p>
+        </div>
+      <?php else: ?>
+        <ul class="activity-list">
+          <?php foreach ($activities as $act):
+            $iconMap = [
+              'lead_created' => ['bi-funnel', 'amber'],
+              'client_converted' => ['bi-person-check', 'green'],
+              'session_scheduled' => ['bi-calendar-plus', 'teal'],
+              'session_completed' => ['bi-check-circle', 'green'],
+              'note_added' => ['bi-sticky', 'blue'],
+              'fee_added' => ['bi-currency-rupee', 'amber'],
+              'fee_reminder_sent' => ['bi-cash-stack', 'amber'],
+              'status_changed' => ['bi-arrow-repeat', 'teal'],
+              'lead_confirmed' => ['bi-send-check', 'teal'],
+              'intake_reminder_sent' => ['bi-bell', 'amber'],
+              'intake_submitted' => ['bi-clipboard-check', 'green'],
+              'intake_reviewed' => ['bi-clipboard-check', 'green'],
+              'clients_merged' => ['bi-arrow-left-right', 'teal'],
+              'session_rescheduled' => ['bi-calendar-event', 'amber'],
+              'session_status_changed' => ['bi-calendar-check', 'teal'],
+              'client_archived' => ['bi-archive', 'amber'],
+              'document_uploaded' => ['bi-file-earmark-arrow-up', 'blue'],
+              'document_downloaded' => ['bi-file-earmark-arrow-down', 'blue'],
+              'document_archived' => ['bi-file-earmark-x', 'amber'],
+            ];
+            $ic = $iconMap[$act['action']] ?? ['bi-circle', 'teal'];
+            $timeAgo = '';
+            $diff = time() - strtotime($act['created_at']);
+            if ($diff < 60) $timeAgo = 'Just now';
+            elseif ($diff < 3600) $timeAgo = floor($diff/60) . 'm ago';
+            elseif ($diff < 86400) $timeAgo = floor($diff/3600) . 'h ago';
+            else $timeAgo = date('d M, h:i A', strtotime($act['created_at']));
+          ?>
+            <li class="activity-item">
+              <div class="activity-icon <?php echo $ic[1]; ?>"><i class="bi <?php echo $ic[0]; ?>"></i></div>
+              <div>
+                <div class="activity-text"><?php echo htmlspecialchars($act['description']); ?></div>
+                <div class="activity-time"><?php echo $timeAgo; ?></div>
+              </div>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+    </div>
+  </div>
+</div><!-- /dashboard-lower-right -->
+
+</div><!-- /dashboard-lower-grid -->
 
 <!-- The month, as data rather than as statements. Changing month fetches
      this page and reads this block out of the response, so the grid and the

@@ -42,7 +42,7 @@ $leads = $pager['rows'];
 
 /** Rebuild the current query string with one key changed — used by the tabs and sort links. */
 function leadsUrl(array $filters, array $overrides = []) {
-    $params = array_merge(['page' => 'leads'], $filters, $overrides);
+    $params = array_merge(['page' => 'leads', 'pp' => $_GET['pp'] ?? null], $filters, $overrides);
     $params = array_filter($params, function ($v) { return $v !== '' && $v !== null; });
     return 'index.php?' . http_build_query($params);
 }
@@ -51,9 +51,9 @@ function leadsUrl(array $filters, array $overrides = []) {
 <!-- Toolbar -->
 <div class="toolbar">
   <div class="toolbar-left">
-    <a href="<?php echo leadsUrl($filters, ['status' => 'all']); ?>" class="filter-btn <?php echo ($statusFilter === 'all' || $statusFilter === '') ? 'active' : ''; ?>">All (<span id="count-all"><?php echo $counts['all']; ?></span>)</a>
+    <a href="<?php echo leadsUrl($filters, ['status' => 'all']); ?>" data-leads-nav class="filter-btn <?php echo ($statusFilter === 'all' || $statusFilter === '') ? 'active' : ''; ?>">All (<span id="count-all"><?php echo $counts['all']; ?></span>)</a>
     <?php foreach (leadStatuses() as $s): ?>
-      <a href="<?php echo leadsUrl($filters, ['status' => $s]); ?>" class="filter-btn <?php echo $statusFilter === $s ? 'active' : ''; ?>"><?php echo leadStatusLabel($s); ?> (<span id="count-<?php echo $s; ?>"><?php echo $counts[$s]; ?></span>)</a>
+      <a href="<?php echo leadsUrl($filters, ['status' => $s]); ?>" data-leads-nav class="filter-btn <?php echo $statusFilter === $s ? 'active' : ''; ?>"><?php echo leadStatusLabel($s); ?> (<span id="count-<?php echo $s; ?>"><?php echo $counts[$s]; ?></span>)</a>
     <?php endforeach; ?>
   </div>
   <div class="toolbar-right">
@@ -74,7 +74,7 @@ function leadsUrl(array $filters, array $overrides = []) {
 
 <!-- Filter bar — open by default when a filter is already applied, so a
      reloaded page never hides the reason it is showing fewer rows. -->
-<form method="get" action="index.php" class="lead-filter-bar" id="lead-filter-bar" <?php echo ($filters['source'] === '' && $filters['date_from'] === '' && $filters['date_to'] === '') ? 'hidden' : ''; ?>>
+<form method="get" action="index.php" class="lead-filter-bar" id="lead-filter-bar" data-leads-nav-form <?php echo ($filters['source'] === '' && $filters['date_from'] === '' && $filters['date_to'] === '') ? 'hidden' : ''; ?>>
   <input type="hidden" name="page" value="leads" />
   <input type="hidden" name="status" value="<?php echo htmlspecialchars($statusFilter); ?>" />
   <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>" />
@@ -96,7 +96,7 @@ function leadsUrl(array $filters, array $overrides = []) {
     <input type="date" name="date_to" class="form-input-sm" value="<?php echo htmlspecialchars($filters['date_to']); ?>" />
   </label>
   <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-  <a href="<?php echo leadsUrl(['status' => $statusFilter]); ?>" class="btn btn-ghost btn-sm">Clear</a>
+  <a href="<?php echo leadsUrl(['status' => $statusFilter]); ?>" data-leads-nav class="btn btn-ghost btn-sm">Clear</a>
 </form>
 
 <!-- Bulk action bar — only visible while something is selected -->
@@ -114,7 +114,7 @@ function leadsUrl(array $filters, array $overrides = []) {
 </div>
 
 <!-- Leads Table -->
-<div class="panel">
+<div class="panel" id="leads-panel">
   <div class="panel-body-flush">
     <?php if (empty($leads)): ?>
       <div class="empty-state">
@@ -189,7 +189,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                   if ($l['preferred_time']) echo ' at ' . date('h:i A', strtotime($l['preferred_time']));
                   ?>
                 </td>
-                <td><span class="badge badge-<?php echo htmlspecialchars($l['preference'] ?? ''); ?>"><?php echo htmlspecialchars($l['preference'] ?? '-'); ?></span></td>
+                <td><span class="badge <?php echo leadPreferenceBadgeClass($l['preference'] ?? ''); ?>"><?php echo htmlspecialchars($l['preference'] ?? '-'); ?></span></td>
                 <td>
                   <span class="badge <?php echo leadStatusBadgeClass($ls); ?>" data-lead-badge="<?php echo $l['id']; ?>"><?php echo leadStatusLabel($ls); ?></span>
                   <?php if (leadIsAging($l)): ?>
@@ -205,7 +205,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                       <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo ($ls === 'new' || $ls === 'contacted') ? '' : 'hidden'; ?>>
                         <i class="bi bi-send-check"></i> Accept
                       </button>
-                      <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted') ? 'hidden' : ''; ?>>
+                      <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted' || $ls === 'confirmed') ? 'hidden' : ''; ?>>
                         <i class="bi bi-x-lg"></i> Reject
                       </button>
                     <?php endif; ?>
@@ -270,7 +270,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                   </div>
                 <?php endif; ?>
                 <div class="grid-card-item">
-                  <span class="grid-card-label"><i class="bi bi-camera-video"></i> Preference: <span class="badge badge-<?php echo $preference; ?>"><?php echo $preference ?: '-'; ?></span></span>
+                  <span class="grid-card-label"><i class="bi bi-camera-video"></i> Preference: <span class="badge <?php echo leadPreferenceBadgeClass($l['preference'] ?? ''); ?>"><?php echo $preference ?: '-'; ?></span></span>
                 </div>
                 <div class="grid-card-item">
                   <i class="bi bi-flag"></i>
@@ -299,7 +299,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                   <button class="btn btn-primary btn-sm" data-lead-convert="<?php echo $l['id']; ?>" onclick="confirmLeadAction(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')" <?php echo ($ls === 'new' || $ls === 'contacted') ? '' : 'hidden'; ?>>
                     <i class="bi bi-send-check"></i> Accept
                   </button>
-                  <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted') ? 'hidden' : ''; ?>>
+                  <button class="btn btn-danger btn-sm" data-lead-reject="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'rejected')" title="Reject lead" <?php echo (leadStatusIsTerminal($ls) || $ls === 'converted' || $ls === 'confirmed') ? 'hidden' : ''; ?>>
                     <i class="bi bi-x-lg"></i> Reject
                   </button>
                 </div>
@@ -421,7 +421,10 @@ function syncLeadStatusUI(id, status) {
     btn.hidden = (status !== 'new');
   });
   document.querySelectorAll('[data-lead-reject="' + id + '"]').forEach(function(btn) {
-    btn.hidden = closed;
+    // Accepted (confirmed) is a decision already acted on -- an intake link
+    // is out the door -- so rejecting from here reads as undoing a step that
+    // already happened rather than the step itself.
+    btn.hidden = closed || status === 'confirmed';
   });
   document.querySelectorAll('[data-lead-convert="' + id + '"]').forEach(function(btn) {
     btn.hidden = (status !== 'new' && status !== 'contacted');
@@ -577,9 +580,8 @@ function doConfirmLead(id, name, formVersion) {
     });
 }
 
-function deleteLead(id, name) {
-  if (!confirm('Delete the lead "' + name + '" permanently? This also removes their intake link history.')) return;
-  if (!confirm('Are you sure? This cannot be undone.')) return;
+async function deleteLead(id, name) {
+  if (!await showConfirm('Delete the lead "' + name + '" permanently? This also removes their intake link history.', { danger: true, okText: 'Delete' })) return;
 
   var fd = new FormData();
   fd.append('action', 'delete');
@@ -775,17 +777,14 @@ function renderDrawerNotes(notes) {
                                                : 'Select all');
   }
 
+  // Delegated on the document rather than bound to today's checkboxes: a
+  // filter swap replaces the table (and the header checkbox with it), and a
+  // listener attached to the node a filter just removed would go with it.
   document.addEventListener('change', function(e) {
-    if (e.target.classList && e.target.classList.contains('lead-select')) refresh();
-  });
+    if (e.target.classList && e.target.classList.contains('lead-select')) { refresh(); return; }
 
-  // The search hides rows, and "all" means all the rows you can see -- so the
-  // header has to be recomputed when the visible set changes, not only when a
-  // box is ticked.
-  window.refreshLeadSelection = refresh;
-
-  if (selectAll) {
-    selectAll.addEventListener('change', function() {
+    if (e.target.id === 'lead-select-all') {
+      selectAll = e.target;
       // Clicking the dash clears rather than selects: a partial selection is
       // one the admin built by hand, and the click that follows is far more
       // often "start again" than "take the other sixteen too".
@@ -795,19 +794,27 @@ function renderDrawerNotes(notes) {
       // not something the admin can see they are about to change.
       selectable().forEach(function (cb) { cb.checked = want; });
       refresh();
-    });
-  }
+    }
+  });
+
+  // The search hides rows, and "all" means all the rows you can see -- so the
+  // header has to be recomputed when the visible set changes, not only when a
+  // box is ticked.
+  window.refreshLeadSelection = function () {
+    selectAll = document.getElementById('lead-select-all');
+    refresh();
+  };
 
   document.getElementById('lead-bulk-clear').addEventListener('click', function() {
     document.querySelectorAll('.lead-select').forEach(function(cb) { cb.checked = false; });
     refresh();
   });
 
-  document.getElementById('lead-bulk-apply').addEventListener('click', function() {
+  document.getElementById('lead-bulk-apply').addEventListener('click', async function() {
     var status = document.getElementById('lead-bulk-status').value;
     var ids    = selected();
     if (!status || !ids.length) return;
-    if (!confirm('Move ' + ids.length + ' lead(s) to ' + status + '?')) return;
+    if (!await showConfirm('Move ' + ids.length + ' lead(s) to ' + status + '?')) return;
 
     var fd = new FormData();
     fd.append('action', 'bulk_status');
@@ -931,7 +938,7 @@ function renderDrawerNotes(notes) {
  * in step with history.replaceState so a refresh or a shared link lands on the
  * same order.
  */
-(function () {
+function initLeadSort() {
   var table = document.querySelector('.data-table');
   var tbody = table ? table.querySelector('tbody') : null;
   if (!tbody) return;
@@ -1004,10 +1011,89 @@ function renderDrawerNotes(notes) {
   }
 
   table.querySelectorAll('.th-sort').forEach(function (link) {
-    link.addEventListener('click', function (e) {
+    link.onclick = function (e) {
       e.preventDefault();
       sortBy(link.dataset.sort, link.dataset.dir);
+    };
+  });
+}
+initLeadSort();
+
+/**
+ * Status tabs and the source/date filter bar, without a page navigation.
+ *
+ * Same trick as the calendar's month nav: fetch the URL, lift the bits that
+ * actually changed out of the response, and drop them into the page that is
+ * already open. The links and the form keep real hrefs/actions, so this is
+ * an enhancement -- with JavaScript off, or if the fetch fails, it is a
+ * normal navigation.
+ */
+var leadsNavBusy = false;
+
+function leadsNav(url, push) {
+  if (leadsNavBusy) return;
+  leadsNavBusy = true;
+  var panel = document.getElementById('leads-panel');
+  if (panel) { panel.classList.add('is-loading'); }
+
+  fetch(url, { credentials: 'same-origin' })
+    .then(function (res) {
+      if (!res.ok) { throw new Error('HTTP ' + res.status); }
+      return res.text();
+    })
+    .then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+
+      var freshPanel = doc.getElementById('leads-panel');
+      if (freshPanel && panel) { panel.innerHTML = freshPanel.innerHTML; }
+
+      var freshTabs = doc.querySelector('.toolbar-left');
+      var curTabs   = document.querySelector('.toolbar-left');
+      if (freshTabs && curTabs) { curTabs.innerHTML = freshTabs.innerHTML; }
+
+      var freshBar = doc.getElementById('lead-filter-bar');
+      var curBar   = document.getElementById('lead-filter-bar');
+      if (freshBar && curBar) {
+        curBar.innerHTML = freshBar.innerHTML;
+        curBar.hidden = freshBar.hidden;
+      }
+
+      if (push) { history.pushState({ leads: true }, '', url); }
+
+      initLeadSort();
+      bindLeadsNavLinks();
+      if (window.refreshLeadSelection) { window.refreshLeadSelection(); }
+      if (panel) { panel.classList.remove('is-loading'); }
+      leadsNavBusy = false;
+    })
+    .catch(function () {
+      // A fetch that failed is not a filter worth trapping anyone on.
+      window.location.href = url;
     });
+}
+
+function bindLeadsNavLinks() {
+  document.querySelectorAll('[data-leads-nav]').forEach(function (link) {
+    link.onclick = function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) { return; }
+      e.preventDefault();
+      leadsNav(link.getAttribute('href'), true);
+    };
+  });
+}
+bindLeadsNavLinks();
+
+(function () {
+  var form = document.getElementById('lead-filter-bar');
+  if (!form) { return; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var params = new URLSearchParams(new FormData(form));
+    leadsNav('index.php?' + params.toString(), true);
   });
 })();
+
+window.addEventListener('popstate', function () {
+  leadsNav(window.location.href, false);
+});
 </script>

@@ -88,6 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // open it. Status, timing and expiry are what the therapist actually needs.
 $linkStatus = isset($_GET['link_status']) ? trim($_GET['link_status']) : '';
 $links      = intakeLinksList($db, $linkStatus);
+
+// Everyone a link is realistically sent to by hand, newest first -- picking a
+// name here is what typing their email used to stand in for.
+$sendCandidates = $db->query("
+    SELECT `first_name`, `last_name`, `email` FROM `clients`
+    WHERE `archived_at` IS NULL
+    UNION
+    SELECT `name` AS first_name, '' AS last_name, `email` FROM `leads`
+    WHERE `email` != ''
+    ORDER BY `first_name` ASC
+")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="toolbar">
@@ -102,15 +113,30 @@ $links      = intakeLinksList($db, $linkStatus);
          short-intake table. That table is gone; the action is not, because
          someone who phones the practice still needs a form. -->
     <form method="post" action="index.php?page=intake" class="send-link-form"
-          onsubmit="return confirm('Send an intake link to ' + this.email.value + '?');">
+          onsubmit="return confirmSendLink(event);">
       <input type="hidden" name="action" value="send_intake_link" />
-      <label class="visually-hidden" for="send-link-email">Email address</label>
-      <input class="form-input" type="email" id="send-link-email" name="email"
-             placeholder="Send a link to an email address" required />
+      <label class="visually-hidden" for="send-link-email">Send to</label>
+      <select class="form-select-sm" id="send-link-email" name="email" required>
+        <option value="" disabled selected hidden>Send a link to...</option>
+        <?php foreach ($sendCandidates as $sc): ?>
+          <option value="<?php echo htmlspecialchars($sc['email']); ?>">
+            <?php echo htmlspecialchars(trim($sc['first_name'] . ' ' . $sc['last_name']) . ' — ' . $sc['email']); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
       <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-envelope-plus"></i> Send</button>
     </form>
   </div>
 </div>
+
+<script>
+async function confirmSendLink(e) {
+  e.preventDefault();
+  var form = e.target;
+  if (await showConfirm('Send an intake link to ' + form.email.value + '?')) { form.submit(); }
+  return false;
+}
+</script>
 
 <div class="panel">
   <div class="panel-header"><div class="panel-title">Intake links</div></div>

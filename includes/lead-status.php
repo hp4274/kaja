@@ -51,6 +51,21 @@ function leadStatusIsTerminal($status) {
 }
 
 /**
+ * "In-person", "inperson", "In-Person" -- the public forms have shipped
+ * slightly different spellings of the same choice over time, and a badge
+ * class built from the raw value went stale (no CSS rule, no colour) the
+ * moment a row did not spell it exactly like the newest form does. Two
+ * buckets only: everything that is not explicitly online reads as in-person.
+ */
+function leadPreferenceBadgeClass($preference) {
+    $norm = strtolower(str_replace(['-', '_', ' '], '', (string) $preference));
+    if ($norm === '') {
+        return 'badge-inactive';
+    }
+    return $norm === 'online' ? 'badge-online' : 'badge-inperson';
+}
+
+/**
  * Forward along the pipeline, or sideways into a terminal exit. Never
  * backwards — a status the admin regrets is a data-repair job, not a button,
  * because moving back out of 'converted' would orphan a client row.

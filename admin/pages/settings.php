@@ -340,7 +340,7 @@ function settingChoice($name, $id, $value, $options, $unit) {
                   <?php if ($admin['id'] === $currentUserId): ?>
                     <span class="hint">Signed in</span>
                   <?php else: ?>
-                    <form method="post" action="index.php?page=settings" class="form-inline" onsubmit="return confirm('Remove the admin account for <?php echo htmlspecialchars($admin['username'], ENT_QUOTES); ?>? They will not be able to sign in again.');">
+                    <form method="post" action="index.php?page=settings" class="form-inline" onsubmit="return confirmRemoveAdmin(event, '<?php echo htmlspecialchars($admin['username'], ENT_QUOTES); ?>');">
                       <input type="hidden" name="settings_action" value="remove_admin" />
                       <input type="hidden" name="admin_id" value="<?php echo $admin['id']; ?>" />
                       <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Remove</button>
@@ -415,6 +415,15 @@ function settingChoice($name, $id, $value, $options, $unit) {
 </style>
 
 <script>
+async function confirmRemoveAdmin(e, username) {
+  e.preventDefault();
+  var form = e.target;
+  if (await showConfirm('Remove the admin account for ' + username + '? They will not be able to sign in again.', { danger: true, okText: 'Remove' })) {
+    form.submit();
+  }
+  return false;
+}
+
 /**
  * Three small things, all of them about seeing the consequence of a setting
  * before it is saved rather than after someone receives it.

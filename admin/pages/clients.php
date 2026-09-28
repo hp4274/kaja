@@ -22,7 +22,7 @@ $clients = $pager['rows'];
 
 /** Rebuild the query string with one key changed, for the tabs and sort links. */
 function clientsUrl(array $filters, array $overrides = []) {
-    $params = array_merge(['page' => 'clients'], $filters, $overrides);
+    $params = array_merge(['page' => 'clients', 'pp' => $_GET['pp'] ?? null], $filters, $overrides);
     $params = array_filter($params, function ($v) { return $v !== '' && $v !== null; });
     return 'index.php?' . http_build_query($params);
 }
@@ -77,7 +77,7 @@ function clientsUrl(array $filters, array $overrides = []) {
                   Last activity <i class="bi bi-arrow-down-up"></i>
                 </a>
               </th>
-              <th>Actions</th>
+              <th class="th-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -180,9 +180,8 @@ function clientsUrl(array $filters, array $overrides = []) {
 </div>
 
 <script>
-function deleteClient(id, name) {
-  if (!confirm('Delete ' + name + ' permanently? Their intake data, sessions, notes, fees and documents are all removed.')) return;
-  if (!confirm('Are you sure? This cannot be undone.')) return;
+async function deleteClient(id, name) {
+  if (!await showConfirm('Delete ' + name + ' permanently? Their intake data, sessions, notes, fees and documents are all removed.', { danger: true, okText: 'Delete' })) return;
   var fd = new FormData();
   fd.append('action', 'delete');
   fd.append('client_id', id);

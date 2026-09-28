@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../includes/booking-slots.php';
 require_once __DIR__ . '/../../includes/client-status.php';
 require_once __DIR__ . '/../../includes/holidays.php';
 require_once __DIR__ . '/../../includes/blocked-slots.php';
+require_once __DIR__ . '/../../includes/calendar-cell.php';
 
 $db = getDbConnection();
 
@@ -81,9 +82,9 @@ $upcoming = $db->query("
 <script>window.CAL_MONTH = <?php echo json_encode(sprintf('%04d-%02d', $year, $month)); ?>;</script>
 <!-- window.ALL_SLOTS is emitted by the shared booking modal include below. -->
 
-<div class="content-grid">
+<div class="content-grid is-stacked">
   <!-- Calendar -->
-  <div class="panel">
+  <div class="panel is-calendar-lg">
     <div class="panel-header">
       <div class="panel-title">Session Calendar</div>
       <div class="calendar-nav">
@@ -102,11 +103,13 @@ $upcoming = $db->query("
           <div class="cal-cell other-month"></div>
         <?php endfor; ?>
 
+        <?php $todayStr = date('Y-m-d'); ?>
         <?php for ($day = 1; $day <= $daysInMonth; $day++):
           $isToday = ($day == date('j') && $month == date('n') && $year == date('Y'));
           $hasSessions = isset($calSessions[$day]);
           $cellDate    = date('Y-m-d', mktime(0, 0, 0, $month, $day, $year));
           $isHoliday   = in_array($cellDate, $monthHolidays, true);
+          $isPast      = $cellDate < $todayStr;
         ?>
           <?php
           // Every day opens the same manage-day view now: what is booked, what
@@ -126,19 +129,24 @@ $upcoming = $db->query("
                     return !in_array($cs['status'], ['cancelled', 'no-show'], true);
                 }))['client_name']
               : null;
+          // A day already gone cannot be booked or have its availability
+          // touched -- there is nothing left to manage. It only stays
+          // clickable when a real session is sitting on it, to look at or
+          // cancel; an empty past day is just a fact, not an action.
+          $clickable  = !$isPast || $activeCount > 0;
+          $slotRows   = calendarSlotRows($hasSessions ? $calSessions[$day] : [], $monthBlocked[$cellDate] ?? [], $isHoliday);
           ?>
-          <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isHoliday ? ' holiday' : ''); ?>" role="button" tabindex="0"
-               data-date="<?php echo $cellDate; ?>"
+          <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isHoliday ? ' holiday' : '') . (!$clickable ? ' is-past-empty' : ''); ?>"
+               <?php echo $clickable ? 'role="button" tabindex="0"' : ''; ?>
+               <?php echo $clickable ? 'data-date="' . $cellDate . '"' : ''; ?>
                <?php echo $isHoliday ? 'data-holiday="1"' : ''; ?>
-               title="<?php echo $isHoliday ? 'Holiday - the practice is closed' : 'Manage this day'; ?>"
+               title="<?php echo $isHoliday ? 'Holiday - the practice is closed' : ($clickable ? 'Manage this day' : 'Nothing to manage on a past day'); ?>"
+               <?php if ($clickable): ?>
                onclick="showDaySessions(<?php echo $day; ?>)"
-               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDaySessions(<?php echo $day; ?>);}">
+               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDaySessions(<?php echo $day; ?>);}"
+               <?php endif; ?>>
             <div class="cal-date"><?php echo $day; ?></div>
-            <?php if ($activeCount === 1 && $soloName): ?>
-              <span class="cal-solo-name"><?php echo htmlspecialchars($soloName); ?></span>
-            <?php elseif ($activeCount > 1): ?>
-              <span class="cal-count"><?php echo $activeCount; ?></span>
-            <?php endif; ?>
+            <?php echo calendarSlotRowsHtml($slotRows); ?>
           </div>
         <?php endfor; ?>
 
@@ -278,11 +286,11 @@ document.addEventListener('calendar:monthchanged', function (e) {
 // cancelled without them.
 //
 // SESSION_SERIES maps session id -> series id, emitted by the page.
-function seriesScopeFor(id, verb) {
+async function seriesScopeFor(id, verb) {
   if (!window.SESSION_SERIES || !SESSION_SERIES[id]) {
     return 'one';   // not part of a series: nothing to ask
   }
-  var answer = window.prompt(
+  var answer = await showPrompt(
     'This session repeats.\n\n' +
     'Type "one" to ' + verb + ' only this occurrence,\n' +
     'or "future" to ' + verb + ' this one and every later one in the series.',
@@ -350,24 +358,15 @@ function submitReschedule(e) {
     .catch(function(){ showToast('Network error', 'error'); });
 }
 
-function updateSessionStatus(id, status) {
-  var scope = seriesScopeFor(id, status === 'cancelled' ? 'cancel' : 'change');
+async function updateSessionStatus(id, status) {
+  var scope = await seriesScopeFor(id, status === 'cancelled' ? 'cancel' : 'change');
   if (scope === null) { location.reload(); return; }   // abandoned; undo the select
-
-  var reason = '';
-  if (status === 'cancelled') {
-    // A cancellation with no reason is a mystery six months later, and the
-    // repo refuses one anyway.
-    reason = window.prompt('Why is this session being cancelled?', '');
-    if (reason === null || reason.trim() === '') { location.reload(); return; }
-  }
 
   var fd = new FormData();
   fd.append('action', 'update_status');
   fd.append('session_id', id);
   fd.append('status', status);
   fd.append('scope', scope);
-  fd.append('cancelled_reason', reason);
 
   fetch('api/sessions.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })

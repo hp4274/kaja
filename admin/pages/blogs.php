@@ -43,7 +43,7 @@ $blogs = $pager['rows'];
 /** Same shape as leadsUrl()/clientsUrl(), keeping the status tab and search. */
 function blogsUrl(array $overrides = []) {
     global $statusFilter, $search;
-    $params = array_merge(['page' => 'blogs', 'status' => $statusFilter, 'q' => $search], $overrides);
+    $params = array_merge(['page' => 'blogs', 'status' => $statusFilter, 'q' => $search, 'pp' => $_GET['pp'] ?? null], $overrides);
     $params = array_filter($params, function ($v) { return $v !== '' && $v !== null && $v !== 'all'; });
     return 'index.php?' . http_build_query($params);
 }
@@ -382,8 +382,8 @@ if (isset($_GET['edit'])) {
   };
 
   // Delete blog
-  window.deleteBlog = function(blogId, title) {
-    if (!confirm('Delete "' + title + '"? This cannot be undone.')) return;
+  window.deleteBlog = async function(blogId, title) {
+    if (!await showConfirm('Delete "' + title + '"? This cannot be undone.', { danger: true, okText: 'Delete' })) return;
 
     var formData = new FormData();
     formData.append('action', 'delete');

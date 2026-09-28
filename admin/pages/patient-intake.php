@@ -23,7 +23,7 @@ $patientIntakes    = $pager['rows'];
 
 /** Same shape as leadsUrl()/clientsUrl() -- this page just never had one. */
 function patientIntakeUrl(array $overrides = []) {
-    $params = array_merge(['page' => 'patient-intake'], $overrides);
+    $params = array_merge(['page' => 'patient-intake', 'pp' => $_GET['pp'] ?? null], $overrides);
     $params = array_filter($params, function ($v) { return $v !== '' && $v !== null; });
     return 'index.php?' . http_build_query($params);
 }
@@ -371,8 +371,8 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && !document.getElementById('piDrawer').hidden) closeIntakeDrawer();
 });
 
-function convertIntake(id, name, email, phone) {
-  if (!confirm('Convert "' + name + '" to a client?')) return;
+async function convertIntake(id, name, email, phone) {
+  if (!await showConfirm('Convert "' + name + '" to a client?')) return;
   var fd = new FormData();
   fd.append('action', 'convert_intake');
   fd.append('id', id);

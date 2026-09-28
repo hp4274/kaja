@@ -793,11 +793,11 @@ var clientId = <?php echo $clientId; ?>;
 // cancelled without them.
 //
 // SESSION_SERIES maps session id -> series id, emitted by the page.
-function seriesScopeFor(id, verb) {
+async function seriesScopeFor(id, verb) {
   if (!window.SESSION_SERIES || !SESSION_SERIES[id]) {
     return 'one';   // not part of a series: nothing to ask
   }
-  var answer = window.prompt(
+  var answer = await showPrompt(
     'This session repeats.\n\n' +
     'Type "one" to ' + verb + ' only this occurrence,\n' +
     'or "future" to ' + verb + ' this one and every later one in the series.',
@@ -913,24 +913,15 @@ function submitReschedule(e) {
     .catch(function(){ showToast('Network error', 'error'); });
 }
 
-function updateSessionStatus(id, status) {
-  var scope = seriesScopeFor(id, status === 'cancelled' ? 'cancel' : 'change');
+async function updateSessionStatus(id, status) {
+  var scope = await seriesScopeFor(id, status === 'cancelled' ? 'cancel' : 'change');
   if (scope === null) { location.reload(); return; }   // abandoned; undo the select
-
-  var reason = '';
-  if (status === 'cancelled') {
-    // A cancellation with no reason is a mystery six months later, and the
-    // repo refuses one anyway.
-    reason = window.prompt('Why is this session being cancelled?', '');
-    if (reason === null || reason.trim() === '') { location.reload(); return; }
-  }
 
   var fd = new FormData();
   fd.append('action', 'update_status');
   fd.append('session_id', id);
   fd.append('status', status);
   fd.append('scope', scope);
-  fd.append('cancelled_reason', reason);
 
   fetch('api/sessions.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })
@@ -1047,8 +1038,8 @@ function submitProfile(e) {
   });
 })();
 
-function archiveDocument(id) {
-  if (!confirm('Remove this document from the client record?')) return;
+async function archiveDocument(id) {
+  if (!await showConfirm('Remove this document from the client record?', { danger: true, okText: 'Remove' })) return;
   var fd = new FormData();
   fd.append('action', 'archive');
   fd.append('document_id', id);
@@ -1075,9 +1066,9 @@ function archiveDocument(id) {
   sync();
 })();
 
-function sendFeeReminder(id) {
+async function sendFeeReminder(id) {
   var btn = document.getElementById('fee-remind');
-  if (!confirm('Email this client their outstanding balance?')) { return; }
+  if (!await showConfirm('Email this client their outstanding balance?')) { return; }
 
   // Disabled while it is in flight: a second click is a second email, and the
   // recipient cannot tell it was an accident.
@@ -1096,8 +1087,8 @@ function sendFeeReminder(id) {
     .then(function () { if (btn) { btn.disabled = false; } });
 }
 
-function archiveClientRecord() {
-  if (!confirm('Archive this client? The record is kept, but it disappears from every list.')) return;
+async function archiveClientRecord() {
+  if (!await showConfirm('Archive this client? The record is kept, but it disappears from every list.', { danger: true, okText: 'Archive' })) return;
   var fd = new FormData();
   fd.append('action', 'archive');
   fd.append('client_id', clientId);
@@ -1130,9 +1121,8 @@ function submitResendIntake(e) {
     .catch(function() { showToast('Network error', 'error'); });
 }
 
-function deleteClientRecord() {
-  if (!confirm('Delete this client permanently? Their intake data, sessions, notes, fees and documents are all removed. This cannot be undone.')) return;
-  if (!confirm('Are you sure? This cannot be undone.')) return;
+async function deleteClientRecord() {
+  if (!await showConfirm('Delete this client permanently? Their intake data, sessions, notes, fees and documents are all removed. This cannot be undone.', { danger: true, okText: 'Delete' })) return;
   var fd = new FormData();
   fd.append('action', 'delete');
   fd.append('client_id', clientId);
@@ -1145,11 +1135,11 @@ function deleteClientRecord() {
     .catch(function(){ showToast('Network error','error'); });
 }
 
-function submitMerge(e) {
+async function submitMerge(e) {
   e.preventDefault();
   var loser = document.getElementById('merge-loser').value;
   if (!loser) return;
-  if (!confirm('Merge that record into this one? Their sessions, notes, documents and payments move here, and the other record is archived.')) return;
+  if (!await showConfirm('Merge that record into this one? Their sessions, notes, documents and payments move here, and the other record is archived.')) return;
 
   var fd = new FormData();
   fd.append('action', 'merge');

@@ -78,6 +78,9 @@ $editableCount = count($questions) - array_sum(array_map('count', $fixed));
                 <div class="row-actions">
                   <a href="index.php?page=forms&v=<?php echo $t['version']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i> Edit</a>
                   <button class="btn btn-ghost btn-sm" onclick="newTemplate(<?php echo $t['version']; ?>)"><i class="bi bi-files"></i> Duplicate</button>
+                  <?php if (!$t['locked'] && !$t['is_default'] && !in_array($t['version'], intakeSchemaVersions(), true)): ?>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTemplate(<?php echo $t['version']; ?>, '<?php echo htmlspecialchars(addslashes($t['name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i> Delete</button>
+                  <?php endif; ?>
                 </div>
               </td>
             </tr>
@@ -275,10 +278,8 @@ function addQuestion(e, section) {
     .catch(function () { showToast('Network error', 'error'); btn.disabled = false; });
 }
 
-function restoreOrder(v) {
-  if (!confirm('Put the sections back in the order the form ships with?
-
-The order of questions inside each section is kept.')) return;
+async function restoreOrder(v) {
+  if (!await showConfirm('Put the sections back in the order the form ships with? The order of questions inside each section is kept.')) return;
   var fd = new FormData();
   fd.append('action', 'normalise_order');
   fd.append('version', v);
@@ -296,8 +297,8 @@ The order of questions inside each section is kept.')) return;
 // Duplicates `from` into a brand-new, independently-named variant -- this is
 // how "Depression intake" or "Anxiety intake" gets created: start from
 // whichever form is closest, rename it, then edit its questions freely.
-function newTemplate(from) {
-  var name = prompt('Name for the new form (e.g. "Depression intake"):');
+async function newTemplate(from) {
+  var name = await showPrompt('Name for the new form (e.g. "Depression intake"):');
   if (name === null) return;   // cancelled
   name = name.trim();
   if (!name) { showToast('A name is required', 'error'); return; }
@@ -317,8 +318,8 @@ function newTemplate(from) {
     .catch(function () { showToast('Network error', 'error'); });
 }
 
-function renameTemplate(v, currentName) {
-  var name = prompt('Rename this form:', currentName);
+async function renameTemplate(v, currentName) {
+  var name = await showPrompt('Rename this form:', currentName);
   if (name === null) return;
   name = name.trim();
   if (!name || name === currentName) return;
@@ -334,6 +335,23 @@ function renameTemplate(v, currentName) {
       if (!d.success) { showToast(d.error || 'Error', 'error'); return; }
       showToast('Renamed to "' + name + '"');
       setTimeout(function () { location.reload(); }, 500);
+    })
+    .catch(function () { showToast('Network error', 'error'); });
+}
+
+async function deleteTemplate(v, name) {
+  if (!await showConfirm('Delete "' + name + '" permanently? Its questions go with it.', { danger: true, okText: 'Delete' })) return;
+
+  var fd = new FormData();
+  fd.append('action', 'delete_template');
+  fd.append('version', v);
+
+  fetch('api/forms.php', { method: 'POST', body: fd })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) { showToast(d.error || 'Error', 'error'); return; }
+      showToast('"' + name + '" deleted');
+      setTimeout(function () { location.href = 'index.php?page=forms'; }, 500);
     })
     .catch(function () { showToast('Network error', 'error'); });
 }
