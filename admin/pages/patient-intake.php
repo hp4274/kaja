@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../includes/lead-status.php';
-
+require_once __DIR__ . '/../../includes/pagination.php';
 
 $db = getDbConnection();
 $stmtPI = $db->query("
@@ -13,6 +13,20 @@ $stmtPI = $db->query("
     ORDER BY pi.created_at DESC
 ");
 $patientIntakes = $stmtPI->fetchAll(PDO::FETCH_ASSOC);
+
+// The drawer's piData JS blob (below) still carries every row, unsliced --
+// only the visible table/grid is paginated, so opening a drawer for a form
+// on another page still works without a second request.
+$allPatientIntakes = $patientIntakes;
+$pager             = paginate($patientIntakes);
+$patientIntakes    = $pager['rows'];
+
+/** Same shape as leadsUrl()/clientsUrl() -- this page just never had one. */
+function patientIntakeUrl(array $overrides = []) {
+    $params = array_merge(['page' => 'patient-intake'], $overrides);
+    $params = array_filter($params, function ($v) { return $v !== '' && $v !== null; });
+    return 'index.php?' . http_build_query($params);
+}
 
 // Score helper
 function calcScore($row, $prefix, $count = 18) {
@@ -36,7 +50,7 @@ function scoreClass($score, $max = 18) {
 
 <div class="panel">
   <div class="panel-header">
-    <div class="panel-title">Patient Intake Forms (<?php echo count($patientIntakes); ?>)</div>
+    <div class="panel-title">Patient Intake Forms (<?php echo count($allPatientIntakes); ?>)</div>
     <div class="view-toggle" data-page="patient-intake">
       <button class="view-toggle-btn" data-view="list" title="List View"><i class="bi bi-list-ul"></i></button>
       <button class="view-toggle-btn" data-view="grid" title="Grid View"><i class="bi bi-grid"></i></button>
@@ -53,6 +67,7 @@ function scoreClass($score, $max = 18) {
         <table class="data-table">
           <thead>
             <tr>
+              <th class="th-num">#</th>
               <th>Date</th>
               <th>Name</th>
               <th>Email</th>
@@ -65,7 +80,10 @@ function scoreClass($score, $max = 18) {
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($patientIntakes as $pi):
+            <?php
+            // Numbered against the whole filtered set: page 2 at 10/page starts at 11.
+            $rowNum = ($pager['page'] - 1) * $pager['perPage'] + 1;
+            foreach ($patientIntakes as $pi):
               $q1 = calcScore($pi, 'q1');
               $q2 = calcScore($pi, 'q2');
               $total = $q1 + $q2;
@@ -74,6 +92,7 @@ function scoreClass($score, $max = 18) {
               $lclientId = $pi['lead_client_id'] ?? null;
             ?>
               <tr>
+                <td class="td-nowrap td-muted"><?php echo $rowNum++; ?></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($pi['created_at'])); ?></td>
                 <td class="td-name"><?php echo htmlspecialchars($pi['first_name'] . ' ' . $pi['last_name']); ?></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($pi['email']); ?>"><?php echo htmlspecialchars($pi['email']); ?></a></td>
@@ -115,6 +134,7 @@ function scoreClass($score, $max = 18) {
       </div>
       
       <div class="grid-view-container">
+        <?php $gridRowNum = ($pager['page'] - 1) * $pager['perPage'] + 1; ?>
         <?php foreach ($patientIntakes as $pi):
           $q1 = calcScore($pi, 'q1');
           $q2 = calcScore($pi, 'q2');
@@ -131,7 +151,7 @@ function scoreClass($score, $max = 18) {
                   <i class="bi bi-clipboard2-pulse"></i>
                   <span><?php echo $fullName; ?></span>
                 </div>
-                <div class="grid-card-date"><?php echo date('d M Y', strtotime($pi['created_at'])); ?></div>
+                <div class="grid-card-date">#<?php echo $gridRowNum++; ?> &middot; <?php echo date('d M Y', strtotime($pi['created_at'])); ?></div>
               </div>
               <div class="grid-card-body">
                 <div class="grid-card-item" title="Email">
@@ -187,6 +207,8 @@ function scoreClass($score, $max = 18) {
           </div>
         <?php endforeach; ?>
       </div>
+
+      <?php echo paginationHtml($pager, 'patientIntakeUrl'); ?>
     <?php endif; ?>
   </div>
 </div>
@@ -210,8 +232,10 @@ function scoreClass($score, $max = 18) {
 </aside>
 
 <script>
-// Every submitted form, for the drawer to read without another request.
-var piData = <?php echo json_encode($patientIntakes); ?>;
+// Every submitted form, for the drawer to read without another request --
+// every page's worth, not just the one on screen, so the drawer works
+// whichever page a form happens to sit on.
+var piData = <?php echo json_encode($allPatientIntakes); ?>;
 
 var q1Texts = {
   "q1_1":"Have you ever walked in your sleep during your adult life?",

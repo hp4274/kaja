@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/../db-config.php';
+require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/intake-schema.php';
 
 function formFieldTypes() {
@@ -24,6 +25,65 @@ function formFieldTypes() {
 function formVersions(PDO $db) {
     $rows = $db->query('SELECT DISTINCT `form_version` FROM `form_questions` ORDER BY `form_version` DESC');
     return array_map('intval', array_column($rows->fetchAll(PDO::FETCH_ASSOC), 'form_version'));
+}
+
+/**
+ * The human name a version was given ("Depression intake"), or a plain
+ * fallback if nobody has renamed it yet -- including on an install where
+ * `php tools/migrate.php` has not created `form_templates` yet, so a form
+ * this table has never heard of still shows something rather than fataling.
+ */
+function formTemplateName(PDO $db, $version) {
+    try {
+        $stmt = $db->prepare('SELECT `name` FROM `form_templates` WHERE `form_version` = :v');
+        $stmt->execute([':v' => (int) $version]);
+        $name = $stmt->fetchColumn();
+        if ($name !== false && trim((string) $name) !== '') {
+            return $name;
+        }
+    } catch (Throwable $e) {
+        // Table missing or unreachable -- fall through to the default name.
+    }
+    return 'Version ' . (int) $version;
+}
+
+/** Rename a variant. Insert-or-update, so renaming twice just overwrites. */
+function setFormTemplateName(PDO $db, $version, $name) {
+    $name = trim((string) $name);
+    if ($name === '') {
+        throw new InvalidArgumentException('A form needs a name.');
+    }
+    $db->prepare('
+        INSERT INTO `form_templates` (`form_version`, `name`) VALUES (:v, :n)
+        ON DUPLICATE KEY UPDATE `name` = VALUES(`name`)
+    ')->execute([':v' => (int) $version, ':n' => $name]);
+}
+
+/**
+ * Every variant an admin can build, name and send -- named, counted, and
+ * flagged with whether it is the one a lead gets when nobody picks one.
+ *
+ * There is no single "live" form any more: every variant here is equally
+ * usable at any time (the Leads page offers all of them). `is_default` marks
+ * only the fallback used by a send path that does not ask -- the short
+ * intake form, and any lead accepted without a version explicitly chosen.
+ */
+function formTemplates(PDO $db) {
+    $liveVersion = getSettingInt('intake_form_version', 1);
+    $versions    = array_unique(array_merge(intakeSchemaVersions(), formVersions($db)));
+    sort($versions);
+
+    $out = [];
+    foreach ($versions as $v) {
+        $out[] = [
+            'version'    => $v,
+            'name'       => formTemplateName($db, $v),
+            'questions'  => count(intakeSchemaFields($v)),
+            'is_default' => ($v === $liveVersion),
+            'locked'     => formVersionIsInUse($db, $v),
+        ];
+    }
+    return $out;
 }
 
 function formVersionExists(PDO $db, $version) {
@@ -444,9 +504,11 @@ function formVersionIsInUse(PDO $db, $version) {
 
 /**
  * Copy a version into a new, higher one that can be edited freely.
- * Returns the new version number.
+ * Returns the new version number. $name, if given, becomes the new variant's
+ * display name -- how an admin turns "duplicate this" into "Depression
+ * intake"; left blank it falls back to "Version N" like any unnamed one.
  */
-function publishNewFormVersion(PDO $db, $fromVersion) {
+function publishNewFormVersion(PDO $db, $fromVersion, $name = null) {
     $fromVersion = (int) $fromVersion;
     if (!formVersionExists($db, $fromVersion)) {
         throw new RuntimeException('Version ' . $fromVersion . ' does not exist.');
@@ -465,6 +527,10 @@ function publishNewFormVersion(PDO $db, $fromVersion) {
                    `options`, `reveal_field`, `reveal_value`, `sort_order`
             FROM `form_questions` WHERE `form_version` = :old
         ')->execute([':new' => $next, ':old' => $fromVersion]);
+
+        if ($name !== null && trim((string) $name) !== '') {
+            setFormTemplateName($db, $next, $name);
+        }
 
         $db->commit();
     } catch (Throwable $e) {

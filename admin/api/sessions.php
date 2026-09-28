@@ -25,6 +25,7 @@ require_once __DIR__ . '/../../includes/session-repo.php';
 require_once __DIR__ . '/../../includes/session-recurring.php';
 require_once __DIR__ . '/../../includes/session-mail.php';
 require_once __DIR__ . '/../../includes/holidays.php';
+require_once __DIR__ . '/../../includes/blocked-slots.php';
 
 $db     = getDbConnection();
 $action = isset($_POST['action']) ? trim($_POST['action']) : '';
@@ -227,6 +228,61 @@ try {
                 // something is standing there and how much of it.
                 'sessions' => count($booked),
             ]);
+            break;
+
+        case 'block_slot':
+            $date = trim($_POST['slot_date'] ?? '');
+            $time = trim($_POST['slot_time'] ?? '');
+            $reason = trim($_POST['reason'] ?? '');
+            $ts = $date !== '' ? strtotime($date) : false;
+            if ($ts === false || !isBookingSlot($time)) {
+                echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+                exit;
+            }
+            $date = date('Y-m-d', $ts);
+
+            // Blocking a slot that already holds a session cancels it first --
+            // a blocked slot and a booked slot cannot both be true of the same
+            // time. Anything without a reason stays exactly as un-cancellable
+            // as it is everywhere else in the admin.
+            $occupied = sessionAtSlot($db, $date, $time);
+            $cancelled = false;
+            if ($occupied) {
+                if ($reason === '') {
+                    echo json_encode(['success' => false, 'error' => 'A session is booked here -- give a reason to cancel it and block the slot']);
+                    exit;
+                }
+                cancelSession($db, $occupied['id'], $reason);
+                sendSessionMail($db, $occupied['id'], 'cancellation');
+                $cancelled = true;
+            }
+
+            blockSlot($db, $date, $time, $reason, $_SESSION['user_id'] ?? null);
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('slot_blocked',:d,'session',NULL)")
+               ->execute([':d' => $date . ' ' . bookingSlotLabel($time) . ' blocked'
+                                . ($cancelled ? ' (cancelled a booked session)' : '')
+                                . ($reason !== '' ? ': ' . $reason : '')]);
+
+            echo json_encode(['success' => true, 'cancelled' => $cancelled]);
+            break;
+
+        case 'unblock_slot':
+            $date = trim($_POST['slot_date'] ?? '');
+            $time = trim($_POST['slot_time'] ?? '');
+            $ts = $date !== '' ? strtotime($date) : false;
+            if ($ts === false || !isBookingSlot($time)) {
+                echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+                exit;
+            }
+            $date = date('Y-m-d', $ts);
+
+            unblockSlot($db, $date, $time);
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('slot_unblocked',:d,'session',NULL)")
+               ->execute([':d' => $date . ' ' . bookingSlotLabel($time) . ' reopened']);
+
+            echo json_encode(['success' => true]);
             break;
 
         case 'update_status':

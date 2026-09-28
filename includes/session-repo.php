@@ -17,6 +17,7 @@ require_once __DIR__ . '/../db-config.php';
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/session-status.php';
 require_once __DIR__ . '/holidays.php';
+require_once __DIR__ . '/blocked-slots.php';
 
 /**
  * The exclusion window for a candidate booking: the session itself, widened by
@@ -101,6 +102,12 @@ function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type =
     if (!$clientId) {
         throw new InvalidArgumentException('A session must belong to a client.');
     }
+    // Nobody can turn up to an appointment that was due yesterday. The
+    // calendar still lets a past day be opened and looked at -- only a new
+    // booking onto one is refused.
+    if (strtotime($window['start']) < time()) {
+        throw new InvalidArgumentException('That time has already passed.');
+    }
 
     // A closed day refuses a booking the same way a clash does -- a
     // RuntimeException -- so a recurrence that lands on a holiday skips that
@@ -111,6 +118,13 @@ function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type =
         $why = holidayReason($db, $day);
         throw new RuntimeException(date('d M Y', strtotime($day)) . ' is marked a holiday'
             . ($why ? ' (' . $why . ')' : '') . '.');
+    }
+    // A time the therapist has explicitly closed refuses a booking the same
+    // way a clash does -- an admin picking that slot in the modal is not a
+    // permission to book it anyway.
+    if (isSlotBlocked($db, $day, date('H:i', strtotime($window['start'])))) {
+        throw new RuntimeException(date('d M Y', strtotime($day)) . ' at '
+            . date('h:i A', strtotime($window['start'])) . ' is blocked.');
     }
 
     // One static practice room, copied onto the row so the record keeps the
@@ -173,6 +187,9 @@ function rescheduleSession(PDO $db, $sessionId, $startTime, $durationMinutes) {
     if ($existing === null) {
         throw new RuntimeException('Session not found.');
     }
+    if (strtotime($window['start']) < time()) {
+        throw new InvalidArgumentException('That time has already passed.');
+    }
 
     // Moving a session onto a closed day is the same mistake as booking one
     // there, so it is refused in the same place and for the same reason.
@@ -181,6 +198,10 @@ function rescheduleSession(PDO $db, $sessionId, $startTime, $durationMinutes) {
         $why = holidayReason($db, $day);
         throw new RuntimeException(date('d M Y', strtotime($day)) . ' is marked a holiday'
             . ($why ? ' (' . $why . ')' : '') . '.');
+    }
+    if (isSlotBlocked($db, $day, date('H:i', strtotime($window['start'])))) {
+        throw new RuntimeException(date('d M Y', strtotime($day)) . ' at '
+            . date('h:i A', strtotime($window['start'])) . ' is blocked.');
     }
     if (sessionStatusIsTerminal($existing['status'])) {
         throw new RuntimeException('A ' . sessionStatusLabel($existing['status'])
@@ -255,6 +276,18 @@ function cancelSession(PDO $db, $sessionId, $reason) {
        ->execute([':r' => mb_substr($reason, 0, 500), ':id' => (int) $sessionId]);
 
     return true;
+}
+
+/** The active session sitting at exactly this date+time, if any. */
+function sessionAtSlot(PDO $db, $date, $time) {
+    $stmt = $db->prepare('
+        SELECT * FROM `sessions`
+        WHERE `start_time` = :st AND `status` NOT IN ("cancelled","no-show")
+        LIMIT 1
+    ');
+    $stmt->execute([':st' => $date . ' ' . $time . ':00']);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row === false ? null : $row;
 }
 
 function fetchSession(PDO $db, $id) {

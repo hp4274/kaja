@@ -20,6 +20,8 @@ if (!in_array($selected, $versions, true)) {
 
 $questions = formQuestions($db, $selected);
 $locked    = formVersionIsInUse($db, $selected);
+$templates = formTemplates($db);
+$currentName = formTemplateName($db, $selected);
 
 // Group for display, preserving the order the questions come back in.
 //
@@ -40,63 +42,82 @@ foreach ($questions as $q) {
 $editableCount = count($questions) - array_sum(array_map('count', $fixed));
 ?>
 
+<!-- Every variant, at a glance. There is no single "live" form any more --
+     each of these is independently usable; Default only marks which one a
+     send path that does not ask (the short-intake form, or a lead accepted
+     without a version chosen) falls back to. This is also how many forms
+     exist becomes a visible number instead of something you'd have to click
+     through a dropdown to count. -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">All intake forms (<?php echo count($templates); ?>)</div>
+    <button class="btn btn-primary btn-sm" onclick="newTemplate(<?php echo $selected; ?>)">
+      <i class="bi bi-plus-lg"></i> New form
+    </button>
+  </div>
+  <div class="panel-body-flush">
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Name</th><th>Questions</th><th>Status</th><th class="th-right">Actions</th></tr>
+        </thead>
+        <tbody>
+          <?php foreach ($templates as $t): ?>
+            <tr <?php echo $t['version'] === $selected ? 'class="is-selected"' : ''; ?>>
+              <td class="td-name">
+                <?php echo htmlspecialchars($t['name']); ?>
+                <small>Version <?php echo $t['version']; ?></small>
+              </td>
+              <td><?php echo $t['questions']; ?></td>
+              <td>
+                <?php if ($t['locked']): ?>
+                  <span class="badge badge-pending"><i class="bi bi-lock"></i> In use</span>
+                <?php endif; ?>
+              </td>
+              <td class="td-actions">
+                <div class="row-actions">
+                  <a href="index.php?page=forms&v=<?php echo $t['version']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+                  <button class="btn btn-ghost btn-sm" onclick="newTemplate(<?php echo $t['version']; ?>)"><i class="bi bi-files"></i> Duplicate</button>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="toolbar">
   <div class="toolbar-left">
-    <!-- One version, not a row of them. A published version is history: the
-         only one worth putting in front of someone is the one they are looking
-         at, and the picker on the right is where the others live. -->
     <span class="filter-btn active" aria-current="page">
-      Version <?php echo $selected; ?><?php echo $selected === $liveVersion ? ' (live)' : ''; ?>
+      Editing: <?php echo htmlspecialchars($currentName); ?>
     </span>
-    <?php if ($selected !== $liveVersion): ?>
-      <span class="hint">Version <?php echo $liveVersion; ?> is live</span>
-    <?php endif; ?>
+    <button class="btn btn-icon btn-sm" onclick="renameTemplate(<?php echo $selected; ?>, '<?php echo htmlspecialchars(addslashes($currentName), ENT_QUOTES); ?>')" title="Rename this form">
+      <i class="bi bi-pencil"></i>
+    </button>
   </div>
   <div class="toolbar-right">
-    <?php if (count($versions) > 1): ?>
-      <label class="visually-hidden" for="version-picker">Show a version</label>
-      <select class="form-select-sm" id="version-picker"
-              onchange="location.href = 'index.php?page=forms&v=' + this.value;">
-        <?php foreach ($versions as $v): ?>
-          <option value="<?php echo $v; ?>" <?php echo $selected === $v ? 'selected' : ''; ?>>
-            Version <?php echo $v; ?><?php echo $v === $liveVersion ? ' (live)' : ''; ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    <?php endif; ?>
     <?php if (!$locked): ?>
       <button class="btn btn-ghost btn-sm" onclick="restoreOrder(<?php echo $selected; ?>)"
               title="Put the sections back in the order the form ships with">
         <i class="bi bi-arrow-counterclockwise"></i> Restore section order
       </button>
     <?php endif; ?>
-    <button class="btn btn-primary btn-sm" onclick="publishVersion(<?php echo $selected; ?>)">
-      <i class="bi bi-files"></i> Publish a new version from this
-    </button>
   </div>
 </div>
 
 <?php if ($locked): ?>
   <div class="bulk-bar is-warning">
     <i class="bi bi-lock"></i>
-    Version <?php echo $selected; ?> is locked: someone has answered it, or a link using it is still out.
-    Publish a new version to make changes — editing this one would change what past clients are recorded as having been asked.
-  </div>
-<?php endif; ?>
-
-<?php if ($selected !== $liveVersion): ?>
-  <div class="bulk-bar">
-    <i class="bi bi-info-circle"></i>
-    Version <?php echo $liveVersion; ?> is the one new links are issued with.
-    <button class="btn btn-primary btn-sm push-right" onclick="makeLive(<?php echo $selected; ?>)">
-      Make version <?php echo $selected; ?> live
-    </button>
+    "<?php echo htmlspecialchars($currentName); ?>" is locked: someone has answered it, or a link using it is still out.
+    Duplicate it to make changes — editing this one would change what past clients are recorded as having been asked.
   </div>
 <?php endif; ?>
 
 <div class="panel">
   <div class="panel-header">
-    <div class="panel-title">Questions in version <?php echo $selected; ?></div>
+    <div class="panel-title"><?php echo htmlspecialchars($currentName); ?></div>
     <span class="hint"><?php echo $editableCount; ?> editable question<?php echo $editableCount === 1 ? '' : 's'; ?></span>
   </div>
   <div class="panel-body-flush">
@@ -272,37 +293,51 @@ The order of questions inside each section is kept.')) return;
     .catch(function () { showToast('Network error', 'error'); });
 }
 
-function publishVersion(from) {
-  if (!confirm('Copy version ' + from + ' into a new editable version?')) return;
+// Duplicates `from` into a brand-new, independently-named variant -- this is
+// how "Depression intake" or "Anxiety intake" gets created: start from
+// whichever form is closest, rename it, then edit its questions freely.
+function newTemplate(from) {
+  var name = prompt('Name for the new form (e.g. "Depression intake"):');
+  if (name === null) return;   // cancelled
+  name = name.trim();
+  if (!name) { showToast('A name is required', 'error'); return; }
+
   var fd = new FormData();
   fd.append('action', 'publish_version');
   fd.append('from_version', from);
+  fd.append('name', name);
 
   fetch('api/forms.php', { method: 'POST', body: fd })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (!d.success) { showToast(d.error || 'Error', 'error'); return; }
-      showToast('Published version ' + d.version);
+      showToast('Created "' + d.name + '"');
       setTimeout(function () { location.href = 'index.php?page=forms&v=' + d.version; }, 700);
     })
     .catch(function () { showToast('Network error', 'error'); });
 }
 
-function makeLive(v) {
-  if (!confirm('Issue all new intake links against version ' + v + '?\n\nLinks already sent keep the version they were issued with.')) return;
+function renameTemplate(v, currentName) {
+  var name = prompt('Rename this form:', currentName);
+  if (name === null) return;
+  name = name.trim();
+  if (!name || name === currentName) return;
+
   var fd = new FormData();
-  fd.append('action', 'set_live_version');
+  fd.append('action', 'rename_template');
   fd.append('version', v);
+  fd.append('name', name);
 
   fetch('api/forms.php', { method: 'POST', body: fd })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (!d.success) { showToast(d.error || 'Error', 'error'); return; }
-      showToast('Version ' + v + ' is now live');
-      setTimeout(function () { location.reload(); }, 700);
+      showToast('Renamed to "' + name + '"');
+      setTimeout(function () { location.reload(); }, 500);
     })
     .catch(function () { showToast('Network error', 'error'); });
 }
+
 </script>
 
 <script>

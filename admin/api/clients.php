@@ -16,6 +16,9 @@ require_once __DIR__ . '/../../includes/client-payments.php';
 require_once __DIR__ . '/../../includes/fee-mail.php';
 require_once __DIR__ . '/../../includes/client-documents.php';
 require_once __DIR__ . '/../../includes/client-merge.php';
+require_once __DIR__ . '/../../includes/intake-token.php';
+require_once __DIR__ . '/../../includes/mail-queue.php';
+require_once __DIR__ . '/../../includes/form-builder.php';
 
 $db     = getDbConnection();
 $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
@@ -234,6 +237,69 @@ try {
                ->execute([':d' => $desc, ':rid' => $clientId]);
 
             echo json_encode(['success' => true, 'fee_id' => $feeId]);
+            break;
+
+        case 'resend_intake':
+            $clientId = intval($_POST['client_id'] ?? 0);
+            $client   = $clientId ? fetchClient($db, $clientId) : null;
+            if (!$client) {
+                echo json_encode(['success' => false, 'error' => 'Client not found']);
+                exit;
+            }
+            if (empty($client['lead_id'])) {
+                echo json_encode(['success' => false, 'error' => 'This client has no originating lead to send a link against']);
+                exit;
+            }
+
+            $requestedVersion = isset($_POST['form_version']) ? trim($_POST['form_version']) : '';
+            $formVersion = null;
+            if ($requestedVersion !== '') {
+                $candidate = (int) $requestedVersion;
+                $known = array_unique(array_merge(intakeSchemaVersions(), formVersions($db)));
+                if (in_array($candidate, $known, true)) {
+                    $formVersion = $candidate;
+                }
+            }
+
+            $issued = issueIntakeToken($db, (int) $client['lead_id'], $clientId, $formVersion);
+            $name   = trim($client['first_name'] . ' ' . $client['last_name']);
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('intake_link_sent',:d,'client',:rid)")
+               ->execute([':d' => "Intake link resent to {$name}", ':rid' => $clientId]);
+
+            if (!sendIntakeLinkEmail($client['email'], $name, $issued['url'], $issued['expires_at'])) {
+                queueFailedMail([
+                    'to'      => $client['email'],
+                    'name'    => $name,
+                    'url'     => $issued['url'],
+                    'expires' => $issued['expires_at'],
+                    'kind'    => 'intake_link',
+                ], 'SMTP send failed');
+            }
+
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'delete':
+            $clientId = intval($_POST['client_id'] ?? 0);
+            $client   = $clientId ? fetchClient($db, $clientId) : null;
+            if (!$client) {
+                echo json_encode(['success' => false, 'error' => 'Client not found']);
+                exit;
+            }
+            $name = clientLabel($db, $clientId);
+
+            // sessions/notes/fees/documents cascade off the FK on client_id;
+            // patient-intake has no FK, so its rows for this client are swept
+            // by hand, and the lead that made this client just loses the link.
+            $db->prepare("DELETE FROM `patient-intake` WHERE `client_id` = :id")->execute([':id' => $clientId]);
+            $db->prepare("UPDATE `leads` SET `client_id` = NULL WHERE `client_id` = :id")->execute([':id' => $clientId]);
+            $db->prepare("DELETE FROM `clients` WHERE `id` = :id")->execute([':id' => $clientId]);
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('client_deleted',:d,'client',NULL)")
+               ->execute([':d' => $name . ' deleted, along with their intake data']);
+
+            echo json_encode(['success' => true]);
             break;
 
         default:

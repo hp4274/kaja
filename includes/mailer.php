@@ -18,6 +18,11 @@
 
 require_once __DIR__ . '/../db-config.php';
 require_once __DIR__ . '/settings.php';
+// For siteBaseUrl(), so the HTML part can point the logo at an absolute URL.
+// Circular with mailer.php (intake-token.php requires this file back for
+// sendMail()), but require_once makes that safe: see email-templates.php,
+// which already relies on the same loop.
+require_once __DIR__ . '/intake-token.php';
 
 function smtpIsConfigured() {
     return defined('SMTP_HOST') && SMTP_HOST !== ''
@@ -180,7 +185,20 @@ function mailBackgroundIsUsable($url) {
 }
 
 /**
- * The HTML rendering of a plain-text body, with an image behind it.
+ * A short, human label for a link instead of the raw URL. Guessed from the
+ * URL's shape, since the plain-text body it comes from carries no markup to
+ * say what the link is for.
+ */
+function mailLinkLabel($url) {
+    if (stripos($url, 'intake') !== false)        { return 'Complete your intake form'; }
+    if (stripos($url, 'client-profile') !== false) { return 'Open in admin'; }
+    if (preg_match('~meet\.|zoom\.|/j/~i', $url))  { return 'Join the video call'; }
+    return 'Open link';
+}
+
+/**
+ * The HTML rendering of a plain-text body, with the practice logo, and an
+ * image behind it.
  *
  * The text sits on a white card, not straight on the picture: whatever image
  * gets chosen, the words stay legible. The outer cell carries the image three
@@ -189,15 +207,24 @@ function mailBackgroundIsUsable($url) {
  * images or ignores backgrounds -- desktop Outlook -- falls back to.
  *
  * The body is escaped BEFORE links are made, so a template can carry no
- * markup of its own, and every URL in it becomes clickable.
+ * markup of its own, and every URL in it becomes clickable. Shown as a short
+ * label rather than the raw address -- nobody needs to read out a 60-character
+ * token -- and opened in a new tab so following it never navigates the reader
+ * away from their inbox.
  */
 function mailHtmlBody($text, $background) {
     $safe = htmlspecialchars(str_replace(["\r\n", "\r"], "\n", (string) $text), ENT_QUOTES, 'UTF-8');
-    $safe = preg_replace('~(https?://[^\s<]*[^\s<.,;:!?)])~i', '<a href="$1" style="color:#0d7377;">$1</a>', $safe);
+    $safe = preg_replace_callback('~(https?://[^\s<]*[^\s<.,;:!?)])~i', function ($m) {
+        $url = htmlspecialchars_decode($m[1], ENT_QUOTES); // already escaped by htmlspecialchars() above
+        return '<a href="' . $m[1] . '" target="_blank" rel="noopener noreferrer" style="color:#0d7377;text-decoration:underline;">'
+            . htmlspecialchars(mailLinkLabel($url), ENT_QUOTES, 'UTF-8') . '</a>';
+    }, $safe);
     $safe = nl2br($safe, false);
 
     $bg   = htmlspecialchars($background, ENT_QUOTES, 'UTF-8');
     $font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
+    $logo = htmlspecialchars(siteBaseUrl() . 'images/logo3.png', ENT_QUOTES, 'UTF-8');
+    $name = htmlspecialchars(getSetting('practice_name'), ENT_QUOTES, 'UTF-8');
 
     return '<!DOCTYPE html><html><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
@@ -208,7 +235,10 @@ function mailHtmlBody($text, $background) {
         . '<tr><td align="center" style="padding:32px 16px;">'
         . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"'
         . ' style="width:100%;max-width:600px;background:#ffffff;border-radius:8px;">'
-        . '<tr><td style="padding:28px 32px;' . $font . 'font-size:15px;line-height:1.6;color:#1f2937;">'
+        . '<tr><td align="center" style="padding:24px 32px 0;">'
+        . '<img src="' . $logo . '" width="56" alt="' . $name . '" style="display:block;border:0;">'
+        . '</td></tr>'
+        . '<tr><td style="padding:16px 32px 28px;' . $font . 'font-size:15px;line-height:1.6;color:#1f2937;">'
         . $safe
         . '</td></tr></table></td></tr></table></body></html>';
 }

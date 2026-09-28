@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../includes/booking-slots.php';
 require_once __DIR__ . '/../../includes/client-status.php';
 require_once __DIR__ . '/../../includes/holidays.php';
+require_once __DIR__ . '/../../includes/blocked-slots.php';
 
 $db = getDbConnection();
 
@@ -45,6 +46,15 @@ $monthHolidays = holidayDates(
     date('Y-m-t', $firstDay)
 );
 
+// Slots the therapist has closed by hand, day by day rather than the whole
+// day at once -- keyed the same shape as $calSessions so the grid and the
+// day modal read both off the same JSON blob.
+$monthBlocked = blockedSlotsBetween(
+    $db,
+    date('Y-m-01', $firstDay),
+    date('Y-m-t', $firstDay)
+);
+
 // Upcoming sessions
 $upcoming = $db->query("
     SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as client_name
@@ -66,8 +76,10 @@ $upcoming = $db->query("
     'monthName' => date('F', $firstDay),
     'label'     => $monthName,
     'sessions'  => $calSessions,
+    'blocked'   => $monthBlocked,
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?></script>
 <script>window.CAL_MONTH = <?php echo json_encode(sprintf('%04d-%02d', $year, $month)); ?>;</script>
+<!-- window.ALL_SLOTS is emitted by the shared booking modal include below. -->
 
 <div class="content-grid">
   <!-- Calendar -->
@@ -97,37 +109,35 @@ $upcoming = $db->query("
           $isHoliday   = in_array($cellDate, $monthHolidays, true);
         ?>
           <?php
-          // Every day is clickable, not only days that already hold something.
-          // The onclick used to be printed only when $hasSessions, so on an
-          // empty calendar there was nothing to click at all and no way to book
-          // from the calendar -- which is the whole reason to have one.
-          $cellAction = $hasSessions
-              ? 'showDaySessions(' . $day . ')'
-              : "openNewSessionModal('" . $cellDate . "')";
+          // Every day opens the same manage-day view now: what is booked, what
+          // is blocked, and the option to book or block whatever is left. A
+          // day with nothing on it is not a dead end -- it is the day most
+          // likely to still need a slot closed ahead of time.
+          $activeCount = 0;
+          if ($hasSessions) {
+              foreach ($calSessions[$day] as $cs) {
+                  if (!in_array($cs['status'], ['cancelled', 'no-show'], true)) {
+                      $activeCount++;
+                  }
+              }
+          }
+          $soloName = $activeCount === 1
+              ? current(array_filter($calSessions[$day], function ($cs) {
+                    return !in_array($cs['status'], ['cancelled', 'no-show'], true);
+                }))['client_name']
+              : null;
           ?>
           <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isHoliday ? ' holiday' : ''); ?>" role="button" tabindex="0"
                data-date="<?php echo $cellDate; ?>"
                <?php echo $isHoliday ? 'data-holiday="1"' : ''; ?>
-               title="<?php echo $isHoliday ? 'Holiday - the practice is closed' : ($hasSessions ? 'View sessions' : 'Book a session'); ?>"
-               onclick="<?php echo $cellAction; ?>"
-               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();<?php echo $cellAction; ?>;}">
+               title="<?php echo $isHoliday ? 'Holiday - the practice is closed' : 'Manage this day'; ?>"
+               onclick="showDaySessions(<?php echo $day; ?>)"
+               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showDaySessions(<?php echo $day; ?>);}">
             <div class="cal-date"><?php echo $day; ?></div>
-            <?php if ($hasSessions): ?>
-              <?php foreach (array_slice($calSessions[$day], 0, 3) as $cs):
-                $dotClass = 'teal';
-                if (in_array($cs['status'], ['pending', 'confirmed'], true)) {
-                    $dotClass = 'amber';
-                } elseif ($cs['status'] === 'completed') {
-                    $dotClass = 'green';
-                } elseif ($cs['status'] === 'cancelled') {
-                    $dotClass = 'red';
-                }
-              ?>
-                <span class="cal-dot <?php echo $dotClass; ?>"></span>
-              <?php endforeach; ?>
-              <?php if (count($calSessions[$day]) > 3): ?>
-                <span class="cal-more">+<?php echo count($calSessions[$day])-3; ?></span>
-              <?php endif; ?>
+            <?php if ($activeCount === 1 && $soloName): ?>
+              <span class="cal-solo-name"><?php echo htmlspecialchars($soloName); ?></span>
+            <?php elseif ($activeCount > 1): ?>
+              <span class="cal-count"><?php echo $activeCount; ?></span>
             <?php endif; ?>
           </div>
         <?php endfor; ?>
@@ -145,7 +155,7 @@ $upcoming = $db->query("
       <div class="panel-title">Upcoming Sessions</div>
       <button class="btn btn-primary btn-sm" type="button" onclick="openNewSessionModal()"><i class="bi bi-plus"></i> New</button>
     </div>
-    <div class="panel-body is-list">
+    <div class="panel-body is-list is-scroll">
       <?php if (empty($upcoming)): ?>
         <div class="empty-state"><i class="bi bi-calendar3"></i><p>No upcoming sessions</p></div>
       <?php else: ?>
@@ -180,18 +190,8 @@ $upcoming = $db->query("
   </div>
 </div>
 
-<!-- Day Sessions Modal -->
-<div class="modal-overlay" id="daySessionsModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title" id="daySessionsTitle">Sessions</div>
-      <button class="modal-close" onclick="document.getElementById('daySessionsModal').classList.remove('open')">&times;</button>
-    </div>
-    <div class="modal-body" id="daySessionsContent"></div>
-  </div>
-</div>
-
-<!-- Booking modal, shared with the dashboard. See admin/includes/session-booking-modal.php -->
+<!-- Day Sessions Modal, and the shared booking modal. Both live in
+     admin/includes/session-booking-modal.php now, shared with the dashboard. -->
 <?php include __DIR__ . "/../includes/session-booking-modal.php"; ?>
 
 <!-- Reschedule Session Modal -->
@@ -215,7 +215,7 @@ foreach ($db->query('SELECT `id`, `recurring_series_id` FROM `sessions` WHERE `r
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">New Date</label>
-          <input type="date" class="form-input" name="session_date" id="reschedule_session_date" required />
+          <input type="date" class="form-input" name="session_date" id="reschedule_session_date" min="<?php echo date('Y-m-d'); ?>" required />
         </div>
         <div class="form-group">
           <label class="form-label" for="reschedule_session_time">New Time</label>
@@ -249,6 +249,7 @@ foreach ($db->query('SELECT `id`, `recurring_series_id` FROM `sessions` WHERE `r
 <script>
 var calData = JSON.parse(document.getElementById('cal-data').textContent);
 var calSessionsData = calData.sessions || {};
+var calBlockedData = calData.blocked || {};
 var calMonthName = calData.monthName || '';
 
 // The grid can change month under this page without reloading it, so the data
@@ -256,50 +257,17 @@ var calMonthName = calData.monthName || '';
 document.addEventListener('calendar:monthchanged', function (e) {
   calData = e.detail || {};
   calSessionsData = calData.sessions || {};
+  calBlockedData = calData.blocked || {};
   calMonthName = calData.monthName || calMonthName;
 });
 
-function showDaySessions(day) {
-  var sessions = calSessionsData[day];
-  if (!sessions) return;
-  document.getElementById('daySessionsTitle').textContent = 'Sessions — ' + calMonthName + ' ' + day;
-  var html = '';
-  sessions.forEach(function(s) {
-    html += '<div class="session-row is-plain">';
-    html += '<div class="session-row-main">';
-    html += '<div class="session-row-icon ' + (s.session_type === 'online' ? 'teal' : 'amber') + '"><i class="bi ' + (s.session_type === 'online' ? 'bi-camera-video' : 'bi-geo-alt') + '"></i></div>';
-    html += '<div class="session-row-body">';
-    html += '<div class="session-row-name">' + escapeHtml(s.client_name || 'Unknown') + '</div>';
-    var startsAt = s.start_time.split(' ')[1].substring(0, 5);
-    var mins = Math.round((Date.parse(s.end_time.replace(' ', 'T')) - Date.parse(s.start_time.replace(' ', 'T'))) / 60000);
-    html += '<div class="session-row-meta">' + startsAt + ' · ' + mins + ' min · <span class="badge badge-' + s.status + '">' + s.status + '</span></div>';
-    html += '</div>';
-    html += '</div>';
-    html += '<div class="session-row-controls">';
-    html += '<select class="status-select" aria-label="Session status" onchange="updateSessionStatus(' + s.id + ', this.value)">';
-    html += '<option value="pending"' + (s.status === 'pending' ? ' selected' : '') + '>Pending</option>';
-    html += '<option value="confirmed"' + (s.status === 'confirmed' ? ' selected' : '') + '>Confirmed</option>';
-    html += '<option value="completed"' + (s.status === 'completed' ? ' selected' : '') + '>Completed</option>';
-    html += '<option value="cancelled"' + (s.status === 'cancelled' ? ' selected' : '') + '>Cancelled</option>';
-    html += '</select>';
-    html += '<button class="btn btn-icon" onclick="openRescheduleModal(' + s.id + ', \'' + s.start_time.split(' ')[0] + '\', \'' + startsAt + '\')" title="Reschedule"><i class="bi bi-pencil-square"></i></button>';
-    html += '</div>';
-    html += '</div>';
-  });
-  // A day that already holds sessions is the most likely day to want another
-  // one on, so the booking action lives right here rather than only behind the
-  // panel header button.
-  html += '<div class="modal-day-book">';
-  html += '<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById(\'daySessionsModal\').classList.remove(\'open\'); openNewSessionModal(calendarDate(' + day + '));">';
-  html += '<i class="bi bi-plus"></i> Book on this day</button>';
-  html += '</div>';
+// showDaySessions(), renderAvailability(), blockSlot() and unblockSlot() now
+// live in the shared booking modal (admin/includes/session-booking-modal.php),
+// so the dashboard gets exactly the same day-management view rather than a
+// copy of it. They read calSessionsData/calBlockedData/calMonthName, which
+// this page keeps updated above.
 
-  document.getElementById('daySessionsContent').innerHTML = html;
-  document.getElementById('daySessionsModal').classList.add('open');
-}
-
-// createSession() and the repeat toggle now live in the shared booking modal,
-// so the dashboard gets exactly the same behaviour rather than a copy of it.
+// createSession() and the repeat toggle also live in the shared booking modal.
 
 // ─── Series scope ────────────────────────────────────────────────────────
 //

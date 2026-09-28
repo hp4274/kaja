@@ -604,6 +604,25 @@ try {
         }
     );
 
+    // ---- form_templates ----------------------------------------------
+    // A human name for a form_questions version -- "Depression intake",
+    // "Anxiety intake" -- so a version stops being a bare number an admin
+    // has to remember the meaning of. One row per version that exists;
+    // seeded lazily by formTemplateName()/renameFormTemplate() rather than
+    // here, since a version this migration has never heard of can still be
+    // created later by publishNewFormVersion().
+    step('create table `form_templates`', !tableExists($db, 'form_templates'),
+        function (PDO $db) {
+            $db->exec("
+                CREATE TABLE `form_templates` (
+                    `form_version` INT NOT NULL PRIMARY KEY,
+                    `name`         VARCHAR(120) NOT NULL,
+                    `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+        }
+    );
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo "MIGRATION FAILED\n" . $e->getMessage() . "\n";

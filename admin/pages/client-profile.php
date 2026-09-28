@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../includes/client-payments.php';
 require_once __DIR__ . '/../../includes/client-documents.php';
 require_once __DIR__ . '/../../includes/session-repo.php';
 require_once __DIR__ . '/../../includes/booking-slots.php';
+require_once __DIR__ . '/../../includes/form-builder.php';
 
 $db = getDbConnection();
 $clientId = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -86,6 +87,14 @@ $nextSession->execute([':cid'=>$clientId]);
 $nextSession = $nextSession->fetch(PDO::FETCH_ASSOC);
 
 $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_name'],0,1));
+
+// How many times this client has actually sent a completed questionnaire
+// back, across every named form variant they were ever asked to fill.
+$submittedFormsStmt = $db->prepare('SELECT COUNT(*) FROM `intake_links` WHERE `client_id` = :id AND `status` = "submitted"');
+$submittedFormsStmt->execute([':id' => $clientId]);
+$submittedFormsCount = (int) $submittedFormsStmt->fetchColumn();
+
+$formTemplatesAvailable = formTemplates($db);
 ?>
 
 <!-- Back link -->
@@ -129,7 +138,7 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
   <button class="profile-tab" onclick="showProfileTab('sessions')">Sessions (<?php echo count($sessions); ?>)</button>
   <button class="profile-tab" onclick="showProfileTab('notes')">Notes (<?php echo count($notes); ?>)</button>
   <button class="profile-tab" onclick="showProfileTab('fees')">Fees (₹<?php echo number_format($totalFees,2); ?>)</button>
-  <button class="profile-tab" onclick="showProfileTab('intake')">Intake Data</button>
+  <button class="profile-tab" onclick="showProfileTab('intake')">Intake Data (<?php echo $submittedFormsCount; ?>)</button>
   <button class="profile-tab" onclick="showProfileTab('profile')">Profile</button>
   <button class="profile-tab" onclick="showProfileTab('documents')">Documents (<?php echo count($documents); ?>)</button>
 </div>
@@ -445,6 +454,12 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
 
 <!-- Intake Data Tab -->
 <div class="profile-tab-content" id="tab-intake">
+  <div class="subsection-head">
+    <h3 class="subsection-title">Intake form<?php echo $submittedFormsCount > 0 ? ' (submitted ' . $submittedFormsCount . 'x)' : ''; ?></h3>
+    <?php if (!empty($client['lead_id'])): ?>
+      <button class="btn btn-primary btn-sm" onclick="openResendIntakeModal()"><i class="bi bi-envelope-arrow-up"></i> Send intake form again</button>
+    <?php endif; ?>
+  </div>
   <?php if (!$intakeRecord): ?>
     <div class="empty-state">
       <i class="bi bi-clipboard-x"></i>
@@ -479,6 +494,32 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
       </div>
     </div>
   <?php endif; ?>
+</div>
+
+<!-- Resend Intake Modal -->
+<div class="modal-overlay" id="resendIntakeModal">
+  <div class="modal-box is-narrow">
+    <div class="modal-header">
+      <div class="modal-title">Send which intake form?</div>
+      <button class="modal-close" onclick="document.getElementById('resendIntakeModal').classList.remove('open')">&times;</button>
+    </div>
+    <form onsubmit="submitResendIntake(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="resendFormVersion">Intake form</label>
+          <select class="form-select" id="resendFormVersion" name="form_version">
+            <?php foreach ($formTemplatesAvailable as $t): ?>
+              <option value="<?php echo $t['version']; ?>" <?php echo $t['is_default'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($t['name']); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('resendIntakeModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-send-check"></i> Send</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Profile Tab -->
@@ -544,6 +585,18 @@ $initials = strtoupper(substr($client['first_name'],0,1) . substr($client['last_
         documents all stay in the database — there is no hard delete.
       </p>
       <button class="btn btn-danger" onclick="archiveClientRecord()"><i class="bi bi-archive"></i> Archive this client</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><div class="panel-title">Delete</div></div>
+    <div class="panel-body">
+      <p class="prose">
+        Deleting removes this client and every intake form they submitted for good. Their sessions,
+        notes, fees and documents go with it. This cannot be undone — archive instead if you just
+        want them out of the lists.
+      </p>
+      <button class="btn btn-danger" onclick="deleteClientRecord()"><i class="bi bi-trash"></i> Delete this client</button>
     </div>
   </div>
 </div>
@@ -697,7 +750,7 @@ foreach ($smStmt as $srow) {
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">New Date</label>
-          <input type="date" class="form-input" name="session_date" id="reschedule_session_date" required />
+          <input type="date" class="form-input" name="session_date" id="reschedule_session_date" min="<?php echo date('Y-m-d'); ?>" required />
         </div>
         <div class="form-group">
           <label class="form-label" for="reschedule_session_time">New Time</label>
@@ -1052,6 +1105,41 @@ function archiveClientRecord() {
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.success) { showToast('Client archived'); setTimeout(function(){ location.href='index.php?page=clients'; }, 700); }
+      else { showToast(d.error || 'Error', 'error'); }
+    })
+    .catch(function(){ showToast('Network error','error'); });
+}
+
+function openResendIntakeModal() {
+  document.getElementById('resendIntakeModal').classList.add('open');
+}
+
+function submitResendIntake(e) {
+  e.preventDefault();
+  var fd = new FormData();
+  fd.append('action', 'resend_intake');
+  fd.append('client_id', clientId);
+  fd.append('form_version', document.getElementById('resendFormVersion').value);
+  document.getElementById('resendIntakeModal').classList.remove('open');
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Intake link sent'); }
+      else { showToast(d.error || 'Error', 'error'); }
+    })
+    .catch(function() { showToast('Network error', 'error'); });
+}
+
+function deleteClientRecord() {
+  if (!confirm('Delete this client permanently? Their intake data, sessions, notes, fees and documents are all removed. This cannot be undone.')) return;
+  if (!confirm('Are you sure? This cannot be undone.')) return;
+  var fd = new FormData();
+  fd.append('action', 'delete');
+  fd.append('client_id', clientId);
+  fetch('api/clients.php', { method:'POST', body: fd })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.success) { showToast('Client deleted'); setTimeout(function(){ location.href='index.php?page=clients'; }, 700); }
       else { showToast(d.error || 'Error', 'error'); }
     })
     .catch(function(){ showToast('Network error','error'); });

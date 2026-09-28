@@ -127,34 +127,39 @@ try {
 
         case 'publish_version':
             $from = intval($_POST['from_version'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
 
             try {
-                $new = publishNewFormVersion($db, $from);
+                $new = publishNewFormVersion($db, $from, $name !== '' ? $name : null);
             } catch (Throwable $e) {
                 echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;
             }
 
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_version_published',:d,'form',:rid)")
-               ->execute([':d' => 'Published intake form version ' . $new . ' from ' . $from, ':rid' => $new]);
+               ->execute([':d' => 'Created intake form "' . ($name !== '' ? $name : formTemplateName($db, $new)) . '" from version ' . $from, ':rid' => $new]);
 
-            echo json_encode(['success' => true, 'version' => $new]);
+            echo json_encode(['success' => true, 'version' => $new, 'name' => formTemplateName($db, $new)]);
             break;
 
-        case 'set_live_version':
+        case 'rename_template':
             $version = intval($_POST['version'] ?? 0);
+            $name    = trim($_POST['name'] ?? '');
 
-            if (!formVersionExists($db, $version)) {
-                echo json_encode(['success' => false, 'error' => 'That version does not exist']);
+            if (!$version || !formVersionExists($db, $version)) {
+                echo json_encode(['success' => false, 'error' => 'That form does not exist']);
                 exit;
             }
 
-            // Only new links pick this up. issueIntakeToken pins the version
-            // onto each row at send time, so nothing already in an inbox moves.
-            setSetting('intake_form_version', (string) $version);
+            try {
+                setFormTemplateName($db, $version, $name);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => publicError($e)]);
+                exit;
+            }
 
-            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_version_live',:d,'form',:rid)")
-               ->execute([':d' => 'New intake links now use form version ' . $version, ':rid' => $version]);
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('form_renamed',:d,'form',:rid)")
+               ->execute([':d' => 'Renamed intake form version ' . $version . ' to "' . $name . '"', ':rid' => $version]);
 
             echo json_encode(['success' => true]);
             break;

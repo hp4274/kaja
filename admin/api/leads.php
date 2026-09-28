@@ -160,9 +160,25 @@ try {
                 exit;
             }
 
+            // Which questionnaire to send this lead. Optional: an admin who does
+            // not pick one gets whatever Settings/the Form Builder has live,
+            // exactly as before this existed. Validated against versions that
+            // actually have questions behind them -- a stray value here would
+            // pin a link to a schema that renders nothing.
+            $requestedVersion = isset($_POST['form_version']) ? trim($_POST['form_version']) : '';
+            $formVersion = null;
+            if ($requestedVersion !== '') {
+                require_once __DIR__ . '/../../includes/form-builder.php';
+                $candidate = (int) $requestedVersion;
+                $known = array_unique(array_merge(intakeSchemaVersions(), formVersions($db)));
+                if (in_array($candidate, $known, true)) {
+                    $formVersion = $candidate;
+                }
+            }
+
             try {
                 $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
-                $result = confirmLead($db, $id, $userId);
+                $result = confirmLead($db, $id, $userId, $formVersion);
             } catch (Throwable $e) {
                 echo json_encode(['success'=>false,'error'=>publicError($e)]);
                 exit;
@@ -203,6 +219,25 @@ try {
                 }
             }
             exit;
+
+        case 'delete':
+            $id   = intval($_POST['id'] ?? 0);
+            $lead = $id ? fetchLead($db, $id) : null;
+            if ($lead === null) {
+                echo json_encode(['success'=>false,'error'=>'Lead not found']);
+                exit;
+            }
+
+            // intake_links and lead_notes cascade off the FK on lead_id; a
+            // client already made from this lead just loses the pointer back.
+            $db->prepare("UPDATE `clients` SET `lead_id` = NULL WHERE `lead_id` = :id")->execute([':id' => $id]);
+            $db->prepare("DELETE FROM `leads` WHERE `id` = :id")->execute([':id' => $id]);
+
+            $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('lead_deleted',:d,'lead',NULL)")
+               ->execute([':d' => "Lead {$lead['name']} ({$lead['email']}) deleted"]);
+
+            echo json_encode(['success'=>true]);
+            break;
 
         case 'convert_intake':
             $intakeId = intval($_POST['id'] ?? 0);

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/client-repo.php';
 require_once __DIR__ . '/../../includes/client-status.php';
+require_once __DIR__ . '/../../includes/pagination.php';
 
 $db      = getDbConnection();
 $counts  = clientStatusCounts($db);
@@ -15,6 +16,9 @@ $filters = [
 $search       = $filters['q'];
 $statusFilter = $filters['status'];
 $clients      = fetchClients($db, $filters);
+
+$pager   = paginate($clients, 10);
+$clients = $pager['rows'];
 
 /** Rebuild the query string with one key changed, for the tabs and sort links. */
 function clientsUrl(array $filters, array $overrides = []) {
@@ -57,6 +61,7 @@ function clientsUrl(array $filters, array $overrides = []) {
         <table class="data-table">
           <thead>
             <tr>
+              <th class="th-num">#</th>
               <th>
                 <a href="<?php echo clientsUrl($filters, ['sort' => 'name', 'dir' => ($filters['sort'] === 'name' && $filters['dir'] === 'asc') ? 'desc' : 'asc']); ?>" class="th-sort">
                   Client <i class="bi bi-arrow-down-up"></i>
@@ -76,8 +81,12 @@ function clientsUrl(array $filters, array $overrides = []) {
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($clients as $c): ?>
+            <?php
+            // Numbered against the whole filtered set: page 2 at 10/page starts at 11.
+            $rowNum = ($pager['page'] - 1) * $pager['perPage'] + 1;
+            foreach ($clients as $c): ?>
               <tr class="client-item" data-name="<?php echo htmlspecialchars(strtolower($c['first_name'] . ' ' . $c['last_name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($c['email'])); ?>">
+                <td class="td-nowrap td-muted"><?php echo $rowNum++; ?></td>
                 <td>
                   <div class="cell-person">
                     <div class="avatar-sm"><?php echo strtoupper(substr($c['first_name'],0,1) . substr($c['last_name'],0,1)); ?></div>
@@ -98,13 +107,16 @@ function clientsUrl(array $filters, array $overrides = []) {
                     );
                     echo date('d M Y', $lastActivity);
                 ?></td>
-                <td>
-                  <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
+                <td class="td-actions">
+                  <div class="row-actions">
+                    <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteClient(<?php echo $c['id']; ?>, '<?php echo htmlspecialchars(addslashes($c['first_name'] . ' ' . $c['last_name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>
             <tr id="clients-no-matches" class="no-matches" style="display:none;">
-              <td colspan="8">
+              <td colspan="9">
                 <i class="bi bi-search"></i>
                 <p>No clients match your search criteria</p>
               </td>
@@ -114,7 +126,8 @@ function clientsUrl(array $filters, array $overrides = []) {
       </div>
       
       <div class="grid-view-container">
-        <?php foreach ($clients as $c): 
+        <?php $gridRowNum = ($pager['page'] - 1) * $pager['perPage'] + 1; ?>
+        <?php foreach ($clients as $c):
           $initials = strtoupper(substr($c['first_name'],0,1) . substr($c['last_name'],0,1));
           $fullName = htmlspecialchars($c['first_name'] . ' ' . $c['last_name']);
           $concernText = htmlspecialchars($c['concern'] ?: '-');
@@ -123,6 +136,7 @@ function clientsUrl(array $filters, array $overrides = []) {
             <div class="grid-card-inner">
               <div class="grid-card-header">
                 <div class="grid-card-title">
+                  <span class="grid-card-num">#<?php echo $gridRowNum++; ?></span>
                   <div class="avatar-sm"><?php echo $initials; ?></div>
                   <span><?php echo $fullName; ?></span>
                 </div>
@@ -147,7 +161,10 @@ function clientsUrl(array $filters, array $overrides = []) {
             </div>
             <div class="grid-card-footer">
               <span class="grid-card-label"><i class="bi bi-calendar3"></i> <?php echo $c['session_count']; ?> Sessions</span>
-              <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
+              <div class="row-actions">
+                <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
+                <button type="button" class="btn btn-danger btn-sm" onclick="deleteClient(<?php echo $c['id']; ?>, '<?php echo htmlspecialchars(addslashes($c['first_name'] . ' ' . $c['last_name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
+              </div>
             </div>
           </div>
         <?php endforeach; ?>
@@ -156,11 +173,28 @@ function clientsUrl(array $filters, array $overrides = []) {
           <p>No clients match your search criteria</p>
         </div>
       </div>
+
+      <?php echo paginationHtml($pager, function ($ov) use ($filters) { return clientsUrl($filters, $ov); }); ?>
     <?php endif; ?>
   </div>
 </div>
 
 <script>
+function deleteClient(id, name) {
+  if (!confirm('Delete ' + name + ' permanently? Their intake data, sessions, notes, fees and documents are all removed.')) return;
+  if (!confirm('Are you sure? This cannot be undone.')) return;
+  var fd = new FormData();
+  fd.append('action', 'delete');
+  fd.append('client_id', id);
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Client deleted'); setTimeout(function() { location.reload(); }, 700); }
+      else { showToast(d.error || 'Error', 'error'); }
+    })
+    .catch(function() { showToast('Network error', 'error'); });
+}
+
 (function() {
   const page = 'clients';
   const container = document.querySelector('.panel');

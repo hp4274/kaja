@@ -19,7 +19,7 @@ require_once __DIR__ . '/intake-token.php';
 require_once __DIR__ . '/lead-status.php';
 require_once __DIR__ . '/lead-repo.php';
 
-function confirmLead(PDO $db, $leadId, $userId = null) {
+function confirmLead(PDO $db, $leadId, $userId = null, $formVersion = null) {
     $leadId = (int) $leadId;
     $lead   = fetchLead($db, $leadId);
 
@@ -69,7 +69,7 @@ function confirmLead(PDO $db, $leadId, $userId = null) {
         // result into expires_at using MySQL's clock. Changing the setting
         // later must not move a link already sitting in someone's inbox,
         // which is why the deadline is stored rather than computed at read.
-        $issued = issueIntakeToken($db, $leadId, $clientId);
+        $issued = issueIntakeToken($db, $leadId, $clientId, $formVersion);
 
         $db->prepare('UPDATE `leads` SET `status`="confirmed", `client_id`=:cid WHERE `id`=:id')
            ->execute([':cid' => $clientId, ':id' => $leadId]);

@@ -1,11 +1,19 @@
 <?php
 require_once __DIR__ . '/../../includes/lead-repo.php';
 require_once __DIR__ . '/../../includes/lead-status.php';
+require_once __DIR__ . '/../../includes/pagination.php';
+require_once __DIR__ . '/../../includes/settings.php';
+require_once __DIR__ . '/../../includes/form-builder.php';
 
 $db = getDbConnection();
 
 $counts  = leadStatusCounts($db);
 $sources = leadSources($db);
+
+// Which questionnaire a lead can be sent -- named variants from the Form
+// Builder (formTemplates() falls back to "Version N" for one nobody has
+// renamed), so the picker below reads "Depression intake", not "V3".
+$formTemplatesAvailable = formTemplates($db);
 
 $filters = [
     'q'         => isset($_GET['q']) ? trim($_GET['q']) : '',
@@ -25,6 +33,12 @@ if (!isset($_GET['status']) && !isset($_GET['q']) && $counts['new'] > 0) {
 $statusFilter = $filters['status'];
 $search       = $filters['q'];
 $leads        = fetchLeads($db, $filters);
+
+// Client-side search/sort (below) run over whatever page is on screen, same
+// as every other paginated list here -- searching across pages would need a
+// server round trip these tables don't otherwise make.
+$pager = paginate($leads, 10);
+$leads = $pager['rows'];
 
 /** Rebuild the current query string with one key changed — used by the tabs and sort links. */
 function leadsUrl(array $filters, array $overrides = []) {
@@ -113,6 +127,7 @@ function leadsUrl(array $filters, array $overrides = []) {
         <table class="data-table">
           <thead>
             <tr>
+              <th class="th-num">#</th>
               <th class="th-check"><input type="checkbox" id="lead-select-all" title="Select all" /></th>
               <?php
               // The header has to say which column is sorted and which way.
@@ -151,6 +166,9 @@ function leadsUrl(array $filters, array $overrides = []) {
           </thead>
           <tbody>
             <?php
+            // Numbered against the whole filtered set, not just this page --
+            // row 11 on page 2 (10/page) reads as 11, not a page that restarts at 1.
+            $rowNum = ($pager['page'] - 1) * $pager['perPage'] + 1;
             foreach ($leads as $l):
               $ls = ($l['status'] ?? '') ?: 'new';
               // A confirmed lead already has a client — pending, awaiting its
@@ -159,6 +177,7 @@ function leadsUrl(array $filters, array $overrides = []) {
               $isClosed  = (leadStatusIsTerminal($ls) || $ls === 'converted');
             ?>
               <tr id="lead-row-<?php echo $l['id']; ?>" class="lead-item" data-created="<?php echo htmlspecialchars($l['created_at']); ?>" data-status="<?php echo htmlspecialchars($ls); ?>" data-name="<?php echo htmlspecialchars(strtolower($l['name'])); ?>" data-email="<?php echo htmlspecialchars(strtolower($l['email'])); ?>">
+                <td class="td-nowrap td-muted"><?php echo $rowNum++; ?></td>
                 <td><input type="checkbox" class="lead-select" value="<?php echo $l['id']; ?>" /></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($l['created_at'])); ?></td>
                 <td class="td-name"><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></td>
@@ -179,9 +198,6 @@ function leadsUrl(array $filters, array $overrides = []) {
                 </td>
                 <td class="td-actions">
                   <div class="row-actions">
-                    <?php if ($hasClient): ?>
-                      <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
-                    <?php endif; ?>
                     <?php if (!$isClosed): ?>
                       <button class="btn btn-success btn-sm" data-lead-contact="<?php echo $l['id']; ?>" onclick="updateLeadStatus(<?php echo $l['id']; ?>, 'contacted')" title="Mark as contacted" <?php echo $ls === 'new' ? '' : 'hidden'; ?>>
                         <i class="bi bi-telephone"></i> Contact
@@ -193,23 +209,21 @@ function leadsUrl(array $filters, array $overrides = []) {
                         <i class="bi bi-x-lg"></i> Reject
                       </button>
                     <?php endif; ?>
-                    <button class="btn btn-icon" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message">
-                      <i class="bi bi-chat-text"></i>
-                    </button>
+                    <?php if ($hasClient): ?>
+                      <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
+                    <?php else: ?>
+                      <!-- No client record yet: opens the same drawer the lead's
+                           own name opens -- their submitted details, nothing else,
+                           since there is no client profile to show. -->
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><i class="bi bi-eye"></i> View Client</button>
+                    <?php endif; ?>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteLead(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
                   </div>
-                </td>
-              </tr>
-              <tr id="msg-row-<?php echo $l['id']; ?>" style="display:none;">
-                <!-- A token, not a fixed grey: a hardcoded near-white here is
-                     a white band across the page in the dark theme. -->
-                <td colspan="9" class="msg-cell">
-                  <strong class="msg-label">Message</strong>
-                  <p class="msg-body"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
                 </td>
               </tr>
             <?php endforeach; ?>
             <tr id="leads-no-matches" class="no-matches" style="display:none;">
-              <td colspan="9">
+              <td colspan="10">
                 <i class="bi bi-search"></i>
                 <p>No leads match your search criteria</p>
               </td>
@@ -219,7 +233,8 @@ function leadsUrl(array $filters, array $overrides = []) {
       </div>
       
       <div class="grid-view-container">
-        <?php foreach ($leads as $l): 
+        <?php $gridRowNum = ($pager['page'] - 1) * $pager['perPage'] + 1; ?>
+        <?php foreach ($leads as $l):
           $prefDateStr = '';
           if ($l['preferred_date']) $prefDateStr .= date('d M Y', strtotime($l['preferred_date']));
           if ($l['preferred_time']) $prefDateStr .= ' at ' . date('h:i A', strtotime($l['preferred_time']));
@@ -235,7 +250,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                   <i class="bi bi-person-badge"></i>
                   <span><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></span>
                 </div>
-                <div class="grid-card-date"><?php echo date('d M Y', strtotime($l['created_at'])); ?></div>
+                <div class="grid-card-date">#<?php echo $gridRowNum++; ?> &middot; <?php echo date('d M Y', strtotime($l['created_at'])); ?></div>
               </div>
               <div class="grid-card-body">
                 <div class="grid-card-item" title="Email">
@@ -266,19 +281,15 @@ function leadsUrl(array $filters, array $overrides = []) {
                   <?php endif; ?>
                 </div>
                 
-                <!-- Card Message Collapsible -->
-                <div id="grid-msg-<?php echo $l['id']; ?>" class="msg-panel" style="display:none;">
-                  <strong class="msg-label">Message</strong>
-                  <p class="msg-body"><?php echo nl2br(htmlspecialchars($l['message'] ?? 'No message')); ?></p>
-                </div>
               </div>
             </div>
             <div class="grid-card-footer">
-              <button class="btn btn-icon" onclick="toggleMessage(<?php echo $l['id']; ?>)" title="View message">
-                <i class="bi bi-chat-text"></i>
-              </button>
               <?php if ($hasClient): ?>
                 <a href="index.php?page=client-profile&id=<?php echo $l['client_id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> View Client</a>
+              <?php else: ?>
+                <!-- No client record yet: opens the same drawer the lead's own
+                     name opens -- their submitted details, nothing else. -->
+                <button type="button" class="btn btn-ghost btn-sm" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><i class="bi bi-eye"></i> View Client</button>
               <?php endif; ?>
               <?php if (!$isClosed): ?>
                 <div class="row-actions">
@@ -293,6 +304,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                   </button>
                 </div>
               <?php endif; ?>
+              <button type="button" class="btn btn-danger btn-sm" onclick="deleteLead(<?php echo $l['id']; ?>, '<?php echo htmlspecialchars(addslashes($l['name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
             </div>
           </div>
         <?php endforeach; ?>
@@ -301,6 +313,8 @@ function leadsUrl(array $filters, array $overrides = []) {
           <p>No leads match your search criteria</p>
         </div>
       </div>
+
+      <?php echo paginationHtml($pager, function ($ov) use ($filters) { return leadsUrl($filters, $ov); }); ?>
     <?php endif; ?>
   </div>
 </div>
@@ -321,9 +335,9 @@ function leadsUrl(array $filters, array $overrides = []) {
     <section class="lead-drawer-section">
       <h3>Actions</h3>
       <div class="lead-drawer-actions">
-        <select class="status-select" id="drawer-status"></select>
         <button class="btn btn-primary btn-sm" id="drawer-confirm"><i class="bi bi-send-check"></i> Accept</button>
         <button class="btn btn-danger btn-sm" id="drawer-reject"><i class="bi bi-x-lg"></i> Reject</button>
+        <button class="btn btn-danger btn-sm" id="drawer-delete"><i class="bi bi-trash"></i> Delete</button>
       </div>
     </section>
 
@@ -348,14 +362,36 @@ function leadsUrl(array $filters, array $overrides = []) {
   </div>
 </aside>
 
+<!-- Which intake questionnaire to send, asked only when there is a real
+     choice: with one form on file this modal never opens and Accept just
+     accepts, same as before named variants existed. -->
+<div class="modal-overlay" id="acceptFormModal">
+  <div class="modal-box is-narrow">
+    <div class="modal-header">
+      <div class="modal-title">Send which intake form?</div>
+      <button class="modal-close" onclick="closeAcceptFormModal()">&times;</button>
+    </div>
+    <form onsubmit="submitAcceptForm(event)">
+      <div class="modal-body">
+        <p class="prose" id="acceptFormLeadName"></p>
+        <div class="form-group">
+          <label class="form-label" for="acceptFormVersion">Intake form</label>
+          <select class="form-select" id="acceptFormVersion" name="form_version">
+            <?php foreach ($formTemplatesAvailable as $t): ?>
+              <option value="<?php echo $t['version']; ?>" <?php echo $t['is_default'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($t['name']); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeAcceptFormModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-send-check"></i> Accept &amp; send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-function toggleMessage(id) {
-  var row = document.getElementById('msg-row-' + id);
-  if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
-  
-  var gridMsg = document.getElementById('grid-msg-' + id);
-  if (gridMsg) gridMsg.style.display = gridMsg.style.display === 'none' ? 'block' : 'none';
-}
 
 var LEAD_STATUSES = ['new', 'contacted', 'confirmed', 'converted', 'rejected'];
 
@@ -435,8 +471,6 @@ function updateLeadStatus(id, status) {
             row.style.transform = 'translateX(-15px)';
             setTimeout(function() {
               row.style.display = 'none';
-              const msgRow = document.getElementById('msg-row-' + id);
-              if (msgRow) msgRow.style.display = 'none';
               checkEmptyState();
             }, 300);
           }
@@ -465,14 +499,44 @@ function updateLeadStatus(id, status) {
 
 // Named confirmLeadAction, not confirmLead: window.confirm is what the dialog
 // below calls, and shadowing it would break every other confirm on the page.
+// Which lead the accept-form modal is currently open for.
+var ACCEPT_FORM_COUNT = <?php echo count($formTemplatesAvailable); ?>;
+var acceptPending = null;
+
 function confirmLeadAction(id, name) {
-  // No dialog. The button says Accept, the toast says what happened, and the
-  // lead's own row shows the new state a moment later -- a prompt in between
-  // is a second click for a decision that was already made by the first.
+  // A real choice only exists with more than one intake form on file --
+  // otherwise this asks a question with one possible answer, which is not a
+  // question. In that case Accept still just accepts, exactly as before
+  // named form variants existed.
+  if (ACCEPT_FORM_COUNT > 1) {
+    acceptPending = { id: id, name: name };
+    document.getElementById('acceptFormLeadName').textContent = 'Sending to ' + name + '.';
+    document.getElementById('acceptFormModal').classList.add('open');
+    return;
+  }
+  doConfirmLead(id, name, null);
+}
+
+function closeAcceptFormModal() {
+  document.getElementById('acceptFormModal').classList.remove('open');
+  acceptPending = null;
+}
+
+function submitAcceptForm(e) {
+  e.preventDefault();
+  if (!acceptPending) return;
+  var version = document.getElementById('acceptFormVersion').value;
+  document.getElementById('acceptFormModal').classList.remove('open');
+  doConfirmLead(acceptPending.id, acceptPending.name, version);
+  acceptPending = null;
+}
+
+function doConfirmLead(id, name, formVersion) {
   var fd = new FormData();
   fd.append('action', 'confirm');
   fd.append('id', id);
-  
+  if (formVersion !== null) { fd.append('form_version', formVersion); }
+
   // Fade out row/card immediately to feel fast
   const row = document.getElementById('lead-row-' + id);
   const card = document.getElementById('lead-card-' + id);
@@ -506,11 +570,33 @@ function confirmLeadAction(id, name) {
         showToast(data.error || 'Error', 'error');
       }
     })
-    .catch(function() { 
+    .catch(function() {
       if (row) row.style.opacity = '1';
       if (card) card.style.opacity = '1';
-      showToast('Network error', 'error'); 
+      showToast('Network error', 'error');
     });
+}
+
+function deleteLead(id, name) {
+  if (!confirm('Delete the lead "' + name + '" permanently? This also removes their intake link history.')) return;
+  if (!confirm('Are you sure? This cannot be undone.')) return;
+
+  var fd = new FormData();
+  fd.append('action', 'delete');
+  fd.append('id', id);
+
+  fetch('api/leads.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('Lead deleted');
+        closeLeadDrawer();
+        setTimeout(function() { location.reload(); }, 500);
+      } else {
+        showToast(data.error || 'Error', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error', 'error'); });
 }
 
 function checkEmptyState() {
@@ -570,16 +656,6 @@ function renderLeadDrawer(data) {
     dup.hidden = true;
   }
 
-  var sel = document.getElementById('drawer-status');
-  sel.innerHTML = '';
-  data.allowed_statuses.forEach(function(opt) {
-    var o = document.createElement('option');
-    o.value = opt.value;
-    o.textContent = opt.label;
-    if (opt.value === lead.status) o.selected = true;
-    sel.appendChild(o);
-  });
-
   var closed = (lead.status === 'rejected' || lead.status === 'converted');
   document.getElementById('drawer-confirm').hidden = (lead.status !== 'new' && lead.status !== 'contacted');
   document.getElementById('drawer-reject').hidden  = closed;
@@ -627,14 +703,14 @@ function renderDrawerNotes(notes) {
     if (e.key === 'Escape' && DRAWER_LEAD_ID !== null) closeLeadDrawer();
   });
 
-  document.getElementById('drawer-status').addEventListener('change', function() {
-    updateLeadStatus(DRAWER_LEAD_ID, this.value);
-  });
   document.getElementById('drawer-reject').addEventListener('click', function() {
     updateLeadStatus(DRAWER_LEAD_ID, 'rejected');
   });
   document.getElementById('drawer-confirm').addEventListener('click', function() {
     confirmLeadAction(DRAWER_LEAD_ID, document.getElementById('drawer-name').textContent);
+  });
+  document.getElementById('drawer-delete').addEventListener('click', function() {
+    deleteLead(DRAWER_LEAD_ID, document.getElementById('drawer-name').textContent);
   });
 
   document.getElementById('drawer-note-form').addEventListener('submit', function(e) {
@@ -889,11 +965,6 @@ function renderDrawerNotes(notes) {
     rows.sort(function (a, b) { return compare(a, b, column, dir); });
     rows.forEach(function (row) {
       tbody.appendChild(row);
-      // Each lead has a hidden message row directly after it. Moving the lead
-      // without it would leave the message attached to whichever lead landed
-      // in that slot -- the wrong message under the wrong name.
-      var msg = document.getElementById('msg-row-' + row.id.replace('lead-row-', ''));
-      if (msg) tbody.appendChild(msg);
     });
 
     var cards = document.querySelector('.grid-view-container');

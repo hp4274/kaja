@@ -58,10 +58,13 @@ function intakeFormUrl($token) {
  * $clientId may be null: the short-intake path knows only an email address, so
  * there is no client row to point at until the form actually comes back.
  */
-function issueIntakeToken(PDO $db, $leadId, $clientId = null) {
+function issueIntakeToken(PDO $db, $leadId, $clientId = null, $formVersion = null) {
     $token       = bin2hex(random_bytes(32));
     $expiryDays  = max(1, getSettingInt('intake_token_expiry_days'));
-    $formVersion = max(1, getSettingInt('intake_form_version'));
+    // Caller may pin a specific version (the admin picking one to send to this
+    // lead); otherwise fall back to whichever version Settings/the Form
+    // Builder currently has marked live.
+    $formVersion = $formVersion !== null ? max(1, (int) $formVersion) : max(1, getSettingInt('intake_form_version'));
 
     // expires_at is computed by the DATABASE, not PHP.
     //

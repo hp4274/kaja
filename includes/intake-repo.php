@@ -136,7 +136,7 @@ function markIntakeLinkReminded(PDO $db, $linkId) {
 /** The admin list: every link with the person it belongs to. */
 function intakeLinksList(PDO $db, $status = '') {
     $sql = '
-        SELECT il.*, l.`name`, l.`email`
+        SELECT il.*, l.`name`, l.`email`, l.`client_id`
         FROM `intake_links` il
         JOIN `leads` l ON l.`id` = il.`lead_id`
     ';

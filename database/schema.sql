@@ -330,6 +330,14 @@ CREATE TABLE IF NOT EXISTS `form_questions` (
     KEY `idx_version` (`form_version`)
 ) ENGINE=InnoDB;
 
+-- A human name for a form_questions version ("Depression intake", "Anxiety
+-- intake") so a variant is not just a bare number. One row per version.
+CREATE TABLE IF NOT EXISTS `form_templates` (
+    `form_version` INT NOT NULL PRIMARY KEY,
+    `name`         VARCHAR(120) NOT NULL,
+    `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- 15. Intake Links Table (tokenised, single-use intake invitations)
 -- expires_at and form_version are PINNED at send time: changing the matching
 -- setting later must not alter links already sitting in someone's inbox.
@@ -369,6 +377,16 @@ CREATE TABLE IF NOT EXISTS `intake_links` (
 -- A holiday is a date, not a session, so it gets its own table rather than a
 -- placeholder row in `sessions`. The date is the primary key: a day is either
 -- closed or it is not, and marking it twice must not make two of it.
+CREATE TABLE IF NOT EXISTS `blocked_slots` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `slot_date` DATE NOT NULL,
+    `slot_time` VARCHAR(5) NOT NULL,
+    `reason` VARCHAR(255) DEFAULT NULL,
+    `created_by` INT DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_slot` (`slot_date`,`slot_time`)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS `holidays` (
     `holiday_date` DATE NOT NULL PRIMARY KEY,
     `reason` VARCHAR(255) DEFAULT NULL,

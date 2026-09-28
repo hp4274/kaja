@@ -126,13 +126,16 @@ $links      = intakeLinksList($db, $linkStatus);
         <table class="data-table">
           <thead>
             <tr>
+              <th class="th-num">#</th>
               <th>Sent</th><th>Name</th><th>Email</th>
               <th>Status</th><th>Opened</th><th>Submitted</th><th>Expires</th>
+              <th class="th-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($links as $il): ?>
+            <?php $rowNum = 1; foreach ($links as $il): ?>
               <tr>
+                <td class="td-nowrap td-muted"><?php echo $rowNum++; ?></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($il['created_at'])); ?></td>
                 <td class="td-name"><?php echo htmlspecialchars($il['name']); ?></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($il['email']); ?>"><?php echo htmlspecialchars($il['email']); ?></a></td>
@@ -146,6 +149,13 @@ $links      = intakeLinksList($db, $linkStatus);
                      the date worth chasing, or not chasing, is this one. -->
                 <td class="td-nowrap td-muted"><?php echo $il['submitted_at'] ? date('d M Y, h:i A', strtotime($il['submitted_at'])) : '—'; ?></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($il['expires_at'])); ?></td>
+                <td class="td-actions">
+                  <?php if (!empty($il['client_id'])): ?>
+                    <a href="index.php?page=client-profile&id=<?php echo (int) $il['client_id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> View Profile</a>
+                  <?php else: ?>
+                    <span class="hint">No client yet</span>
+                  <?php endif; ?>
+                </td>
               </tr>
             <?php endforeach; ?>
           </tbody>

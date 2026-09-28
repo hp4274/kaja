@@ -31,6 +31,38 @@ $heldClients    = $db->query("
 $awaitingReview = (int) ($heldClients['review'] ?? 0);
 $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
 ?>
+<!-- Day management: what is booked, what is blocked, on the day clicked.
+     Shared by both calendars -- see showDaySessions() below. -->
+<div class="modal-overlay" id="daySessionsModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="daySessionsTitle">Manage day</div>
+      <button class="modal-close" onclick="document.getElementById('daySessionsModal').classList.remove('open')">&times;</button>
+    </div>
+    <div class="modal-body" id="daySessionsContent"></div>
+  </div>
+</div>
+
+<!-- Same per-slot list, applied to every date in a multi-day selection at
+     once instead of one day. Opened from the selection bar's "Manage
+     availability" button -- see openBulkAvailability() below. -->
+<div class="modal-overlay" id="bulkAvailabilityModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Manage availability</div>
+      <button class="modal-close" onclick="document.getElementById('bulkAvailabilityModal').classList.remove('open')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="prose" id="bulkAvailabilitySub"></p>
+      <div id="bulkAvailabilityContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>window.ALL_SLOTS = <?php echo json_encode(array_map(function ($s) {
+    return ['time' => $s, 'label' => bookingSlotLabel($s)];
+}, bookingSlots())); ?>;</script>
+
 <div class="modal-overlay" id="newSessionModal">
   <div class="modal-box">
     <div class="modal-header">
@@ -70,7 +102,7 @@ $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
         <div class="form-row">
           <div class="form-group">
             <label class="form-label" for="new-session-date">Date</label>
-            <input type="date" class="form-input" id="new-session-date" name="session_date" required />
+            <input type="date" class="form-input" id="new-session-date" name="session_date" min="<?php echo date('Y-m-d'); ?>" required />
             <!-- Every date picked on the calendar, first one included. Empty
                  unless the therapist ctrl- or shift-clicked more than one. -->
             <input type="hidden" id="new-session-dates" name="session_dates" value="" />
@@ -235,6 +267,191 @@ function calendarDate(day) {
   var month = window.CAL_MONTH || '';
   if (!month) return '';
   return month + '-' + (day < 10 ? '0' + day : String(day));
+}
+
+/**
+ * Manage one day: its sessions, and every bookable slot on it.
+ *
+ * Both calendars call this with the same globals -- calSessionsData,
+ * calBlockedData, calMonthName -- which each page keeps in step with the
+ * month on screen. It is the "one more option" on a day click: view and
+ * change what is booked, and close or reopen whatever slot is left.
+ */
+function showDaySessions(day) {
+  var sessions = (window.calSessionsData || {})[day] || [];
+  document.getElementById('daySessionsTitle').textContent = 'Manage — ' + (window.calMonthName || '') + ' ' + day;
+  var html = '';
+
+  if (!sessions.length) {
+    html += '<div class="empty-state"><i class="bi bi-calendar3"></i><p>No sessions this day</p></div>';
+  }
+
+  sessions.forEach(function(s) {
+    html += '<div class="session-row is-plain">';
+    html += '<div class="session-row-main">';
+    html += '<div class="session-row-icon ' + (s.session_type === 'online' ? 'teal' : 'amber') + '"><i class="bi ' + (s.session_type === 'online' ? 'bi-camera-video' : 'bi-geo-alt') + '"></i></div>';
+    html += '<div class="session-row-body">';
+    html += '<div class="session-row-name">' + escapeHtml(s.client_name || 'Unknown') + '</div>';
+    var startsAt = s.start_time.split(' ')[1].substring(0, 5);
+    var mins = Math.round((Date.parse(s.end_time.replace(' ', 'T')) - Date.parse(s.start_time.replace(' ', 'T'))) / 60000);
+    html += '<div class="session-row-meta">' + startsAt + ' · ' + mins + ' min · <span class="badge badge-' + s.status + '">' + s.status + '</span></div>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="session-row-controls">';
+    html += '<select class="status-select" aria-label="Session status" onchange="updateSessionStatus(' + s.id + ', this.value)">';
+    html += '<option value="pending"' + (s.status === 'pending' ? ' selected' : '') + '>Pending</option>';
+    html += '<option value="confirmed"' + (s.status === 'confirmed' ? ' selected' : '') + '>Confirmed</option>';
+    html += '<option value="completed"' + (s.status === 'completed' ? ' selected' : '') + '>Completed</option>';
+    html += '<option value="cancelled"' + (s.status === 'cancelled' ? ' selected' : '') + '>Cancelled</option>';
+    html += '</select>';
+    html += '<button class="btn btn-icon" onclick="openRescheduleModal(' + s.id + ', \'' + s.start_time.split(' ')[0] + '\', \'' + startsAt + '\')" title="Reschedule"><i class="bi bi-pencil-square"></i></button>';
+    html += '</div>';
+    html += '</div>';
+  });
+
+  // A day that already holds sessions is the most likely day to want another
+  // one on, so the booking action lives right here rather than only behind
+  // the panel header button.
+  html += '<div class="modal-day-book">';
+  html += '<button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById(\'daySessionsModal\').classList.remove(\'open\'); openNewSessionModal(calendarDate(' + day + '));">';
+  html += '<i class="bi bi-plus"></i> Book on this day</button>';
+  html += '</div>';
+
+  html += renderAvailability(day, sessions);
+
+  document.getElementById('daySessionsContent').innerHTML = html;
+  document.getElementById('daySessionsModal').classList.add('open');
+}
+
+/**
+ * One row per bookable time of day. Blocking a slot that holds a session
+ * cancels it in the same click -- a blocked slot and a booked slot cannot
+ * both be true of the same time, so there is one button, not two.
+ */
+function renderAvailability(day, sessions) {
+  var date = calendarDate(day);
+  var blocked = (window.calBlockedData || {})[date] || [];
+  var html = '<div class="section-title">Manage availability</div>';
+  html += '<div class="availability-list">';
+
+  (window.ALL_SLOTS || []).forEach(function(slot) {
+    var occupied = sessions.filter(function(s) {
+      return s.status !== 'cancelled' && s.status !== 'no-show'
+        && s.start_time.split(' ')[1].substring(0, 5) === slot.time;
+    })[0];
+    var isBlocked = blocked.indexOf(slot.time) !== -1;
+
+    html += '<div class="availability-row">';
+    html += '<span class="availability-time">' + slot.label + '</span>';
+    if (occupied) {
+      html += '<span class="badge badge-scheduled">Booked — ' + escapeHtml(occupied.client_name || 'Unknown') + '</span>';
+      html += '<button type="button" class="btn btn-danger btn-sm" onclick="blockSlot(\'' + date + '\', \'' + slot.time + '\', true)">Cancel &amp; block</button>';
+    } else if (isBlocked) {
+      html += '<span class="badge badge-inactive">Blocked</span>';
+      html += '<button type="button" class="btn btn-ghost btn-sm" onclick="unblockSlot(\'' + date + '\', \'' + slot.time + '\')">Reopen</button>';
+    } else {
+      html += '<span class="badge badge-active">Available</span>';
+      html += '<button type="button" class="btn btn-ghost btn-sm" onclick="blockSlot(\'' + date + '\', \'' + slot.time + '\', false)">Block</button>';
+    }
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function blockSlot(date, time, hasSession) {
+  var reason = '';
+  if (hasSession) {
+    reason = window.prompt('This cancels the session booked at this time. Why is it being cancelled?', '');
+    if (reason === null || reason.trim() === '') return;
+  } else {
+    reason = window.prompt('Why is this slot being blocked? (optional)', '') || '';
+  }
+
+  var fd = new FormData();
+  fd.append('action', 'block_slot');
+  fd.append('slot_date', date);
+  fd.append('slot_time', time);
+  fd.append('reason', reason);
+
+  fetch('api/sessions.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast(d.cancelled ? 'Session cancelled and slot blocked' : 'Slot blocked');
+        setTimeout(function() { location.reload(); }, 600);
+      } else {
+        showToast(d.error || 'Error', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error', 'error'); });
+}
+
+/**
+ * The same per-slot list as a single day, run over every date in a
+ * multi-select at once. A slot booked on ANY of the picked dates counts as
+ * booked; a slot free everywhere is available; blocked only when every picked
+ * date already has it blocked -- a slot half-open across the selection reads
+ * as open, since that is the state a click on it would actually change.
+ */
+function openBulkAvailability() {
+  var dates = calendarSelection.dates();
+  if (!dates.length) return;
+
+  document.getElementById('bulkAvailabilitySub').textContent =
+    dates.length + (dates.length === 1 ? ' date selected' : ' dates selected') + ': ' + calendarDateSummary(dates);
+
+  var html = '<div class="availability-list">';
+  (window.ALL_SLOTS || []).forEach(function (slot) {
+    var bookedOn = dates.filter(function (date) {
+      var day = parseInt(date.split('-')[2], 10);
+      return (window.calSessionsData[day] || []).some(function (s) {
+        return s.status !== 'cancelled' && s.status !== 'no-show'
+          && s.start_time.split(' ')[1].substring(0, 5) === slot.time;
+      });
+    });
+    var blockedOn = dates.filter(function (date) {
+      return ((window.calBlockedData || {})[date] || []).indexOf(slot.time) !== -1;
+    });
+
+    html += '<div class="availability-row">';
+    html += '<span class="availability-time">' + slot.label + '</span>';
+    if (bookedOn.length) {
+      html += '<span class="badge badge-scheduled">Booked on ' + bookedOn.length + '/' + dates.length + '</span>';
+      html += '<button type="button" class="btn btn-danger btn-sm" onclick="calendarSelection.blockSlot(\'' + slot.time + '\'); document.getElementById(\'bulkAvailabilityModal\').classList.remove(\'open\');">Cancel &amp; block</button>';
+    } else if (blockedOn.length === dates.length) {
+      html += '<span class="badge badge-inactive">Blocked</span>';
+      html += '<button type="button" class="btn btn-ghost btn-sm" onclick="calendarSelection.unblockSlot(\'' + slot.time + '\'); document.getElementById(\'bulkAvailabilityModal\').classList.remove(\'open\');">Reopen</button>';
+    } else {
+      html += '<span class="badge badge-active">Available</span>';
+      html += '<button type="button" class="btn btn-ghost btn-sm" onclick="calendarSelection.blockSlot(\'' + slot.time + '\'); document.getElementById(\'bulkAvailabilityModal\').classList.remove(\'open\');">Block</button>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  document.getElementById('bulkAvailabilityContent').innerHTML = html;
+  document.getElementById('bulkAvailabilityModal').classList.add('open');
+}
+
+function unblockSlot(date, time) {
+  var fd = new FormData();
+  fd.append('action', 'unblock_slot');
+  fd.append('slot_date', date);
+  fd.append('slot_time', time);
+
+  fetch('api/sessions.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Slot reopened');
+        setTimeout(function() { location.reload(); }, 600);
+      } else {
+        showToast(d.error || 'Error', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error', 'error'); });
 }
 
 function createSession(e) {
@@ -422,6 +639,7 @@ var calendarSelection = (function () {
           + '<span class="calendar-selection-actions">'
           + '<button type="button" class="btn btn-ghost btn-sm" data-cal-clear>Clear</button>'
           + '<button type="button" class="btn btn-ghost btn-sm" data-cal-holiday></button>'
+          + '<button type="button" class="btn btn-ghost btn-sm" data-cal-manage-availability><i class="bi bi-sliders"></i> Manage availability</button>'
           + '<button type="button" class="btn btn-primary btn-sm" data-cal-book>Book these dates</button>'
           + '</span>';
         bar.querySelector('[data-cal-clear]').addEventListener('click', function () { clear(); });
@@ -431,6 +649,7 @@ var calendarSelection = (function () {
         bar.querySelector('[data-cal-holiday]').addEventListener('click', function () {
           setHoliday(!allPickedAreHolidays());
         });
+        bar.querySelector('[data-cal-manage-availability]').addEventListener('click', openBulkAvailability);
         grid.parentNode.insertBefore(bar, grid.nextSibling);
       }
 
@@ -451,6 +670,62 @@ var calendarSelection = (function () {
       // Booking a day that is already closed is refused server-side; the button
       // says so up front instead of letting the modal be filled in for nothing.
       bar.querySelector('[data-cal-book]').disabled = !closing;
+    });
+  }
+
+  /**
+   * Block the same time of day across every picked date, in one go. A session
+   * already sitting in one of those slots is cancelled along with it -- same
+   * rule as blocking a single day's slot, just run over the whole selection.
+   */
+  function blockPickedSlots(time) {
+    if (!picked.length) return;
+    var reason = window.prompt('Why are these slots being blocked? (needed for any that already have a session booked)', '') || '';
+
+    var fd = function (date) {
+      var f = new FormData();
+      f.append('action', 'block_slot');
+      f.append('slot_date', date);
+      f.append('slot_time', time);
+      f.append('reason', reason);
+      return f;
+    };
+
+    Promise.all(picked.map(function (date) {
+      return fetch('api/sessions.php', { method: 'POST', body: fd(date) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { return { date: date, ok: d.success, error: d.error }; })
+        .catch(function () { return { date: date, ok: false, error: 'Network error' }; });
+    })).then(function (results) {
+      var okCount = results.filter(function (r) { return r.ok; }).length;
+      var failed  = results.filter(function (r) { return !r.ok; });
+
+      var msg = okCount + (okCount === 1 ? ' slot blocked' : ' slots blocked');
+      if (failed.length) {
+        msg += ', ' + failed.length + ' skipped (' + (failed[0].error || 'error') + ')';
+      }
+      showToast(msg, failed.length && !okCount ? 'error' : undefined);
+      clear();
+      setTimeout(function () { location.reload(); }, 600);
+    });
+  }
+
+  /** Reopen the same time of day across every picked date. */
+  function unblockPickedSlots(time) {
+    if (!picked.length) return;
+
+    Promise.all(picked.map(function (date) {
+      var f = new FormData();
+      f.append('action', 'unblock_slot');
+      f.append('slot_date', date);
+      f.append('slot_time', time);
+      return fetch('api/sessions.php', { method: 'POST', body: f })
+        .then(function (r) { return r.json(); })
+        .catch(function () { return { success: false }; });
+    })).then(function () {
+      showToast('Slots reopened');
+      clear();
+      setTimeout(function () { location.reload(); }, 600);
     });
   }
 
@@ -633,7 +908,9 @@ var calendarSelection = (function () {
   return {
     dates: function () { return picked.slice(); },
     clear: clear,
-    reset: reset
+    reset: reset,
+    blockSlot: blockPickedSlots,
+    unblockSlot: unblockPickedSlots
   };
 })();
 

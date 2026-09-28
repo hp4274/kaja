@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../includes/mail-queue.php';
 require_once __DIR__ . '/../../includes/intake-data.php';
 require_once __DIR__ . '/../../includes/session-repo.php';
 require_once __DIR__ . '/../../includes/holidays.php';
+require_once __DIR__ . '/../../includes/blocked-slots.php';
 
 $db = getDbConnection();
 
@@ -45,6 +46,7 @@ $monthName  = date('F Y', $firstDay);
 // Days the practice is closed this month. The grid shows them shut so a
 // booking is never started on a day the guard is going to refuse.
 $monthHolidays = holidayDates($db, date('Y-m-01', $firstDay), date('Y-m-t', $firstDay));
+$monthBlocked  = blockedSlotsBetween($db, date('Y-m-01', $firstDay), date('Y-m-t', $firstDay));
 
 $calStmt = $db->prepare("
     SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as client_name
@@ -142,15 +144,30 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
           $cellDate   = date('Y-m-d', mktime(0, 0, 0, $month, $day, $year));
           $isHoliday  = in_array($cellDate, $monthHolidays, true);
         ?>
+          <?php
+          $activeCount = 0;
+          if ($hasSessions) {
+              foreach ($calSessions[$day] as $cs) {
+                  if (!in_array($cs['status'], ['cancelled', 'no-show'], true)) {
+                      $activeCount++;
+                  }
+              }
+          }
+          $soloName = $activeCount === 1
+              ? current(array_filter($calSessions[$day], function ($cs) {
+                    return !in_array($cs['status'], ['cancelled', 'no-show'], true);
+                }))['client_name']
+              : null;
+          ?>
           <div class="cal-cell <?php echo ($isToday ? 'today' : '') . ($isSelected ? ' selected' : '') . ($isHoliday ? ' holiday' : ''); ?>"
                data-date="<?php echo $cellDate; ?>"
                <?php echo $isHoliday ? 'data-holiday="1" title="Holiday - the practice is closed"' : ''; ?>
                onclick="selectCalendarDay(this, <?php echo $day; ?>)">
             <div class="cal-date"><?php echo $day; ?></div>
-            <?php if ($hasSessions): ?>
-              <?php foreach ($calSessions[$day] as $cs): ?>
-                <span class="cal-dot <?php echo $cs['session_type']==='online'?'teal':'amber'; ?>"></span>
-              <?php endforeach; ?>
+            <?php if ($activeCount === 1 && $soloName): ?>
+              <span class="cal-solo-name"><?php echo htmlspecialchars($soloName); ?></span>
+            <?php elseif ($activeCount > 1): ?>
+              <span class="cal-count"><?php echo $activeCount; ?></span>
             <?php endif; ?>
           </div>
         <?php endfor; ?>
@@ -169,7 +186,10 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
       <div class="day-sessions" id="day-sessions-inline-area">
         <div class="subsection-head">
           <h3 class="subsection-title" id="inline-sessions-title">Sessions</h3>
-          <button class="btn btn-primary btn-sm" type="button" onclick="openNewSessionModal(selectedCalendarDate())"><i class="bi bi-plus"></i> Book</button>
+          <div class="row-actions">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="showDaySessions(selectedCalendarDay)"><i class="bi bi-sliders"></i> Manage availability</button>
+            <button class="btn btn-primary btn-sm" type="button" onclick="openNewSessionModal(selectedCalendarDate())"><i class="bi bi-plus"></i> Book</button>
+          </div>
         </div>
         <div id="inline-sessions-list">
           <!-- Populated dynamically via JavaScript -->
@@ -371,12 +391,14 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     'label'      => $monthName,
     'defaultDay' => (int) $defaultDay,
     'sessions'   => $calSessions,
+    'blocked'    => $monthBlocked,
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?></script>
 <script>window.CAL_MONTH = <?php echo json_encode(sprintf('%04d-%02d', $year, $month)); ?>;</script>
 
 <script>
 var calData = JSON.parse(document.getElementById('cal-data').textContent);
 var calSessionsData = calData.sessions || {};
+var calBlockedData = calData.blocked || {};
 var calMonthName = calData.monthName || '';
 
 // The day the therapist last clicked. Booking from this panel should land on
@@ -475,6 +497,7 @@ document.addEventListener('DOMContentLoaded', openSelectedDay);
 document.addEventListener('calendar:monthchanged', function (e) {
   calData = e.detail || {};
   calSessionsData = calData.sessions || {};
+  calBlockedData = calData.blocked || {};
   calMonthName = calData.monthName || calMonthName;
   selectedCalendarDay = calData.defaultDay || 1;
   openSelectedDay();

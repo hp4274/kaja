@@ -477,6 +477,14 @@ a:hover { color: var(--clr-primary-dark); }
   padding: var(--space-3) var(--space-5);
 }
 
+/* Capped so a long list scrolls inside its own card instead of stretching the
+   page past the panel next to it -- Upcoming Sessions was the worst offender,
+   growing one row per session with no ceiling. */
+.panel-body.is-list.is-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
 .panel-body-flush {
   padding: 0;
 }
@@ -766,10 +774,11 @@ a:hover { color: var(--clr-primary-dark); }
 .cal-cell {
   background: var(--clr-surface);
   padding: var(--space-2);
-  min-height: 54px;
+  height: 78px;
   cursor: pointer;
   transition: background var(--transition-fast);
   position: relative;
+  overflow: hidden;
 }
 
 .cal-cell:hover { background: var(--clr-hover-surface); }
@@ -798,6 +807,53 @@ a:hover { color: var(--clr-primary-dark); }
 .cal-dot.green { background: var(--clr-success); }
 .cal-dot.amber { background: var(--clr-warning); }
 .cal-dot.red { background: var(--clr-danger); }
+
+/* A day with exactly one active session names them; two or more collapse to
+   a count. Both are positioned out of the flow, in a fixed-height cell -- the
+   number badge used to sit inline below the date and grow that one cell
+   taller than its neighbours, throwing every row after it out of alignment. */
+.cal-count {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--clr-primary);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cal-solo-name {
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-1-5);
+  display: block;
+  font-size: 0.65rem;
+  color: var(--clr-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Day modal: per-slot availability ─── */
+.availability-list { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+.availability-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--clr-border-light);
+}
+.availability-time { width: 80px; flex-shrink: 0; font-size: 0.85rem; color: var(--clr-text); }
+.availability-row .badge { flex-grow: 1; }
 
 /* ═══════════════════════════════════════════
    ACTIVITY FEED
@@ -1226,6 +1282,67 @@ a:hover { color: var(--clr-primary-dark); }
   background: var(--clr-primary);
   color: var(--clr-on-accent);
   border-color: var(--clr-primary);
+}
+
+/* ═══════════════════════════════════════════
+   PAGINATION
+   ═══════════════════════════════════════════ */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--clr-border-light);
+}
+
+.pagination-summary {
+  font-size: 0.78rem;
+  color: var(--clr-text-secondary);
+  white-space: nowrap;
+}
+
+.pagination-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.pagination-edge.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.pagination-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-h);
+  height: var(--control-h);
+  padding: 0 var(--space-2);
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  background: var(--clr-surface);
+  color: var(--clr-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.pagination-num:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
+.pagination-num.active {
+  background: var(--clr-primary);
+  color: var(--clr-on-accent);
+  border-color: var(--clr-primary);
+}
+
+.pagination-ellipsis {
+  padding: 0 var(--space-1);
+  color: var(--clr-text-secondary);
 }
 
 /* ═══════════════════════════════════════════
@@ -2059,13 +2176,14 @@ body.admin-body.admin-dark-theme {
    Every page wrote `text-align:right` on the cell and a four-property
    inline-flex on a div inside it. The row is what needs naming, not the
    alignment, so this carries both. */
-.td-actions { text-align: right; white-space: nowrap; }
+.td-actions { text-align: right; white-space: normal; }
 
 .row-actions {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 /* Right-aligned column: on the header as well as the cells, or the label
@@ -2307,6 +2425,7 @@ body.admin-body.admin-dark-theme {
 
 /* The select-all column: wide enough for a checkbox, no wider. */
 .th-check { width: 36px; }
+.th-num   { width: 40px; color: var(--clr-text-secondary); font-weight: 400; }
 
 /* ─── "Nothing matched" ───
    Leads and clients each drew this twice -- once for the table, once for the
@@ -2357,6 +2476,7 @@ body.admin-body.admin-dark-theme {
    margin to every item on top of it, so cards on the same row disagreed about
    where their third line sat. */
 .grid-card-date { font-size: 0.75rem; color: var(--clr-text-muted); }
+.grid-card-num  { font-size: 0.75rem; color: var(--clr-text-muted); }
 .grid-card-item .badge { flex-shrink: 0; }
 .grid-card-label { font-size: 0.8rem; font-weight: 500; color: var(--clr-text-secondary); }
 

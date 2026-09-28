@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../includes/pagination.php';
+
 $db = getDbConnection();
 
 // Counts
@@ -34,6 +36,17 @@ $sql .= " ORDER BY `created_at` DESC";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $blogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$pager = paginate($blogs);
+$blogs = $pager['rows'];
+
+/** Same shape as leadsUrl()/clientsUrl(), keeping the status tab and search. */
+function blogsUrl(array $overrides = []) {
+    global $statusFilter, $search;
+    $params = array_merge(['page' => 'blogs', 'status' => $statusFilter, 'q' => $search], $overrides);
+    $params = array_filter($params, function ($v) { return $v !== '' && $v !== null && $v !== 'all'; });
+    return 'index.php?' . http_build_query($params);
+}
 
 // Editing existing post?
 $editBlog = null;
@@ -191,6 +204,8 @@ if (isset($_GET['edit'])) {
           </tbody>
         </table>
       </div>
+
+      <?php echo paginationHtml($pager, 'blogsUrl'); ?>
     <?php endif; ?>
   </div>
 </div>
