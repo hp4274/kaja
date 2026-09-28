@@ -78,7 +78,7 @@ $pageDesc  = $post ? htmlspecialchars($post['excerpt']) : 'The blog post you are
           <a href="index.html">Home</a>
           <a href="index.html#how-it-works">How it Works</a>
           <a href="about.html">About</a>
-          <a href="blogs.php" class="active">Blog</a>
+          <a href="blog.html" class="active">Blog</a>
         </div>
 
         <div class="rw-nav-actions d-none d-lg-flex">
@@ -180,7 +180,7 @@ $pageDesc  = $post ? htmlspecialchars($post['excerpt']) : 'The blog post you are
     <div class="abt2-wrapper" id="main-content" style="text-align:center; padding:6rem 1rem;">
       <h1 style="font-size:2rem; font-weight:600; color:#1f2937;">Post Not Found</h1>
       <p style="color:#6b7280; margin:1rem 0 2rem;">The article you are looking for may have been moved or is no longer available.</p>
-      <a href="blogs.php" style="color:#f97316; font-weight:500; text-decoration:none;">← Back to all articles</a>
+      <a href="blog.html" style="color:#f97316; font-weight:500; text-decoration:none;">← Back to all articles</a>
     </div>
     <?php endif; ?>
 
@@ -205,7 +205,7 @@ $pageDesc  = $post ? htmlspecialchars($post['excerpt']) : 'The blog post you are
             <ul class="footer-links">
               <li><a href="index.html">Home</a></li>
               <li><a href="about.html">About Us</a></li>
-              <li><a href="blogs.php">Blog Insights</a></li>
+              <li><a href="blog.html">Blog Insights</a></li>
               <li><a href="appointment.html">Contact</a></li>
             </ul>
           </div>

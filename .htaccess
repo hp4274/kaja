@@ -23,6 +23,16 @@ DirectoryIndex index.html index.php
     # flat (/intake.php?token=...), so bookmarks and already-emailed links work.
     RewriteRule ^(blogs|blog-detail|intake|intake-thank-you|dashboard)\.php$ php/$1.php [L,QSA]
 
+    # blogs.html and blog-detail.html were static, hardcoded copies of these
+    # same two pages -- removed, since admin-added posts never reached them.
+    # A redirect, not a 404, for whatever still links to the old filename.
+    RewriteRule ^blogs\.html$ blogs.php [L,QSA,R=301]
+    RewriteRule ^blog-detail\.html$ blog-detail.php [L,QSA,R=301]
+
+    # blog.html: kept as the public URL, served internally by the dynamic
+    # PHP page. No redirect -- address bar stays blog.html.
+    RewriteRule ^blog\.html$ php/blogs.php [L,QSA]
+
     # Friendly page routes (matches vercel.json)
     RewriteRule ^about/?$ about.html [L,QSA]
     RewriteRule ^blogs/?$ php/blogs.php [L,QSA]

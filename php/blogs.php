@@ -68,7 +68,7 @@ $catEmojis = [
         <a href="index.html">Home</a>
         <a href="index.html#how-it-works">How it Works</a>
         <a href="about.html">About</a>
-        <a href="blogs.php" class="active">Blog</a>
+        <a href="blog.html" class="active">Blog</a>
       </div>
 
       <div class="rw-nav-actions d-none d-lg-flex">
@@ -163,15 +163,21 @@ $catEmojis = [
         <div class="row g-4 mb-5" id="blog-grid">
           <?php if (!empty($posts)): ?>
             <?php foreach ($posts as $post): ?>
-              <?php 
+              <?php
                 $cat = $post['category'] ?? 'Anxiety';
                 $bgColor = $catColors[$cat] ?? '#FFF0E6';
                 $emoji = $catEmojis[$cat] ?? '💡';
+                $cover = !empty($post['cover_image']) ? htmlspecialchars($post['cover_image']) : '';
+                $headerStyle = $cover
+                  ? "background-image: url('$cover'); background-size: cover; background-position: center;"
+                  : "background: $bgColor;";
               ?>
               <div class="col-lg-3 col-md-6 blog-post-item" data-topic="<?php echo htmlspecialchars($cat); ?>">
                 <div class="rw-blog-card">
-                  <div class="rw-blog-card-header" style="background: <?php echo $bgColor; ?>;">
-                    <div class="rw-blog-card-icon-wrap"><?php echo $emoji; ?></div>
+                  <div class="rw-blog-card-header" style="<?php echo $headerStyle; ?>">
+                    <?php if (!$cover): ?>
+                      <div class="rw-blog-card-icon-wrap"><?php echo $emoji; ?></div>
+                    <?php endif; ?>
                     <span class="rw-blog-card-cat-pill"><?php echo htmlspecialchars($cat); ?></span>
                   </div>
                   <div class="rw-blog-card-body">
@@ -205,7 +211,7 @@ $catEmojis = [
                   <p class="rw-blog-card-excerpt">Notice the trigger, the thought, and the body response—then choose a gentler next step.</p>
                   <div class="rw-blog-card-footer">
                     <span>By Kajal</span>
-                    <a href="blog-detail.html" style="color: #0C3834; text-decoration: none;">&rarr;</a>
+                    <a href="blog-detail.php" style="color: #0C3834; text-decoration: none;">&rarr;</a>
                   </div>
                 </div>
               </div>
@@ -224,7 +230,7 @@ $catEmojis = [
                   <p class="rw-blog-card-excerpt">Repair starts with clear, kind communication—and room for both.</p>
                   <div class="rw-blog-card-footer">
                     <span>By Kajal</span>
-                    <a href="blog-detail.html" style="color: #0C3834; text-decoration: none;">&rarr;</a>
+                    <a href="blog-detail.php" style="color: #0C3834; text-decoration: none;">&rarr;</a>
                   </div>
                 </div>
               </div>
@@ -243,7 +249,7 @@ $catEmojis = [
                   <p class="rw-blog-card-excerpt">Your energy is information. Listening early helps you reset before you hit empty.</p>
                   <div class="rw-blog-card-footer">
                     <span>By Kajal</span>
-                    <a href="blog-detail.html" style="color: #0C3834; text-decoration: none;">&rarr;</a>
+                    <a href="blog-detail.php" style="color: #0C3834; text-decoration: none;">&rarr;</a>
                   </div>
                 </div>
               </div>
@@ -262,7 +268,7 @@ $catEmojis = [
                   <p class="rw-blog-card-excerpt">Healing rarely moves in a straight line. Here is how to honor your window of tolerance.</p>
                   <div class="rw-blog-card-footer">
                     <span>By Kajal</span>
-                    <a href="blog-detail.html" style="color: #0C3834; text-decoration: none;">&rarr;</a>
+                    <a href="blog-detail.php" style="color: #0C3834; text-decoration: none;">&rarr;</a>
                   </div>
                 </div>
               </div>
@@ -317,7 +323,7 @@ $catEmojis = [
             <li><a href="about.html">About</a></li>
             <li><a href="index.html#how-it-works">How It Works</a></li>
             <li><a href="index.html#services">Services</a></li>
-            <li><a href="blogs.php">Blog</a></li>
+            <li><a href="blog.html">Blog</a></li>
           </ul>
         </div>
 
