@@ -104,7 +104,7 @@ header('Cache-Control: no-store, private');
       </div>
 
       <div class="rw-nav-actions d-none d-lg-flex">
-        <a href="appointment.html" class="rw-btn rw-btn-primary">Book Appointment</a>
+        <a href="appointment.html#booking-form" class="rw-btn rw-btn-primary">Book Appointment</a>
         <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank"
           aria-label="Instagram"><i class="bi bi-instagram"></i></a>
         <a href="index.html" class="rw-social-icon" aria-label="Website"><i class="bi bi-globe2"></i></a>

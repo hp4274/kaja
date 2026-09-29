@@ -107,7 +107,7 @@ try {
                         $ts = strtotime($d . ' ' . $time);
                         if ($ts === false) { continue; }
                         try {
-                            $ids[] = createSession($db, $clientId, date('Y-m-d H:i:s', $ts), $duration, $type);
+                            $ids[] = createSession($db, $clientId, date('Y-m-d H:i:s', $ts), $duration, $type, null, $_POST['video_link'] ?? null);
                         } catch (Throwable $e) {
                             // One clashing day must not lose the other four.
                             // Kept as a plain date: the browser groups the list
@@ -136,9 +136,7 @@ try {
                        ->execute([':d' => count($ids) . ' session(s) booked for ' . sessionLabel($db, $ids[0]), ':rid' => $clientId]);
 
                     foreach ($ids as $mid) {
-                        if (fetchSession($db, $mid)['status'] === 'confirmed') {
-                            sendSessionMail($db, $mid, 'confirmation');
-                        }
+                        sendBookedSessionMail($db, $mid);
                     }
 
                     echo json_encode(['success' => true, 'session_id' => $ids[0],
@@ -151,7 +149,7 @@ try {
                     $endValue = trim($_POST['repeat_end_value'] ?? '4');
 
                     $ids = generateSeries($db, $clientId, $start, $duration, $type, [
-                        'frequency' => $repeat,
+                        'frequency' => $repeat, 'video_link' => $_POST['video_link'] ?? null,
                         'end'       => ['type' => $endType, 'value' => $endValue],
                     ]);
 
@@ -161,9 +159,11 @@ try {
                     }
                     $sessionId = $ids[0];
                     $booked    = count($ids);
+                    $allIds    = $ids;
                 } else {
-                    $sessionId = createSession($db, $clientId, $start, $duration, $type);
+                    $sessionId = createSession($db, $clientId, $start, $duration, $type, null, $_POST['video_link'] ?? null);
                     $booked    = 1;
+                    $allIds    = [$sessionId];
                 }
             } catch (Throwable $e) {
                 echo json_encode(['success' => false, 'error' => publicError($e)]);
@@ -180,9 +180,12 @@ try {
 
             // After the write, never inside it. A dead mail server must not
             // undo a booking that is already correct.
+            // Confirmed sessions get the confirmation; pending ones get the
+            // Accept/Decline links. A series mails every occurrence.
             $mailed = null;
-            if (fetchSession($db, $sessionId)['status'] === 'confirmed') {
-                $mailed = sendSessionMail($db, $sessionId, 'confirmation');
+            foreach ($allIds as $i => $mid) {
+                $r = sendBookedSessionMail($db, $mid);
+                if ($i === 0) { $mailed = $r; }
             }
 
             echo json_encode(['success' => true, 'session_id' => $sessionId,
@@ -257,7 +260,6 @@ try {
                     $sid = (int) $c['id'];
                     try {
                         cancelSession($db, $sid, 'Practice closed that day; moved to the next available week.');
-                        sendSessionMail($db, $sid, 'cancellation');
                         $cancelled++;
 
                         $duration = (int) round((strtotime($c['end_time']) - strtotime($c['start_time'])) / 60);
@@ -281,9 +283,12 @@ try {
 
                         if ($newId !== null) {
                             $rescheduled++;
-                            if (fetchSession($db, $newId)['status'] === 'confirmed') {
-                                sendSessionMail($db, $newId, 'confirmation');
-                            }
+                            // One mail saying the session moved (and why), not a
+                            // cancellation followed by a separate confirmation.
+                            notifySessionRescheduled($db, $newId, $c['start_time'],
+                                'the practice is closed on ' . date('d M Y', strtotime($c['start_time'])) . ($why !== '' ? ' (' . $why . ')' : '') . '.');
+                        } else {
+                            sendSessionMail($db, $sid, 'cancellation');
                         }
                         // Eight weeks out with nothing free: the cancellation
                         // still stands, it is just not auto-rebooked. The
@@ -507,6 +512,7 @@ try {
                         $newStart = date('Y-m-d H:i:s', strtotime($t['start_time']) + $delta);
                         $tDur     = (int) round((strtotime($t['end_time']) - strtotime($t['start_time'])) / 60);
                         rescheduleSession($db, $tid, $newStart, $tDur);
+                        try { notifySessionRescheduled($db, $tid, $t['start_time']); } catch (Throwable $mailErr) { error_log('[sessions-api] reschedule mail: ' . $mailErr->getMessage()); }
                         $moved++;
                     }
                     echo json_encode(['success' => true, 'moved' => $moved]);
@@ -514,6 +520,7 @@ try {
                 }
 
                 rescheduleSession($db, $sessionId, $start, $duration);
+                try { notifySessionRescheduled($db, $sessionId, $existing['start_time']); } catch (Throwable $mailErr) { error_log('[sessions-api] reschedule mail: ' . $mailErr->getMessage()); }
             } catch (Throwable $e) {
                 echo json_encode(['success' => false, 'error' => publicError($e)]);
                 exit;

@@ -72,7 +72,7 @@ $catEmojis = [
       </div>
 
       <div class="rw-nav-actions d-none d-lg-flex">
-        <a href="appointment.html" class="rw-btn rw-btn-primary">Book Appointment</a>
+        <a href="appointment.html#booking-form" class="rw-btn rw-btn-primary">Book Appointment</a>
         <a href="https://www.instagram.com/rewirewithkajal/" class="rw-social-icon" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
         <a href="index.html" class="rw-social-icon" aria-label="Website"><i class="bi bi-globe2"></i></a>
         <a href="mailto:hello@rewirewithkajal.com" class="rw-social-icon" aria-label="Email"><i class="bi bi-envelope"></i></a>
@@ -350,7 +350,7 @@ $catEmojis = [
         <div class="col-lg-2 col-md-6">
           <h5>Book a Session</h5>
           <p class="mb-3" style="font-size: 14px; line-height: 1.5;">Take the first step towards inner peace and lasting change.</p>
-          <a href="appointment.html" class="rw-footer-btn">Book Free Call <i class="bi bi-arrow-right"></i></a>
+          <a href="appointment.html#booking-form" class="rw-footer-btn">Book Free Call <i class="bi bi-arrow-right"></i></a>
         </div>
       </div>
 

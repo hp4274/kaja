@@ -91,7 +91,7 @@ function sessionConflictMessage(array $conflict) {
  * Book a session. Throws on any overlap rather than booking it anyway: two
  * people told to arrive at the same hour is not fixable after the fact.
  */
-function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type = 'online', $seriesId = null) {
+function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type = 'online', $seriesId = null, $meetingLink = null) {
     $window = sessionWindowFor($startTime, $durationMinutes);
     if ($window === null) {
         throw new InvalidArgumentException('That is not a valid start time.');
@@ -129,7 +129,12 @@ function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type =
 
     // One static practice room, copied onto the row so the record keeps the
     // link it was actually sent with even if the setting changes later.
-    $videoLink = ($type === 'online') ? (getSetting('practice_video_link', '') ?: null) : null;
+    // A link typed for this booking wins over the practice default.
+    $meetingLink = trim((string) $meetingLink);
+    if ($meetingLink !== '' && !preg_match('~^https?://\S+$~i', $meetingLink)) {
+        throw new InvalidArgumentException('The meeting link must start with http:// or https://');
+    }
+    $videoLink = ($type === 'online') ? ($meetingLink ?: (getSetting('practice_video_link', '') ?: null)) : null;
     $status    = getSettingInt('auto_confirm_sessions', 0) ? 'confirmed' : 'pending';
 
     $ownTransaction = !$db->inTransaction();
@@ -337,7 +342,7 @@ function consecutiveNoShows(PDO $db, $clientId) {
 }
 
 /**
- * End-of-day sweep: confirmed sessions whose end time has passed are completed.
+ * Sweep: confirmed sessions that started over an hour ago are completed.
  *
  * Only confirmed ones. A session nobody ever confirmed should not quietly
  * become a session that happened.
@@ -345,7 +350,7 @@ function consecutiveNoShows(PDO $db, $clientId) {
 function sweepCompletedSessions(PDO $db) {
     $stmt = $db->prepare('
         UPDATE `sessions` SET `status` = "completed"
-        WHERE `status` = "confirmed" AND `end_time` < NOW()
+        WHERE `status` = "confirmed" AND `start_time` < DATE_SUB(NOW(), INTERVAL 60 MINUTE)
     ');
     $stmt->execute();
     return $stmt->rowCount();

@@ -30,6 +30,25 @@ $heldClients    = $db->query("
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 $awaitingReview = (int) ($heldClients['review'] ?? 0);
 $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
+
+// Per client: last session (any status) and the preferred date/time from their
+// intake (falling back to the lead). Drives the hint under the client picker.
+$clientBookingInfo = [];
+try {
+    foreach ($db->query("SELECT `client_id`, MAX(`start_time`) AS last_at FROM `sessions` GROUP BY `client_id`") as $r) {
+        $clientBookingInfo[(int) $r['client_id']]['last'] = $r['last_at'];
+    }
+    foreach ($db->query("
+        SELECT l.`client_id`, COALESCE(NULLIF(pi.`pref_date`, ''), l.`preferred_date`) AS pd,
+               COALESCE(NULLIF(pi.`pref_time`, ''), l.`preferred_time`) AS pt
+        FROM `leads` l
+        LEFT JOIN `patient-intake` pi ON pi.`email` = l.`email` AND pi.`phone` = l.`phone`
+        WHERE l.`client_id` IS NOT NULL ORDER BY l.`id` ASC
+    ") as $r) {
+        $clientBookingInfo[(int) $r['client_id']]['pd'] = $r['pd'];
+        $clientBookingInfo[(int) $r['client_id']]['pt'] = $r['pt'];
+    }
+} catch (Exception $e) { /* hint is optional */ }
 ?>
 <!-- Day management: what is booked, what is blocked, on the day clicked.
      Shared by both calendars -- see showDaySessions() below. -->
@@ -75,6 +94,7 @@ $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
   </div>
 </div>
 
+<script>window.CLIENT_BOOKING_INFO = <?php echo json_encode((object) $clientBookingInfo); ?>;</script>
 <script>window.ALL_SLOTS = <?php echo json_encode(array_map(function ($s) {
     return ['time' => $s, 'label' => bookingSlotLabel($s)];
 }, bookingSlots())); ?>;</script>
@@ -95,6 +115,7 @@ $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
               <option value="<?php echo (int) $cl['id']; ?>"><?php echo htmlspecialchars($cl['first_name'] . ' ' . $cl['last_name']); ?></option>
             <?php endforeach; ?>
           </select>
+          <small class="hint is-block" id="new-session-client-hint" hidden></small>
           <?php if ($awaitingReview || $awaitingIntake): ?>
             <?php
             // A client missing from this list reads as a broken page unless the
@@ -145,10 +166,18 @@ $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
           </div>
           <div class="form-group">
             <label class="form-label" for="new-session-type">Type</label>
-            <select class="form-select" id="new-session-type" name="session_type">
+            <select class="form-select" id="new-session-type" name="session_type"
+                    onchange="document.getElementById('new-session-link-group').hidden = this.value !== 'online'">
               <option value="online">Online</option>
               <option value="inperson">In-Person</option>
             </select>
+          </div>
+          <div class="form-group" id="new-session-link-group">
+            <label class="form-label" for="new-session-video-link">Meeting link</label>
+            <input type="url" class="form-input" id="new-session-video-link" name="video_link"
+                   value="<?php echo htmlspecialchars(getSetting('practice_video_link', '')); ?>"
+                   placeholder="https://meet.google.com/..." />
+            <div class="hint">Sent to the client in the booking, reminder and confirmation mails.</div>
           </div>
           <div class="form-group">
             <label class="form-label" for="new-session-repeat">Repeat</label>
@@ -195,7 +224,7 @@ $awaitingIntake = (int) ($heldClients['pending'] ?? 0);
  * therapist actually clicked is the whole point: retyping a date you just
  * pointed at is how the wrong day gets booked.
  */
-function openNewSessionModal(dateStr) {
+function openNewSessionModal(dateStr, clientId) {
   var modal = document.getElementById('newSessionModal');
   if (!modal) return;
 
@@ -209,12 +238,54 @@ function openNewSessionModal(dateStr) {
   var dateField = document.getElementById('new-session-date');
   if (dateField && dateStr) dateField.value = dateStr;
 
+  var clientSel = document.getElementById('new-session-client');
+  if (clientSel && clientId) clientSel.value = String(clientId);
+  showClientBookingHint(!dateStr && dates.length < 2);
+
   applyDateSelection(dates);
   syncBlockedTimeOptions();
   modal.classList.add('open');
 
   var client = document.getElementById('new-session-client');
   if (client && !client.disabled) client.focus();
+}
+
+/**
+ * First booking: show (and, when no day was pointed at, prefill) the client's
+ * preferred date/time. Once they have any session: show the last session date.
+ */
+function showClientBookingHint(prefill) {
+  var sel  = document.getElementById('new-session-client');
+  var hint = document.getElementById('new-session-client-hint');
+  if (!hint) return;
+  var info = (sel && window.CLIENT_BOOKING_INFO || {})[sel.value];
+  hint.hidden = true;
+  if (!info) return;
+
+  var fmt = function (d) { return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); };
+  if (info.last) {
+    hint.textContent = 'Last session: ' + fmt(new Date(info.last.replace(' ', 'T')));
+    hint.hidden = false;
+    return;
+  }
+  if (!info.pd && !info.pt) return;
+
+  var text = [];
+  var dateOk = /^\d{4}-\d{2}-\d{2}$/.test(info.pd || '');
+  if (dateOk) text.push(fmt(new Date(info.pd + 'T00:00')));
+  if (info.pt) text.push(info.pt);
+  hint.textContent = 'Preferred date & time: ' + text.join(' at ');
+  hint.hidden = false;
+
+  if (!prefill) return;
+  var dateField = document.getElementById('new-session-date');
+  if (dateOk && dateField && info.pd >= dateField.min) dateField.value = info.pd;
+  var timeField = document.getElementById('new-session-time');
+  if (info.pt && timeField) {
+    Array.prototype.forEach.call(timeField.options, function (o) {
+      if (o.value && (o.value.substring(0, 5) === String(info.pt).substring(0, 5) || o.dataset.label === info.pt)) timeField.value = o.value;
+    });
+  }
 }
 
 function closeNewSessionModal() {
@@ -599,6 +670,8 @@ function createSession(e) {
 
   var dateField = document.getElementById('new-session-date');
   if (dateField) { dateField.addEventListener('change', syncBlockedTimeOptions); }
+  var clientField = document.getElementById('new-session-client');
+  if (clientField) { clientField.addEventListener('change', function () { showClientBookingHint(false); }); }
 
   var modal = document.getElementById('newSessionModal');
   if (modal) {

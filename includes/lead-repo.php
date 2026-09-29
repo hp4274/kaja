@@ -36,10 +36,10 @@ function leadListSql(array $filters) {
         $params[':status'] = $status;
     }
 
-    $source = isset($filters['source']) ? trim($filters['source']) : '';
-    if ($source !== '' && $source !== 'all') {
-        $where[] = '`source` = :source';
-        $params[':source'] = $source;
+    $pref = isset($filters['preference']) ? trim($filters['preference']) : '';
+    if ($pref !== '' && $pref !== 'all') {
+        $where[] = '`preference` = :preference';
+        $params[':preference'] = $pref;
     }
 
     // Dates arrive as YYYY-MM-DD from <input type="date">. The upper bound is
@@ -102,11 +102,11 @@ function leadStatusCounts(PDO $db) {
     return $counts;
 }
 
-function leadSources(PDO $db) {
-    $rows = $db->query('SELECT DISTINCT `source` FROM `leads` WHERE `source` <> "" ORDER BY `source` ASC');
+function leadPreferences(PDO $db) {
+    $rows = $db->query('SELECT DISTINCT `preference` FROM `leads` WHERE `preference` IS NOT NULL AND `preference` <> "" ORDER BY `preference` ASC');
     $out  = [];
     foreach ($rows as $row) {
-        $out[] = $row['source'];
+        $out[] = $row['preference'];
     }
     return $out;
 }

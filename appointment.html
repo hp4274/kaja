@@ -53,7 +53,7 @@
           <h1 class="rw-apt-title">Book Your<br><span class="rw-accent-text rw-font-italic">Session.</span></h1>
           <p class="rw-apt-subtext">Book time that fits you. You say what you need; we confirm next steps&mdash;forms
             use simple words, not clinic jargon.</p>
-          <a href="#intake" class="rw-btn rw-btn-primary rw-apt-btn">
+          <a href="#booking-form" class="rw-btn rw-btn-primary rw-apt-btn">
             <i class="bi bi-calendar-event me-2"></i> Start Intake <i class="bi bi-arrow-right ms-2"></i>
           </a>
         </div>
@@ -89,7 +89,7 @@
   </section>
 
   <!-- Assessment Form Section -->
-  <section class="rw-apt-assessment-section" id="intake">
+  <section class="rw-apt-assessment-section" id="booking-form">
     <div class="rw-container" style="max-width: 1240px;">
       <div class="rw-assessment-card">
         <div class="row g-0">
@@ -145,7 +145,7 @@
                 <div class="col-md-6">
                   <label for="ap-name" class="rw-form-label">FULL NAME</label>
                   <input type="text" id="ap-name" name="name" class="rw-form-input" placeholder="Enter your full name"
-                    required>
+                    required maxlength="100" pattern="[A-Za-z][A-Za-z .'\-]*" title="Letters, spaces and . ' - only">
                 </div>
 
                 <!-- Email -->
@@ -170,8 +170,8 @@
                 <!-- Phone Number -->
                 <div class="col-md-6">
                   <label for="ap-phone" class="rw-form-label">PHONE NUMBER</label>
-                  <input type="tel" id="ap-phone" name="phone" class="rw-form-input"
-                    placeholder="Enter your phone number" required>
+                  <input type="tel" id="ap-phone" name="phone" class="rw-form-input" inputmode="numeric" maxlength="10"
+                    pattern="[0-9]{10}" title="Enter exactly 10 digits" placeholder="Enter your 10-digit phone number" required>
                 </div>
 
                 <!-- Preferred Date -->
@@ -210,7 +210,7 @@
                 <div class="col-12">
                   <label for="ap-msg" class="rw-form-label">WHAT WOULD YOU LIKE SUPPORT WITH?</label>
                   <textarea id="ap-msg" name="message" class="rw-form-textarea" rows="3"
-                    placeholder="Share what's on your mind..." required></textarea>
+                    placeholder="Share what's on your mind..."></textarea>
                 </div>
 
                 <!-- Submit Button -->

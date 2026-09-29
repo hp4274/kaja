@@ -91,7 +91,7 @@ function generateSeries(PDO $db, $clientId, $firstStart, $durationMinutes, $type
 
     foreach ($occurrences as $start) {
         try {
-            $id = createSession($db, $clientId, $start, $durationMinutes, $type, $seriesId);
+            $id = createSession($db, $clientId, $start, $durationMinutes, $type, $seriesId, $recurrence['video_link'] ?? null);
         } catch (RuntimeException $e) {
             continue;   // clash: skip this week, keep the rest
         }

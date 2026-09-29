@@ -190,6 +190,7 @@ function mailBackgroundIsUsable($url) {
  * say what the link is for.
  */
 function mailLinkLabel($url) {
+    if (stripos($url, 'session-response') !== false) { return stripos($url, 'r=reject') !== false ? 'Decline this session' : 'Accept this session'; }
     if (stripos($url, 'intake') !== false)        { return 'Complete your intake form'; }
     if (stripos($url, 'client-profile') !== false) { return 'Open in admin'; }
     if (preg_match('~meet\.|zoom\.|/j/~i', $url))  { return 'Join the video call'; }
@@ -214,8 +215,14 @@ function mailLinkLabel($url) {
  */
 function mailHtmlBody($text, $background) {
     $safe = htmlspecialchars(str_replace(["\r\n", "\r"], "\n", (string) $text), ENT_QUOTES, 'UTF-8');
-    $safe = preg_replace_callback('~(https?://[^\s<]*[^\s<.,;:!?)])~i', function ($m) {
+    $safe = preg_replace_callback('~(?:(?:Accept|Decline):\s*)?(https?://[^\s<]*[^\s<.,;:!?)])~i', function ($m) {
         $url = htmlspecialchars_decode($m[1], ENT_QUOTES); // already escaped by htmlspecialchars() above
+        if (stripos($url, 'session-response') !== false) {
+            // Accept / Decline render as buttons; the "Accept:" prefix the plain-text part needs is dropped here.
+            $btn = stripos($url, 'r=reject') !== false ? '#b91c1c' : '#0d7377';
+            return '<a href="' . $m[1] . '" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:4px 8px 4px 0;padding:12px 28px;background:' . $btn . ';color:#ffffff;text-decoration:none;font-weight:600;border-radius:6px;">'
+                . htmlspecialchars(mailLinkLabel($url), ENT_QUOTES, 'UTF-8') . '</a>';
+        }
         return '<a href="' . $m[1] . '" target="_blank" rel="noopener noreferrer" style="color:#0d7377;text-decoration:underline;">'
             . htmlspecialchars(mailLinkLabel($url), ENT_QUOTES, 'UTF-8') . '</a>';
     }, $safe);

@@ -34,7 +34,9 @@ try {
     ]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user && password_verify($password, $user['password'])) {
+    // MySQL collation is case-insensitive; enforce exact-case match here.
+    $exact = $user && (hash_equals((string) $user['username'], $username) || hash_equals((string) $user['email'], $username));
+    if ($exact && password_verify($password, $user['password'])) {
         // Password is correct, set session
         session_regenerate_id(true);
         $_SESSION['logged_in'] = true;

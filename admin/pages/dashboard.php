@@ -201,7 +201,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
        correct, the screen said success, and the person never hears from us. -->
   <div class="bulk-bar is-danger">
     <i class="bi bi-envelope-exclamation"></i>
-    <?php echo (int) $queuedMail; ?> email(s) failed to send and are waiting for the hourly job to retry them.
+    <?php echo (int) $queuedMail; ?> email(s) failed to send and are waiting for the next scheduled job to retry them.
   </div>
 <?php endif; ?>
 

@@ -14,6 +14,7 @@ require_once __DIR__ . '/mail-queue.php';
 require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/session-repo.php';
 require_once __DIR__ . '/email-templates.php';
+require_once __DIR__ . '/session-token.php';
 
 /** The variables every session template can use. */
 function sessionMailVars(PDO $db, $sessionId) {
@@ -45,42 +46,46 @@ function sessionMailVars(PDO $db, $sessionId) {
 }
 
 /**
- * Send one templated session mail. $kind is confirmation, cancellation or
- * reminder. Returns true when it went out, false when it was queued.
+ * Send one templated session mail. $kind is confirmation, cancellation,
+ * reminder, pending (Accept/Decline links), rescheduled or admin_rejected
+ * (to the practice). $extra overrides/adds placeholders, e.g. old_time.
+ * Returns true when it went out, false when it was queued or not sendable.
  */
-function sendSessionMail(PDO $db, $sessionId, $kind) {
-    $keys = [
-        'confirmation' => ['notify_session_confirmed_subject', 'notify_session_confirmed_body', 'session_confirmed'],
-        'cancellation' => ['notify_session_cancelled_subject', 'notify_session_cancelled_body', 'session_cancelled'],
-        'reminder'     => ['notify_session_reminder_subject',  'notify_session_reminder_body',  'session_reminder'],
+function sendSessionMail(PDO $db, $sessionId, $kind, array $extra = []) {
+    $templates = [
+        'confirmation'   => 'session_confirmed',
+        'cancellation'   => 'session_cancelled',
+        'reminder'       => 'session_reminder',
+        'pending'        => 'session_pending',
+        'rescheduled'    => 'session_rescheduled',
+        'admin_rejected' => 'session_rejected_admin',
     ];
-    if (!isset($keys[$kind])) {
+    if (!isset($templates[$kind])) {
         throw new InvalidArgumentException('Unknown session mail kind: ' . $kind);
     }
 
     $payload = sessionMailVars($db, $sessionId);
-    if ($payload === null || $payload['to'] === '') {
+    if ($payload === null) {
         return false;
     }
+    $vars = $payload['vars'];
+    $to   = $kind === 'admin_rejected' ? (string) getSetting('practice_email') : (string) $payload['to'];
 
-    $subject = renderNotificationTemplate(getSetting($keys[$kind][0]), $payload['vars']);
-    $body    = renderNotificationTemplate(getSetting($keys[$kind][1]), $payload['vars']);
-
-    $background = emailBackgroundUrl($keys[$kind][2]);
-
-    if (sendMail($payload['to'], $subject, $body, null, $background)) {
-        return true;
+    $status = fetchSession($db, $sessionId)['status'];
+    $needsAnswer = in_array($status, ['pending', 'rejected'], true);
+    if ($kind === 'pending' || ($kind === 'rescheduled' && $needsAnswer)) {
+        $token = issueSessionToken($db, $sessionId);
+        $vars['accept_link'] = sessionResponseUrl($token, 'accept');
+        $vars['reject_link'] = sessionResponseUrl($token, 'reject');
+    }
+    if ($kind === 'rescheduled') {
+        $vars['status_note'] = $needsAnswer
+            ? "Please let us know whether this new time works:\nAccept: " . $vars['accept_link'] . "\nDecline: " . $vars['reject_link']
+            : 'This time is confirmed.';
+        $vars += ['old_time' => '', 'reschedule_reason' => ''];
     }
 
-    queueFailedMail([
-        'to'         => $payload['to'],
-        'subject'    => $subject,
-        'body'       => $body,
-        'kind'       => 'session_mail',
-        'background' => $background,
-    ], 'mail() returned false');
-
-    return false;
+    return sendTemplatedMail($templates[$kind], $to, array_merge($vars, $extra));
 }
 
 /**
@@ -104,7 +109,48 @@ function sessionsDueReminder(PDO $db, $hours) {
     return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id'));
 }
 
+/** Confirmed sessions starting within the next 30 minutes, not yet nudged. */
+function sessionsDueSoon(PDO $db) {
+    $stmt = $db->query('
+        SELECT `id` FROM `sessions`
+        WHERE `status` = "confirmed" AND `reminder30_sent` = 0
+          AND `start_time` > NOW()
+          AND `start_time` <= DATE_ADD(NOW(), INTERVAL 30 MINUTE)
+    ');
+    return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id'));
+}
+
+function markSessionRemindedSoon(PDO $db, $sessionId) {
+    $db->prepare('UPDATE `sessions` SET `reminder30_sent` = 1 WHERE `id` = :id')
+       ->execute([':id' => (int) $sessionId]);
+}
+
 function markSessionReminded(PDO $db, $sessionId) {
     $db->prepare('UPDATE `sessions` SET `reminder_sent` = 1 WHERE `id` = :id')
        ->execute([':id' => (int) $sessionId]);
+}
+
+/** After a booking: confirmed sessions get the confirmation, pending ones the Accept/Decline mail. */
+function sendBookedSessionMail(PDO $db, $sessionId) {
+    $s = fetchSession($db, $sessionId);
+    if ($s === null) {
+        return false;
+    }
+    return sendSessionMail($db, $sessionId, $s['status'] === 'confirmed' ? 'confirmation' : 'pending');
+}
+
+/**
+ * After a session has moved. A session the client had declined goes back to
+ * pending (new time, new answer needed) before the mail is built, so the mail
+ * carries fresh Accept/Decline links.
+ */
+function notifySessionRescheduled(PDO $db, $sessionId, $oldStart, $reason = '') {
+    $s = fetchSession($db, $sessionId);
+    if ($s !== null && $s['status'] === 'rejected') {
+        setSessionStatus($db, $sessionId, 'pending');
+    }
+    return sendSessionMail($db, $sessionId, 'rescheduled', [
+        'old_time'          => date('l d M Y \a\t h:i A', strtotime($oldStart)),
+        'reschedule_reason' => $reason !== '' ? 'Reason: ' . $reason : '',
+    ]);
 }

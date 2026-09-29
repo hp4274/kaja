@@ -99,12 +99,12 @@
         <div class="ra-form-row">
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-fname">First Name *</label>
-            <input class="ra-form-input" id="in-fname" name="first_name" type="text" placeholder="First Name"
+            <input class="ra-form-input" id="in-fname" name="first_name" type="text" maxlength="50" pattern="[A-Za-z][A-Za-z .'\-]*" title="Letters only" placeholder="First Name"
               required />
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-lname">Last Name *</label>
-            <input class="ra-form-input" id="in-lname" name="last_name" type="text" placeholder="Last Name" required />
+            <input class="ra-form-input" id="in-lname" name="last_name" type="text" maxlength="50" pattern="[A-Za-z][A-Za-z .'\-]*" title="Letters only" placeholder="Last Name" required />
           </div>
         </div>
 
@@ -116,7 +116,7 @@
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-phone">Phone Number *</label>
-            <input class="ra-form-input" id="in-phone" name="phone" type="tel" placeholder="10-digit number" required />
+            <input class="ra-form-input" id="in-phone" name="phone" type="tel" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" title="Enter exactly 10 digits" placeholder="10-digit number" required />
           </div>
         </div>
 
@@ -160,11 +160,11 @@
         <div class="ra-form-row">
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-em-name">Full Name *</label>
-            <input class="ra-form-input" id="in-em-name" name="emergency_name" type="text" required />
+            <input class="ra-form-input" id="in-em-name" name="emergency_name" type="text" maxlength="100" pattern="[A-Za-z][A-Za-z .'\-]*" title="Letters only" required />
           </div>
           <div class="ra-form-group">
             <label class="ra-form-label" for="in-em-phone">Phone Number *</label>
-            <input class="ra-form-input" id="in-em-phone" name="emergency_phone" type="tel" required />
+            <input class="ra-form-input" id="in-em-phone" name="emergency_phone" type="tel" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" title="Enter exactly 10 digits" required />
           </div>
         </div>
         <div class="ra-form-group">
@@ -1374,6 +1374,13 @@
       var dateInput = document.getElementById("in-pref-date");
       var timeSelect = document.getElementById("in-pref-time");
       var timeHelp = document.getElementById("in-time-help");
+
+      var dobInput = document.getElementById("in-dob");
+      if (dobInput) dobInput.max = new Date().toISOString().split("T")[0];
+      ["in-phone", "in-em-phone"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener("input", function () { el.value = el.value.replace(/\D/g, "").slice(0, 10); });
+      });
 
       // Set min date to today
       if (dateInput) {

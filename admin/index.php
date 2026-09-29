@@ -106,9 +106,10 @@ $pageTitle = $pageTitles[$page] ?? 'Dashboard';
       var toast = document.getElementById('alertToast');
       toast.textContent = message;
       toast.className = 'alert-toast ' + type + ' show';
-      setTimeout(function() {
+      clearTimeout(toast._t);
+      toast._t = setTimeout(function() {
         toast.classList.remove('show');
-      }, 3000);
+      }, 4000);
     }
 
     // escapeHtml helper

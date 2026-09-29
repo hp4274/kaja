@@ -194,7 +194,10 @@ CREATE TABLE IF NOT EXISTS `sessions` (
     -- pending -> confirmed -> completed, with cancelled and no-show as exits.
     -- no-show is deliberately not a flavour of cancelled: no advance notice,
     -- different follow-up, and its own line on the dashboard.
-    `status` ENUM('pending','confirmed','completed','cancelled','no-show') NOT NULL DEFAULT 'pending',
+    `status` ENUM('pending','confirmed','rejected','completed','cancelled','no-show') NOT NULL DEFAULT 'pending',
+    -- One-time accept/reject link for a pending session (includes/session-token.php).
+    `response_token` CHAR(64) DEFAULT NULL,
+    `responded_at` DATETIME DEFAULT NULL,
     -- One static practice room, copied in at booking so the record keeps the
     -- link it was actually sent with.
     `video_link` VARCHAR(500) DEFAULT NULL,
@@ -206,12 +209,15 @@ CREATE TABLE IF NOT EXISTS `sessions` (
     `rescheduled_count` INT NOT NULL DEFAULT 0,
     -- Set once by the reminder pass so a session is never chased twice.
     `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
+    -- The 30-minutes-before nudge; separate from the day-before reminder.
+    `reminder30_sent` TINYINT(1) NOT NULL DEFAULT 0,
     `notes` TEXT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY `idx_start` (`start_time`),
     KEY `idx_series` (`recurring_series_id`),
     KEY `idx_client_start` (`client_id`, `start_time`),
+    UNIQUE KEY `uniq_response_token` (`response_token`),
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

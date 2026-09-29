@@ -99,3 +99,23 @@ function sendFeeReminder(PDO $db, $clientId) {
 
     return ['sent' => false, 'error' => 'The mail server refused it. It is queued and will be retried.'];
 }
+
+/**
+ * Receipt for a payment just recorded as paid. Call after the write commits.
+ * A client with no email is skipped quietly; a failed send is queued by
+ * sendTemplatedMail().
+ */
+function sendFeeReceivedEmail(PDO $db, $clientId, $amount, $feeDate) {
+    $stmt = $db->prepare('SELECT `first_name`, `last_name`, `email` FROM `clients` WHERE `id` = :c');
+    $stmt->execute([':c' => (int) $clientId]);
+    $client = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$client || trim((string) $client['email']) === '') {
+        return false;
+    }
+    return sendTemplatedMail('fee_received', $client['email'], [
+        'client_name'   => trim($client['first_name'] . ' ' . $client['last_name']),
+        'amount_paid'   => '₹' . number_format((float) $amount, 2),
+        'fee_date'      => date('d M Y', strtotime($feeDate)),
+        'practice_name' => getSetting('practice_name'),
+    ]);
+}

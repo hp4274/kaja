@@ -163,7 +163,131 @@ function emailTemplates() {
                 'practice_name' => $practice,
             ],
         ],
+        'lead_rejected' => [
+            'label'       => 'Lead rejected',
+            'icon'        => 'bi-x-circle',
+            'trigger'     => 'When you reject a lead',
+            'blurb'       => 'A courtesy reply so the person is not left waiting.',
+            'subject_key' => 'notify_lead_rejected_subject',
+            'body_key'    => 'notify_lead_rejected_body',
+            'bg_key'      => 'notify_lead_rejected_bg',
+            'to'          => 'the lead',
+            'required'    => [],
+            'vars'        => [
+                'name'          => 'Ananya',
+                'practice_name' => $practice,
+            ],
+        ],
+
+        'session_pending' => [
+            'label'       => 'Session awaiting confirmation',
+            'icon'        => 'bi-hourglass-split',
+            'trigger'     => 'When a session is booked and needs the client to accept',
+            'blurb'       => 'Carries one-time Accept and Decline links.',
+            'subject_key' => 'notify_session_pending_subject',
+            'body_key'    => 'notify_session_pending_body',
+            'bg_key'      => 'notify_session_pending_bg',
+            'to'          => 'the client',
+            'required'    => ['accept_link', 'reject_link'],
+            'vars'        => [
+                'client_name'   => 'Ananya Rao',
+                'session_time'  => $when,
+                'session_type'  => 'Online',
+                'accept_link'   => siteBaseUrl() . 'session-response.php?token=8f3c1a9e42&r=accept',
+                'reject_link'   => siteBaseUrl() . 'session-response.php?token=8f3c1a9e42&r=reject',
+                'practice_name' => $practice,
+            ],
+        ],
+
+        'session_rescheduled' => [
+            'label'       => 'Session rescheduled',
+            'icon'        => 'bi-calendar2-range',
+            'trigger'     => 'When a session is moved, including when a holiday moves it',
+            'blurb'       => 'The old and new time, and the reason if there is one.',
+            'subject_key' => 'notify_session_rescheduled_subject',
+            'body_key'    => 'notify_session_rescheduled_body',
+            'bg_key'      => 'notify_session_rescheduled_bg',
+            'to'          => 'the client',
+            'required'    => [],
+            'vars'        => [
+                'client_name'       => 'Ananya Rao',
+                'old_time'          => date('l d M Y \a\t h:i A', strtotime('+2 days 15:00')),
+                'session_time'      => $when,
+                'session_type'      => 'Online',
+                'video_link'        => 'https://meet.example.com/ananya-rao',
+                'reschedule_reason' => 'Reason: the practice is closed that day.',
+                'status_note'       => 'This time is confirmed.',
+                'practice_name'     => $practice,
+            ],
+        ],
+
+        'session_rejected_admin' => [
+            'label'       => 'Session declined (to you)',
+            'icon'        => 'bi-calendar-x',
+            'trigger'     => 'When a client declines a session from the emailed link',
+            'blurb'       => 'Sent to the practice address so the session can be rescheduled.',
+            'subject_key' => 'notify_session_rejected_admin_subject',
+            'body_key'    => 'notify_session_rejected_admin_body',
+            'bg_key'      => 'notify_session_rejected_admin_bg',
+            'to'          => 'the practice',
+            'required'    => [],
+            'vars'        => [
+                'client_name'   => 'Ananya Rao',
+                'session_time'  => $when,
+                'practice_name' => $practice,
+            ],
+        ],
+
+        'fee_received' => [
+            'label'       => 'Payment received',
+            'icon'        => 'bi-receipt',
+            'trigger'     => 'When a fee is recorded as paid',
+            'blurb'       => 'A short receipt for the payment.',
+            'subject_key' => 'notify_fee_received_subject',
+            'body_key'    => 'notify_fee_received_body',
+            'bg_key'      => 'notify_fee_received_bg',
+            'to'          => 'the client',
+            'required'    => ['amount_paid'],
+            'vars'        => [
+                'client_name'   => 'Ananya Rao',
+                'amount_paid'   => '₹1,500.00',
+                'fee_date'      => date('d M Y'),
+                'practice_name' => $practice,
+            ],
+        ],
     ];
+}
+
+/**
+ * Render one registry template and send it. On failure the rendered message is
+ * queued (kind templated_mail; the hourly job replays it as-is) and false is
+ * returned. Never call this inside a DB transaction: SMTP is slow.
+ */
+function sendTemplatedMail($templateId, $to, array $vars) {
+    $to = trim((string) $to);
+    if ($to === '') {
+        return false;
+    }
+    $subject    = renderNotificationTemplate(getSetting('notify_' . $templateId . '_subject'), $vars);
+    $body       = renderNotificationTemplate(getSetting('notify_' . $templateId . '_body'), $vars);
+    $background = emailBackgroundUrl($templateId);
+
+    if (sendMail($to, $subject, $body, getSetting('practice_email'), $background)) {
+        return true;
+    }
+    require_once __DIR__ . '/mail-queue.php';
+    queueFailedMail([
+        'to' => $to, 'subject' => $subject, 'body' => $body,
+        'kind' => 'templated_mail', 'background' => $background,
+    ], 'SMTP send failed');
+    return false;
+}
+
+function sendLeadRejectedEmail($toEmail, $name) {
+    return sendTemplatedMail('lead_rejected', $toEmail, [
+        'name'          => trim((string) $name) !== '' ? trim((string) $name) : 'there',
+        'practice_name' => getSetting('practice_name'),
+    ]);
 }
 
 /**

@@ -236,6 +236,11 @@ try {
             $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('fee_added', :d, 'client', :rid)")
                ->execute([':d' => $desc, ':rid' => $clientId]);
 
+            // Payment receipt, after the write. Failure is queued, never shown.
+            if ($status === 'paid') {
+                sendFeeReceivedEmail($db, $clientId, $amount, $feeDate);
+            }
+
             echo json_encode(['success' => true, 'fee_id' => $feeId]);
             break;
 

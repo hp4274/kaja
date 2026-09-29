@@ -144,6 +144,15 @@ $formTemplatesAvailable = formTemplates($db);
 </div>
 
 <!-- Overview Tab -->
+<style>
+.status-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; padding-top:16px; border-top:1px solid var(--border, #e5e7eb); }
+.status-btn { color:#fff; border:0; }
+.status-btn-inactive { background:#b45309; }
+.status-btn-inactive:hover { background:#92400e; }
+.status-btn-completed { background:#15803d; }
+.status-btn-completed:hover { background:#166534; }
+.intake-row-btn { cursor:pointer; }
+</style>
 <div class="profile-tab-content active" id="tab-overview">
   <div class="split-grid">
     <!-- Client Info -->
@@ -159,16 +168,17 @@ $formTemplatesAvailable = formTemplates($db);
           <div>
             <div class="detail-label">Status</div>
             <div class="detail-value">
-              <select class="status-select" onchange="updateClientStatus(<?php echo $clientId; ?>, this.value)">
-                <?php foreach (clientStatuses() as $cs): ?>
-                  <option value="<?php echo $cs; ?>" <?php echo $client['status'] === $cs ? 'selected' : ''; ?>><?php echo clientStatusLabel($cs); ?></option>
-                <?php endforeach; ?>
-              </select>
+              <span class="badge badge-<?php echo $client['status']; ?>"><?php echo htmlspecialchars(clientStatusLabel($client['status'])); ?></span>
               <?php if (!clientIsBookable($client['status'])): ?>
                 <div class="hint is-block">Not bookable while <?php echo strtolower(clientStatusLabel($client['status'])); ?>.</div>
               <?php endif; ?>
             </div>
           </div>
+        </div>
+        <div class="status-actions">
+          <?php foreach (['inactive' => 'Inactive', 'completed' => 'Completed'] as $k => $lbl): if ($client['status'] === $k) continue; ?>
+            <button type="button" class="btn btn-sm status-btn status-btn-<?php echo $k; ?>" onclick="setClientStatus('<?php echo $k; ?>', '<?php echo $lbl; ?>')">Mark <?php echo $lbl; ?></button>
+          <?php endforeach; ?>
         </div>
       </div>
     </div>
@@ -460,7 +470,7 @@ $formTemplatesAvailable = formTemplates($db);
       <button class="btn btn-primary btn-sm" onclick="openResendIntakeModal()"><i class="bi bi-envelope-arrow-up"></i> Send intake form again</button>
     <?php endif; ?>
   </div>
-  <?php if (!$intakeRecord): ?>
+  <?php if (empty($intakes)): ?>
     <div class="empty-state">
       <i class="bi bi-clipboard-x"></i>
       <p>No intake form on file</p>
@@ -468,33 +478,37 @@ $formTemplatesAvailable = formTemplates($db);
     </div>
   <?php else: ?>
     <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          Intake responses
-          <?php if ($intakeRecord['version'] < 2): ?>
-            <!-- Only older forms are tagged. Labelling the current one would
-                 add noise to every record for the sake of the few that differ. -->
-            <span class="badge badge-archived" title="Answered under an older version of the form">Form v<?php echo (int) $intakeRecord['version']; ?></span>
-          <?php endif; ?>
+      <div class="panel-body panel-body-flush">
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Form</th><th>Date filled</th><th class="th-right">Score</th><th class="th-right">Details</th></tr>
+            </thead>
+            <tbody>
+              <?php foreach (array_reverse($intakes) as $row):
+                $tq = 0;
+                for ($i = 1; $i <= 18; $i++) {
+                    if (strtolower($row["q1_{$i}"] ?? '') === 'yes') $tq++;
+                    if (strtolower($row["q2_{$i}"] ?? '') === 'yes') $tq++;
+                }
+                $tcls = $tq >= 24 ? 'high' : ($tq >= 12 ? 'mid' : 'low');
+              ?>
+                <tr>
+                  <td class="td-name">Patient Intake Form<?php echo !empty($row['form_version']) ? ' (v' . (int) $row['form_version'] . ')' : ''; ?></td>
+                  <td class="td-muted"><?php echo date('d M Y, h:i A', strtotime($row['created_at'])); ?></td>
+                  <td class="td-actions"><span class="score-text <?php echo $tcls; ?>"><?php echo $tq; ?>/36</span></td>
+                  <td class="td-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="openIntakeDrawer(<?php echo (int) $row['id']; ?>)"><i class="bi bi-eye"></i> Details</button></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
         </div>
-        <span class="hint">
-          Submitted <?php echo $intakeRecord['submitted_at'] ? date('d M Y, H:i', strtotime($intakeRecord['submitted_at'])) : 'unknown'; ?>
-        </span>
-      </div>
-      <div class="panel-body">
-        <?php foreach ($intakeSections as $section): ?>
-          <h3 class="intake-section-title"><?php echo htmlspecialchars($section['title']); ?></h3>
-          <dl class="lead-answers">
-            <?php foreach ($section['answers'] as $a): ?>
-              <dt><?php echo htmlspecialchars($a['label']); ?></dt>
-              <dd><?php echo nl2br(htmlspecialchars($a['value'])); ?></dd>
-            <?php endforeach; ?>
-          </dl>
-        <?php endforeach; ?>
       </div>
     </div>
   <?php endif; ?>
 </div>
+
+<?php $allPatientIntakes = $intakes; include __DIR__ . '/../includes/intake-drawer.php'; ?>
 
 <!-- Resend Intake Modal -->
 <div class="modal-overlay" id="resendIntakeModal">
@@ -1167,14 +1181,15 @@ function submitFee(e) {
     .catch(function() { showToast('Network error','error'); });
 }
 
-function updateClientStatus(id, status) {
+async function setClientStatus(status, label) {
+  if (!await showConfirm('Mark this client as ' + label.toLowerCase() + '?', { okText: label })) return;
   var fd = new FormData();
   fd.append('action', 'update_status');
-  fd.append('client_id', id);
+  fd.append('client_id', clientId);
   fd.append('status', status);
   fetch('api/clients.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })
-    .then(function(d) { if(d.success) showToast('Status updated'); else showToast(d.error||'Error','error'); })
+    .then(function(d) { if(d.success){ showToast('Status updated'); setTimeout(function(){ location.reload(); }, 600); } else showToast(d.error||'Error','error'); })
     .catch(function() { showToast('Network error','error'); });
 }
 

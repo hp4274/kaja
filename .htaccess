@@ -21,7 +21,7 @@ DirectoryIndex index.html index.php
 
     # .html pages sit at the root. PHP pages live in php/, but public URLs stay
     # flat (/intake.php?token=...), so bookmarks and already-emailed links work.
-    RewriteRule ^(blogs|blog-detail|intake|intake-thank-you|dashboard)\.php$ php/$1.php [L,QSA]
+    RewriteRule ^(blogs|blog-detail|intake|intake-thank-you|dashboard|session-response)\.php$ php/$1.php [L,QSA]
 
     # blogs.html and blog-detail.html were static, hardcoded copies of these
     # same two pages -- removed, since admin-added posts never reached them.

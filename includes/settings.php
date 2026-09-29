@@ -180,6 +180,91 @@ Best regards,
             "Best regards,
 {{practice_name}}",
 
+        // Lead rejected: the courtesy reply, so nobody is left waiting.
+        'notify_lead_rejected_subject'     => 'About your enquiry - {{practice_name}}',
+        'notify_lead_rejected_body'        =>
+            "Hello {{name}},
+
+" .
+            "Thank you for getting in touch. Unfortunately we are unable to take your enquiry forward at this time.
+
+" .
+            "If you think this is a mistake, or your circumstances change, just reply to this email.
+
+" .
+            "Best regards,
+{{practice_name}}",
+
+        // Session booked but not yet confirmed: the client accepts or declines.
+        'notify_session_pending_subject'   => 'Please confirm your session on {{session_time}} - {{practice_name}}',
+        'notify_session_pending_body'      =>
+            "Hello {{client_name}},
+
+" .
+            "A session has been booked for you on {{session_time}}.
+
+" .
+            "Format: {{session_type}}
+" .
+            "Joining link: {{video_link}}
+
+" .
+            "Please let us know whether this time works:
+
+" .
+            "Accept: {{accept_link}}
+
+" .
+            "Decline: {{reject_link}}
+
+" .
+            "Best regards,
+{{practice_name}}",
+
+        'notify_session_rescheduled_subject' => 'Your session has moved to {{session_time}} - {{practice_name}}',
+        'notify_session_rescheduled_body'    =>
+            "Hello {{client_name}},
+
+" .
+            "Your session has been moved from {{old_time}} to {{session_time}}.
+{{reschedule_reason}}
+" .
+            "Format: {{session_type}}
+" .
+            "Joining link: {{video_link}}
+
+" .
+            "{{status_note}}
+
+" .
+            "Best regards,
+{{practice_name}}",
+
+        // Sent to the practice, not the client.
+        'notify_session_rejected_admin_subject' => 'Session declined by {{client_name}}',
+        'notify_session_rejected_admin_body'    =>
+            "{{client_name}} has declined the session on {{session_time}}.
+
+" .
+            "It is still on the calendar as Rejected. Reschedule or cancel it from the Sessions page.",
+
+        'notify_fee_received_subject'      => 'Payment received - {{practice_name}}',
+        'notify_fee_received_body'         =>
+            "Hello {{client_name}},
+
+" .
+            "We have received your payment of {{amount_paid}} dated {{fee_date}}. Thank you.
+
+" .
+            "Best regards,
+{{practice_name}}",
+
+        'notify_lead_rejected_bg' => '',
+        'notify_session_pending_bg' => '',
+        'notify_session_rescheduled_bg' => '',
+        'notify_session_rejected_admin_bg' => '',
+        'notify_fee_received_bg' => '',
+
         // Uploads. Shared with Patient Intake the day it gains a file
         // question -- one setting, two consumers.
         'upload_max_mb'         => '10',

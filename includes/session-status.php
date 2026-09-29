@@ -3,6 +3,8 @@
  * The session lifecycle, in one place.
  *
  * pending -> confirmed -> completed, with cancelled and no-show as exits.
+ * rejected: the client declined the offered time. Still holds the slot until
+ * the admin reschedules (back to pending) or cancels it.
  *
  * no-show is deliberately not a flavour of cancelled. A cancellation came with
  * notice and freed the hour; a no-show did not, and the two need different
@@ -10,7 +12,7 @@
  */
 
 function sessionStatuses() {
-    return ['pending', 'confirmed', 'completed', 'cancelled', 'no-show'];
+    return ['pending', 'confirmed', 'rejected', 'completed', 'cancelled', 'no-show'];
 }
 
 function isValidSessionStatus($status) {
@@ -21,6 +23,7 @@ function sessionStatusLabel($status) {
     $labels = [
         'pending'   => 'Pending',
         'confirmed' => 'Confirmed',
+        'rejected'  => 'Declined by client',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
         'no-show'   => 'No-show',
@@ -32,6 +35,7 @@ function sessionStatusBadgeClass($status) {
     $classes = [
         'pending'   => 'badge-pending',
         'confirmed' => 'badge-scheduled',
+        'rejected'  => 'badge-rejected',
         'completed' => 'badge-completed',
         'cancelled' => 'badge-cancelled',
         'no-show'   => 'badge-no-show',
@@ -56,7 +60,8 @@ function sessionCanTransition($from, $to) {
     }
 
     $allowed = [
-        'pending'   => ['confirmed', 'completed', 'cancelled', 'no-show'],
+        'pending'   => ['confirmed', 'rejected', 'completed', 'cancelled', 'no-show'],
+        'rejected'  => ['pending', 'confirmed', 'cancelled'],
         'confirmed' => ['completed', 'cancelled', 'no-show'],
     ];
     return isset($allowed[$from]) && in_array($to, $allowed[$from], true);

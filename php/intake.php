@@ -117,7 +117,19 @@ if ($link) {
             'last_name'  => isset($nameParts[1]) ? $nameParts[1] : '',
             'email'      => (string) $lead['email'],
             'phone'      => (string) $lead['phone'],
+            'presenting_concern' => (string) $lead['message'],
+            'pref_consult'       => $lead['preference'] === 'In-person' ? 'Onsite' : (string) $lead['preference'],
         ];
+        // Date before time: the wizard replays keys in order, and the time
+        // slots only exist once the date has been set.
+        $prefTs = $lead['preferred_date'] ? strtotime($lead['preferred_date']) : false;
+        if ($prefTs !== false && date('Y-m-d', $prefTs) >= date('Y-m-d')) {
+            $prefill['pref_date'] = date('Y-m-d', $prefTs);
+            $timeTs = $lead['preferred_time'] ? strtotime($lead['preferred_time']) : false;
+            if ($timeTs !== false) {
+                $prefill['pref_time'] = date('h:i A', $timeTs);
+            }
+        }
     }
 }
 

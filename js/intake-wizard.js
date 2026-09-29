@@ -158,6 +158,7 @@
           if (f.value === boot.draft[name]) f.checked = true;
         } else {
           f.value = boot.draft[name];
+          if (name === 'pref_date') f.dispatchEvent(new Event('change', { bubbles: true }));  // loads the time slots
         }
       });
     });

@@ -98,8 +98,15 @@ try {
             $preference = isset($_POST['preference']) ? trim($_POST['preference']) : '';
             $message = isset($_POST['message']) ? trim($_POST['message']) : '';
             
-            if (empty($name) || empty($email) || empty($phone) || empty($prefDate) || empty($prefTime) || empty($preference) || empty($message)) {
-                sendResponse(false, 'All fields are required.', 400);
+            if (empty($name) || empty($email) || empty($phone) || empty($prefDate) || empty($prefTime) || empty($preference)) {
+                sendResponse(false, 'Please fill in all required fields.', 400);
+            }
+
+            if (!preg_match("/^[\p{L}][\p{L} .'-]*$/u", $name) || mb_strlen($name) > 100) {
+                sendResponse(false, "Name may contain only letters, spaces and . ' -", 400);
+            }
+            if (!preg_match('/^[0-9]{10}$/', $phone)) {
+                sendResponse(false, 'Phone number must be exactly 10 digits (numbers only).', 400);
             }
             
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

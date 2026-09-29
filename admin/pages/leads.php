@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../includes/form-builder.php';
 $db = getDbConnection();
 
 $counts  = leadStatusCounts($db);
-$sources = leadSources($db);
+$preferences = leadPreferences($db);
 
 // Which questionnaire a lead can be sent -- named variants from the Form
 // Builder (formTemplates() falls back to "Version N" for one nobody has
@@ -18,7 +18,7 @@ $formTemplatesAvailable = formTemplates($db);
 $filters = [
     'q'         => isset($_GET['q']) ? trim($_GET['q']) : '',
     'status'    => isset($_GET['status']) ? trim($_GET['status']) : '',
-    'source'    => isset($_GET['source']) ? trim($_GET['source']) : '',
+    'preference' => isset($_GET['preference']) ? trim($_GET['preference']) : '',
     'date_from' => isset($_GET['date_from']) ? trim($_GET['date_from']) : '',
     'date_to'   => isset($_GET['date_to']) ? trim($_GET['date_to']) : '',
     'sort'      => (isset($_GET['sort']) && $_GET['sort'] === 'status') ? 'status' : 'date',
@@ -74,16 +74,16 @@ function leadsUrl(array $filters, array $overrides = []) {
 
 <!-- Filter bar — open by default when a filter is already applied, so a
      reloaded page never hides the reason it is showing fewer rows. -->
-<form method="get" action="index.php" class="lead-filter-bar" id="lead-filter-bar" data-leads-nav-form <?php echo ($filters['source'] === '' && $filters['date_from'] === '' && $filters['date_to'] === '') ? 'hidden' : ''; ?>>
+<form method="get" action="index.php" class="lead-filter-bar" id="lead-filter-bar" data-leads-nav-form <?php echo ($filters['preference'] === '' && $filters['date_from'] === '' && $filters['date_to'] === '') ? 'hidden' : ''; ?>>
   <input type="hidden" name="page" value="leads" />
   <input type="hidden" name="status" value="<?php echo htmlspecialchars($statusFilter); ?>" />
   <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>" />
   <label class="lead-filter-field">
-    <span>Source</span>
-    <select name="source" class="form-select-sm">
-      <option value="">All sources</option>
-      <?php foreach ($sources as $src): ?>
-        <option value="<?php echo htmlspecialchars($src); ?>" <?php echo $filters['source'] === $src ? 'selected' : ''; ?>><?php echo htmlspecialchars($src); ?></option>
+    <span>Preference</span>
+    <select name="preference" class="form-select-sm">
+      <option value="">All preferences</option>
+      <?php foreach ($preferences as $src): ?>
+        <option value="<?php echo htmlspecialchars($src); ?>" <?php echo $filters['preference'] === $src ? 'selected' : ''; ?>><?php echo htmlspecialchars($src); ?></option>
       <?php endforeach; ?>
     </select>
   </label>
@@ -181,7 +181,7 @@ function leadsUrl(array $filters, array $overrides = []) {
                 <td><input type="checkbox" class="lead-select" value="<?php echo $l['id']; ?>" /></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($l['created_at'])); ?></td>
                 <td class="td-name"><a href="#" onclick="openLeadDrawer(<?php echo $l['id']; ?>); return false;"><?php echo htmlspecialchars($l['name']); ?></a></td>
-                <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a></td>
+                <td class="td-email"><?php echo htmlspecialchars($l['email']); ?></td>
                 <td class="td-nowrap"><?php echo htmlspecialchars(($l['country_code'] ?? '') . ' ' . ($l['phone'] ?? '')); ?></td>
                 <td class="td-nowrap td-muted">
                   <?php
@@ -255,7 +255,7 @@ function leadsUrl(array $filters, array $overrides = []) {
               <div class="grid-card-body">
                 <div class="grid-card-item" title="Email">
                   <i class="bi bi-envelope"></i>
-                  <a href="mailto:<?php echo htmlspecialchars($l['email']); ?>"><?php echo htmlspecialchars($l['email']); ?></a>
+                  <?php echo htmlspecialchars($l['email']); ?>
                 </div>
                 <?php if ($l['phone']): ?>
                   <div class="grid-card-item" title="Phone">

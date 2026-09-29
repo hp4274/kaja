@@ -1,10 +1,10 @@
 <?php
 /**
- * Hourly stale-intake reminder.
+ * Stale-intake reminder + session reminders. Run every 5-10 min (30-min session nudge).
  *
  *   php cron/intake-reminders.php
  *
- * Despite the name this is the practice's single hourly job: it also sweeps
+ * Despite the name this is the practice's single scheduled job (every 5 minutes): it also sweeps
  * finished sessions to completed and sends session reminders.
  *
  * Three passes, in order: retry queued mail, expire overdue links, then chase
@@ -44,7 +44,7 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
         // Both are queued already rendered, so the replay only has to send.
         // fee_reminder used to fall through to the intake-link branch below,
         // which reads a name and a URL a payment reminder does not have.
-        if (in_array($payload['kind'] ?? '', ['session_mail', 'fee_reminder'], true)) {
+        if (in_array($payload['kind'] ?? '', ['session_mail', 'fee_reminder', 'templated_mail'], true)) {
             return sendMail($payload['to'], $payload['subject'], $payload['body'],
                             null, $payload['background'] ?? '');
         }
@@ -83,6 +83,13 @@ if (php_sapi_name() === 'cli' && isset($argv[0]) && realpath($argv[0]) === realp
         // become the same client reminded every hour after it recovers.
         markSessionReminded($db, $sid);
         echo '  session #' . $sid . ' ' . ($sent ? 'reminded' : 'MAIL FAILED (queued)') . PHP_EOL;
+    }
+
+    // 30-minute nudge. Needs the cron to run every 5-10 minutes to land on time.
+    foreach (sessionsDueSoon($db) as $sid) {
+        $sent = sendSessionMail($db, $sid, 'reminder');
+        markSessionRemindedSoon($db, $sid);
+        echo '  session #' . $sid . ' 30-min reminder ' . ($sent ? 'sent' : 'MAIL FAILED (queued)') . PHP_EOL;
     }
 
     $hours = getSettingInt('admin_reminder_hours', 48);

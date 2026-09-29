@@ -91,6 +91,23 @@ if (!filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
     intakeFail('Please provide a valid email address.');
 }
 
+foreach (['first_name' => 'First name', 'last_name' => 'Last name', 'emergency_name' => 'Emergency contact name'] as $id => $label) {
+    if (!empty($values[$id]) && !preg_match("/^\p{L}[\p{L} .'-]*$/u", $values[$id])) {
+        intakeFail($label . " may contain only letters, spaces and . ' -");
+    }
+}
+foreach (['phone' => 'Phone', 'emergency_phone' => 'Emergency contact phone'] as $id => $label) {
+    if (!empty($values[$id]) && !preg_match('/^[0-9]{10}$/', $values[$id])) {
+        intakeFail($label . ' must be exactly 10 digits (numbers only).');
+    }
+}
+if (!empty($values['dob'])) {
+    $d = DateTime::createFromFormat('Y-m-d', $values['dob']);
+    if (!$d || $d->format('Y-m-d') !== $values['dob'] || $values['dob'] > date('Y-m-d')) {
+        intakeFail('Date of birth must be a valid date that is not in the future.');
+    }
+}
+
 $values['consent_version'] = INTAKE_CONSENT_VERSION;
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,24 @@
   }
   resetMinDate();
 
+  var apPhone = document.getElementById("ap-phone");
+  if (apPhone) {
+    apPhone.addEventListener("input", function () {
+      apPhone.value = apPhone.value.replace(/\D/g, "").slice(0, 10);
+    });
+  }
+
+  /* Deep link (#booking-form): scroll to the form and focus its first field. */
+  function focusBookingForm() {
+    if (location.hash !== "#booking-form") return;
+    var sec = document.getElementById("booking-form");
+    var first = document.getElementById("ap-name");
+    if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (first) first.focus({ preventScroll: true });
+  }
+  window.addEventListener("load", focusBookingForm);
+  window.addEventListener("hashchange", focusBookingForm);
+
   /* The appointment page does not load the shared form stylesheet, so the
      feedback banner is styled inline to stay self-contained. */
   var ALERT_STYLES = {

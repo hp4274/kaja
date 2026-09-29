@@ -60,6 +60,17 @@ try {
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('status_changed',:d,'lead',:rid)")
                ->execute([':d'=>$desc, ':rid'=>$id]);
 
+            // A rejected lead is told so, after the write and after the answer
+            // has gone: the mail is SMTP-slow and its failure is queued, not shown.
+            if ($status === 'rejected') {
+                $rej = fetchLead($db, $id);
+                respondAndContinue(['success'=>true,'status'=>$status]);
+                if ($rej !== null && $rej['email'] !== '') {
+                    sendLeadRejectedEmail($rej['email'], $rej['name']);
+                }
+                exit;
+            }
+
             echo json_encode(['success'=>true,'status'=>$status]);
             break;
 
@@ -134,18 +145,33 @@ try {
                 exit;
             }
 
+            // Who is about to be rejected, captured before the write: the bulk
+            // helper reports only a count.
+            $toReject = [];
+            if ($status === 'rejected' && $ids) {
+                $in = implode(',', array_fill(0, count($ids), '?'));
+                $sel = $db->prepare("SELECT `id`,`name`,`email` FROM `leads` WHERE `id` IN ($in) AND `status` <> 'rejected' AND `email` <> ''");
+                $sel->execute(array_map('intval', $ids));
+                $toReject = $sel->fetchAll(PDO::FETCH_ASSOC);
+            }
+
             $result = bulkUpdateLeadStatus($db, $ids, $status);
 
             $desc = $result['updated'] . ' lead(s) moved to ' . leadStatusLabel($status);
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('status_changed',:d,'lead',NULL)")
                ->execute([':d'=>$desc]);
 
-            echo json_encode([
+            respondAndContinue([
                 'success' => true,
                 'updated' => $result['updated'],
                 'skipped' => $result['skipped'],
             ]);
-            break;
+            foreach ($toReject as $r) {
+                if (!in_array((int) $r['id'], $result['skipped'], true)) {
+                    sendLeadRejectedEmail($r['email'], $r['name']);
+                }
+            }
+            exit;
 
         case 'confirm':
             $id = intval($_POST['id'] ?? 0);
