@@ -210,7 +210,7 @@ try {
 
     $db->commit();
 
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     if ($db->inTransaction()) {
         $db->rollBack();
     }
