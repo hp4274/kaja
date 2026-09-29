@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/form-builder.php';
 require_once __DIR__ . '/../../includes/settings.php';
+require_once __DIR__ . '/../../includes/intake-repo.php';
 
 $db = getDbConnection();
 
@@ -70,8 +71,13 @@ $editableCount = count($questions) - array_sum(array_map('count', $fixed));
               </td>
               <td><?php echo $t['questions']; ?></td>
               <td>
-                <?php if ($t['locked']): ?>
-                  <span class="badge badge-pending"><i class="bi bi-lock"></i> In use</span>
+                <?php if ($t['locked']):
+                  $pendingNames = intakeLinksPendingNames($db, $t['version']);
+                  $pendingTitle = $pendingNames
+                    ? 'Still filling: ' . implode(', ', $pendingNames)
+                    : 'Answered already -- no one is currently filling it';
+                ?>
+                  <span class="badge badge-pending" title="<?php echo htmlspecialchars($pendingTitle); ?>"><i class="bi bi-lock"></i> In use</span>
                 <?php endif; ?>
               </td>
               <td class="td-actions">

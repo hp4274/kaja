@@ -25,9 +25,9 @@
 $_local = [
     'APP_ENV'               => stripos(__DIR__, 'xampp') !== false ? 'development' : 'production',
     'DB_HOST'               => 'localhost',
-    'DB_NAME'               => 'kaja_db',
-    'DB_USER'               => 'root',
-    'DB_PASS'               => '',
+    'DB_NAME'               => 'rewirewithkajal',
+    'DB_USER'               => 'rewire_user',
+    'DB_PASS'               => '123456',
     'INTAKE_ENCRYPTION_KEY' => '',
     'SMTP_HOST'             => 'smtp.gmail.com',
     'SMTP_PORT'             => 587,

@@ -292,6 +292,10 @@ try {
             // sessions/notes/fees/documents cascade off the FK on client_id;
             // patient-intake has no FK, so its rows for this client are swept
             // by hand, and the lead that made this client just loses the link.
+            // intake_links has an ON DELETE SET NULL FK, which would only orphan
+            // these rows (they'd linger with client_id wiped) -- deleted by hand
+            // instead so a client's intake history actually goes with them.
+            $db->prepare("DELETE FROM `intake_links` WHERE `client_id` = :id")->execute([':id' => $clientId]);
             $db->prepare("DELETE FROM `patient-intake` WHERE `client_id` = :id")->execute([':id' => $clientId]);
             $db->prepare("UPDATE `leads` SET `client_id` = NULL WHERE `client_id` = :id")->execute([':id' => $clientId]);
             $db->prepare("DELETE FROM `clients` WHERE `id` = :id")->execute([':id' => $clientId]);

@@ -159,9 +159,9 @@ async function confirmSendLink(e) {
             </tr>
           </thead>
           <tbody>
-            <?php $rowNum = 1; foreach ($links as $il): ?>
+            <?php foreach ($links as $il): ?>
               <tr>
-                <td class="td-nowrap td-muted"><?php echo $rowNum++; ?></td>
+                <td class="td-nowrap td-muted"><?php echo $il['row_num']; ?></td>
                 <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($il['created_at'])); ?></td>
                 <td class="td-name"><?php echo htmlspecialchars($il['name']); ?></td>
                 <td class="td-email"><a href="mailto:<?php echo htmlspecialchars($il['email']); ?>"><?php echo htmlspecialchars($il['email']); ?></a></td>

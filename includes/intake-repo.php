@@ -133,21 +133,41 @@ function markIntakeLinkReminded(PDO $db, $linkId) {
        ->execute([':id' => (int) $linkId]);
 }
 
-/** The admin list: every link with the person it belongs to. */
+/** Names still expected to answer this form version -- for the "In use" tooltip. */
+function intakeLinksPendingNames(PDO $db, $version) {
+    $stmt = $db->prepare('
+        SELECT l.`name` FROM `intake_links` il
+        JOIN `leads` l ON l.`id` = il.`lead_id`
+        WHERE il.`form_version` = :v AND il.`status` IN ("sent","opened","filled")
+        ORDER BY il.`created_at` ASC
+    ');
+    $stmt->execute([':v' => (int) $version]);
+    return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'name');
+}
+
+/**
+ * The admin list: every link with the person it belongs to, plus a `row_num`
+ * fixed to each link's position in the full, unfiltered, newest-first list.
+ * Filtering by status shows fewer rows, but never renumbers the ones left --
+ * a link's "#" is its identity, not a count of what's currently on screen.
+ */
 function intakeLinksList(PDO $db, $status = '') {
-    $sql = '
+    $all = $db->query('
         SELECT il.*, l.`name`, l.`email`, l.`client_id`
         FROM `intake_links` il
         JOIN `leads` l ON l.`id` = il.`lead_id`
-    ';
-    $params = [];
-    if ($status !== '' && $status !== 'all' && isValidIntakeStatus($status)) {
-        $sql .= ' WHERE il.`status` = :status';
-        $params[':status'] = $status;
-    }
-    $sql .= ' ORDER BY il.`created_at` DESC';
+        ORDER BY il.`created_at` DESC
+    ')->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($all as $i => &$row) {
+        $row['row_num'] = $i + 1;
+    }
+    unset($row);
+
+    if ($status === '' || $status === 'all' || !isValidIntakeStatus($status)) {
+        return $all;
+    }
+    return array_values(array_filter($all, function ($row) use ($status) {
+        return $row['status'] === $status;
+    }));
 }
