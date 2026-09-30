@@ -737,17 +737,31 @@ try {
         }
     );
 
-    // client_documents columns
-    step("client_documents.shared_with_client, client_uploaded, size_bytes, archived_at",
+    step("client_documents.size_bytes",
+        tableExists($db, 'client_documents') && !columnExists($db, 'client_documents', 'size_bytes'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `client_documents` ADD COLUMN `size_bytes` INT NOT NULL DEFAULT 0");
+        }
+    );
+
+    step("client_documents.archived_at",
+        tableExists($db, 'client_documents') && !columnExists($db, 'client_documents', 'archived_at'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `client_documents` ADD COLUMN `archived_at` DATETIME DEFAULT NULL");
+        }
+    );
+
+    step("client_documents.shared_with_client",
         tableExists($db, 'client_documents') && !columnExists($db, 'client_documents', 'shared_with_client'),
         function (PDO $db) {
-            $db->exec("
-                ALTER TABLE `client_documents`
-                ADD COLUMN `size_bytes` INT NOT NULL DEFAULT 0,
-                ADD COLUMN `archived_at` DATETIME DEFAULT NULL,
-                ADD COLUMN `shared_with_client` TINYINT(1) NOT NULL DEFAULT 0,
-                ADD COLUMN `client_uploaded` TINYINT(1) NOT NULL DEFAULT 0
-            ");
+            $db->exec("ALTER TABLE `client_documents` ADD COLUMN `shared_with_client` TINYINT(1) NOT NULL DEFAULT 0");
+        }
+    );
+
+    step("client_documents.client_uploaded",
+        tableExists($db, 'client_documents') && !columnExists($db, 'client_documents', 'client_uploaded'),
+        function (PDO $db) {
+            $db->exec("ALTER TABLE `client_documents` ADD COLUMN `client_uploaded` TINYINT(1) NOT NULL DEFAULT 0");
         }
     );
 
