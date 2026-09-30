@@ -111,9 +111,10 @@ function expireOverdueIntakeLinks(PDO $db) {
 function staleIntakeLinks(PDO $db, $hours) {
     $stmt = $db->prepare('
         SELECT il.`id`, il.`lead_id`, il.`token`, il.`expires_at`,
-               l.`name`, l.`email`
+               COALESCE(NULLIF(TRIM(CONCAT_WS(" ",c.`first_name`,c.`last_name`)),""), l.`name`) AS `name`, l.`email`
         FROM `intake_links` il
         JOIN `leads` l ON l.`id` = il.`lead_id`
+        LEFT JOIN `clients` c ON c.`id` = l.`client_id`
         WHERE il.`reminder_sent` = 0
           AND il.`status` IN ("sent","opened","filled")
           AND il.`created_at` < DATE_SUB(NOW(), INTERVAL :hours HOUR)
@@ -153,9 +154,10 @@ function intakeLinksPendingNames(PDO $db, $version) {
  */
 function intakeLinksList(PDO $db, $status = '') {
     $all = $db->query('
-        SELECT il.*, l.`name`, l.`email`, l.`client_id`
+        SELECT il.*, COALESCE(NULLIF(TRIM(CONCAT_WS(" ",c.`first_name`,c.`last_name`)),""), l.`name`) AS `name`, l.`email`, l.`client_id`
         FROM `intake_links` il
         JOIN `leads` l ON l.`id` = il.`lead_id`
+        LEFT JOIN `clients` c ON c.`id` = l.`client_id`
         ORDER BY il.`created_at` DESC
     ')->fetchAll(PDO::FETCH_ASSOC);
 

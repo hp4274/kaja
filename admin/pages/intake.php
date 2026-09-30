@@ -9,37 +9,49 @@ $successMsg = '';
 $errorMsg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'send_intake_link') {
-    $email = trim($_POST['email'] ?? '');
+    $clientRow = null;
+    $pickedId  = (int) ($_POST['client_id'] ?? 0);
+    if ($pickedId) {
+        $q = $db->prepare("SELECT `id`, `first_name`, `last_name`, `email`, `lead_id` FROM `clients` WHERE `id` = :id");
+        $q->execute([':id' => $pickedId]);
+        $clientRow = $q->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    $email = $clientRow ? trim($clientRow['email']) : '';
 
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errorMsg = 'Please enter a valid email address.';
+    if (!$clientRow || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errorMsg = 'Please pick a client with a valid email address.';
     } else {
-        // Find or create the lead this link belongs to, then mint a token.
-        // The link that goes out is personal to this address: intake.php refuses
-        // to render without one, so a forwarded or guessed URL gets nowhere.
-        $checkLead = $db->prepare("SELECT `id`, `name` FROM `leads` WHERE `email` = :email ORDER BY `id` ASC LIMIT 1");
-        $checkLead->execute([':email' => $email]);
-        $existingLead = $checkLead->fetch(PDO::FETCH_ASSOC);
+        // The link goes to a known client, so the greeting uses their real name.
+        // Reuse the lead the client came from; otherwise find/create one by email.
+        $clientName = trim($clientRow['first_name'] . ' ' . $clientRow['last_name']);
+        $existingLead = false;
+        if (!empty($clientRow['lead_id'])) {
+            $checkLead = $db->prepare("SELECT `id` FROM `leads` WHERE `id` = :id");
+            $checkLead->execute([':id' => (int) $clientRow['lead_id']]);
+            $existingLead = $checkLead->fetch(PDO::FETCH_ASSOC);
+        }
+        if (!$existingLead) {
+            $checkLead = $db->prepare("SELECT `id` FROM `leads` WHERE `email` = :email ORDER BY `id` ASC LIMIT 1");
+            $checkLead->execute([':email' => $email]);
+            $existingLead = $checkLead->fetch(PDO::FETCH_ASSOC);
+        }
+        $leadName = $clientName;
 
         try {
             $db->beginTransaction();
 
             if ($existingLead) {
-                $leadId   = (int) $existingLead['id'];
-                $leadName = $existingLead['name'];
+                $leadId = (int) $existingLead['id'];
             } else {
                 $ins = $db->prepare("
                     INSERT INTO `leads` (`name`, `email`, `phone`, `source`, `status`)
-                    VALUES ('Valued Client', :email, '', 'Short Intake Contact', 'new')
+                    VALUES (:name, :email, '', 'Short Intake Contact', 'new')
                 ");
-                $ins->execute([':email' => $email]);
-                $leadId   = (int) $db->lastInsertId();
-                $leadName = '';
+                $ins->execute([':name' => $clientName, ':email' => $email]);
+                $leadId = (int) $db->lastInsertId();
             }
 
-            // No client row yet: we know only an email address. submit_intake.php
-            // creates the client when the questionnaire actually arrives.
-            $issued = issueIntakeToken($db, $leadId, null);
+            $issued = issueIntakeToken($db, $leadId, (int) $clientRow['id']);
 
             $desc = "Intake link issued to {$email} (expires " . date('d M Y', strtotime($issued['expires_at'])) . ")";
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('intake_link_sent',:d,'lead',:rid)")
@@ -92,12 +104,9 @@ $links      = intakeLinksList($db, $linkStatus);
 // Everyone a link is realistically sent to by hand, newest first -- picking a
 // name here is what typing their email used to stand in for.
 $sendCandidates = $db->query("
-    SELECT `first_name`, `last_name`, `email` FROM `clients`
-    WHERE `archived_at` IS NULL
-    UNION
-    SELECT `name` AS first_name, '' AS last_name, `email` FROM `leads`
-    WHERE `email` != ''
-    ORDER BY `first_name` ASC
+    SELECT `id`, `first_name`, `last_name`, `email` FROM `clients`
+    WHERE `archived_at` IS NULL AND `email` != ''
+    ORDER BY `first_name` ASC, `last_name` ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -116,10 +125,10 @@ $sendCandidates = $db->query("
           onsubmit="return confirmSendLink(event);">
       <input type="hidden" name="action" value="send_intake_link" />
       <label class="visually-hidden" for="send-link-email">Send to</label>
-      <select class="form-select-sm" id="send-link-email" name="email" required>
+      <select class="form-select-sm" id="send-link-email" name="client_id" required>
         <option value="" disabled selected hidden>Send a link to...</option>
         <?php foreach ($sendCandidates as $sc): ?>
-          <option value="<?php echo htmlspecialchars($sc['email']); ?>">
+          <option value="<?php echo (int) $sc['id']; ?>">
             <?php echo htmlspecialchars(trim($sc['first_name'] . ' ' . $sc['last_name']) . ' — ' . $sc['email']); ?>
           </option>
         <?php endforeach; ?>
@@ -133,7 +142,7 @@ $sendCandidates = $db->query("
 async function confirmSendLink(e) {
   e.preventDefault();
   var form = e.target;
-  if (await showConfirm('Send an intake link to ' + form.email.value + '?')) { form.submit(); }
+  if (await showConfirm('Send an intake link to ' + form.client_id.selectedOptions[0].text.trim() + '?')) { form.submit(); }
   return false;
 }
 </script>

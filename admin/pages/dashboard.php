@@ -65,8 +65,8 @@ foreach ($allSessions as $s) {
     $calSessions[$d][] = $s;
 }
 
-// Activity log — last 9
-$actStmt = $db->query("SELECT * FROM `activity_log` ORDER BY `created_at` DESC LIMIT 9");
+// Activity log — last 15
+$actStmt = $db->query("SELECT * FROM `activity_log` ORDER BY `created_at` DESC LIMIT 15");
 $activities = $actStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Recent leads — last 5
@@ -336,7 +336,7 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
     <div class="panel-header">
       <div class="panel-title">Recent Activity</div>
     </div>
-    <div class="panel-body is-list is-scroll">
+    <div class="panel-body is-list">
       <?php if (empty($activities)): ?>
         <div class="empty-state">
           <i class="bi bi-clock-history"></i>
@@ -482,7 +482,7 @@ function selectCalendarDay(element, day) {
       }
       html += '    </div>';
       html += '  </div>';
-      html += '  <span class="badge badge-' + status + '">' + status + '</span>';
+      html += '  <span class="badge badge-session-' + status + '">' + status + '</span>';
       html += '</div>';
     });
     html += '</div>';

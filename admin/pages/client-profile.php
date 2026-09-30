@@ -795,32 +795,9 @@ foreach ($smStmt as $srow) {
   </div>
 </div>
 
+<?php include __DIR__ . "/../includes/series-scope-modal.php"; ?>
 <script>
 var clientId = <?php echo $clientId; ?>;
-
-// ─── Series scope ────────────────────────────────────────────────────────
-//
-// Whenever a session belongs to a recurring series, the admin is asked whether
-// an action applies to this occurrence or to this and every later one.
-// Guessing is the defining bug of recurring appointments, and both wrong
-// answers stay invisible until somebody turns up to an appointment that was
-// cancelled without them.
-//
-// SESSION_SERIES maps session id -> series id, emitted by the page.
-async function seriesScopeFor(id, verb) {
-  if (!window.SESSION_SERIES || !SESSION_SERIES[id]) {
-    return 'one';   // not part of a series: nothing to ask
-  }
-  var answer = await showPrompt(
-    'This session repeats.\n\n' +
-    'Type "one" to ' + verb + ' only this occurrence,\n' +
-    'or "future" to ' + verb + ' this one and every later one in the series.',
-    'one'
-  );
-  if (answer === null) return null;              // cancelled the prompt
-  answer = answer.trim().toLowerCase();
-  return (answer === 'one' || answer === 'future') ? answer : null;
-}
 
 // A session booked before the slot list changed sits at a time the list no
 // longer offers. Dropping it would leave the picker showing a time the session

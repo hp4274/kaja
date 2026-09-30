@@ -120,18 +120,22 @@ function seriesSessions(PDO $db, $seriesId) {
  * time than one booked after it, and "future" means later in the calendar,
  * not later in the table.
  */
-function laterInSeries(PDO $db, $sessionId) {
+function laterInSeries(PDO $db, $sessionId, $weeks = null) {
     $session = fetchSession($db, $sessionId);
     if ($session === null || empty($session['recurring_series_id'])) {
         return $session === null ? [] : [(int) $session['id']];
     }
 
+    // Optional window: only sessions starting within $weeks weeks of this one.
+    $until = $weeks === null ? '9999-12-31 23:59:59'
+           : date('Y-m-d H:i:s', strtotime('+' . (int) $weeks . ' weeks', strtotime($session['start_time'])));
+
     $stmt = $db->prepare('
         SELECT `id` FROM `sessions`
-        WHERE `recurring_series_id` = :s AND `start_time` >= :from
+        WHERE `recurring_series_id` = :s AND `start_time` >= :from AND `start_time` <= :until
         ORDER BY `start_time` ASC
     ');
-    $stmt->execute([':s' => (int) $session['recurring_series_id'], ':from' => $session['start_time']]);
+    $stmt->execute([':s' => (int) $session['recurring_series_id'], ':from' => $session['start_time'], ':until' => $until]);
 
     return array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id'));
 }
@@ -139,15 +143,17 @@ function laterInSeries(PDO $db, $sessionId) {
 /**
  * Which sessions an action should touch, given an explicit scope.
  *
- * Only 'one' and 'future' exist. There is deliberately no "all in series":
- * reaching backwards would rewrite appointments that have already happened.
+ * 'one', 'future', or 'weeks:N' (this one plus later ones within N weeks of
+ * its start, N = 1..52). Anything else is treated as 'one'. There is
+ * deliberately no "all in series": reaching backwards would rewrite
+ * appointments that have already happened.
  */
 function applyToScope(PDO $db, $sessionId, $scope) {
     if ($scope === 'future') {
         return laterInSeries($db, $sessionId);
     }
-    if ($scope !== 'one') {
-        throw new InvalidArgumentException('Scope must be "one" or "future".');
+    if (is_string($scope) && preg_match('/^weeks:(\d+)$/', $scope, $m) && $m[1] >= 1 && $m[1] <= 52) {
+        return laterInSeries($db, $sessionId, (int) $m[1]);
     }
     return [(int) $sessionId];
 }

@@ -33,12 +33,12 @@ function sessionStatusLabel($status) {
 
 function sessionStatusBadgeClass($status) {
     $classes = [
-        'pending'   => 'badge-pending',
-        'confirmed' => 'badge-scheduled',
-        'rejected'  => 'badge-rejected',
-        'completed' => 'badge-completed',
-        'cancelled' => 'badge-cancelled',
-        'no-show'   => 'badge-no-show',
+        'pending'   => 'badge-session-pending',
+        'confirmed' => 'badge-session-confirmed',
+        'rejected'  => 'badge-session-rejected',
+        'completed' => 'badge-session-completed',
+        'cancelled' => 'badge-session-cancelled',
+        'no-show'   => 'badge-session-no-show',
     ];
     return isset($classes[$status]) ? $classes[$status] : 'badge-archived';
 }

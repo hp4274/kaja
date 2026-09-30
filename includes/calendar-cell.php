@@ -16,7 +16,9 @@ require_once __DIR__ . '/booking-slots.php';
  *                             (one row per bookable time) stays the same
  *                             everywhere; only the state each row is in changes.
  * @return array List of ['time','label','status','name'], one per slot, in
- *               bookingSlots() order. status is 'booked'|'cancelled'|'blocked'|'holiday'|'free'.
+ *               bookingSlots() order. status is a session status (pending,
+ *               confirmed, rejected, completed, cancelled, no-show) or
+ *               'blocked'|'holiday'|'free'.
  */
 function calendarSlotRows(array $daySessions, array $blockedTimes, $isHoliday = false) {
     $bySlot = [];
@@ -25,8 +27,8 @@ function calendarSlotRows(array $daySessions, array $blockedTimes, $isHoliday = 
         $isCancelled = in_array($s['status'], ['cancelled', 'no-show'], true);
         // An active booking always wins the slot over a cancelled one sitting
         // at the same time -- the cell should show what is actually true now.
-        if (!isset($bySlot[$t]) || ($bySlot[$t]['status'] === 'cancelled' && !$isCancelled)) {
-            $bySlot[$t] = ['status' => $isCancelled ? 'cancelled' : 'booked', 'name' => $s['client_name']];
+        if (!isset($bySlot[$t]) || (in_array($bySlot[$t]['status'], ['cancelled', 'no-show'], true) && !$isCancelled)) {
+            $bySlot[$t] = ['status' => $s['status'], 'name' => $s['client_name']];
         }
     }
 
@@ -47,14 +49,15 @@ function calendarSlotRows(array $daySessions, array $blockedTimes, $isHoliday = 
 
 /** The rows above, rendered as the cell's mini-schedule markup. */
 function calendarSlotRowsHtml(array $rows) {
-    $icons = ['blocked' => 'bi-lock-fill', 'cancelled' => 'bi-x-circle-fill', 'holiday' => 'bi-calendar-check'];
+    $icons = ['blocked' => 'bi-lock-fill', 'cancelled' => 'bi-x-circle-fill', 'no-show' => 'bi-person-x-fill',
+              'completed' => 'bi-check-circle-fill', 'holiday' => 'bi-calendar-check'];
     $html = '<div class="cal-slot-list">';
     foreach ($rows as $row) {
         $html .= '<div class="cal-slot-row">';
         // A plain "H:i" reads faster in a column this narrow than a 12-hour
         // label with AM/PM competing for the same few pixels.
         $html .= '<span class="cal-slot-time">' . htmlspecialchars($row['time']) . '</span>';
-        $html .= '<span class="cal-slot-pill is-' . $row['status'] . '">';
+        $html .= '<span class="cal-slot-pill is-' . htmlspecialchars($row['status']) . '">';
         if (isset($icons[$row['status']])) {
             $html .= '<i class="bi ' . $icons[$row['status']] . '"></i> ';
         }

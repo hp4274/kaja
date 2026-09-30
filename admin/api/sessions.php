@@ -496,12 +496,13 @@ try {
             );
 
             try {
-                if ($scope === 'future' && !empty($existing['recurring_series_id'])) {
+                $targets = ($scope !== 'one' && !empty($existing['recurring_series_id']))
+                    ? applyToScope($db, $sessionId, $scope) : [$sessionId];
+                if (count($targets) > 1) {
                     // Every later occurrence shifts by the same delta, so the
                     // rhythm of the series is preserved rather than collapsed
                     // onto one repeated date.
                     $delta   = strtotime($start) - strtotime($existing['start_time']);
-                    $targets = applyToScope($db, $sessionId, 'future');
                     $moved   = 0;
 
                     foreach ($targets as $tid) {

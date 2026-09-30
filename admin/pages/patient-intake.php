@@ -187,7 +187,7 @@ function scoreClass($score, $max = 18) {
                 </div>
               </div>
             </div>
-            <div class="grid-card-footer">
+            <div class="grid-card-footer is-actions">
               <button class="btn btn-ghost btn-sm" onclick="openIntakeDrawer(<?php echo $pi['id']; ?>)"><i class="bi bi-eye"></i> Details</button>
               <?php if ($lstatus !== 'converted'): ?>
                 <button class="btn btn-success btn-sm" onclick="convertIntake(<?php echo $pi['id']; ?>, '<?php echo htmlspecialchars(addslashes($pi['first_name'] . ' ' . $pi['last_name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($pi['email']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($pi['phone']), ENT_QUOTES); ?>')">

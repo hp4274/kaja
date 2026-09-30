@@ -30,6 +30,10 @@
   --clr-on-accent: #ffffff;        /* label on a filled colour button/badge */
   --clr-warning-text: #b45309;     /* amber text that stays readable on its tint */
   --clr-neutral-pill: #f3f4f6;     /* badges whose colour is grey by design */
+  --clr-declined: #ea580c;         /* session status: declined by client (orange) */
+  --clr-declined-light: #ffedd5;
+  --clr-noshow: #7e22ce;           /* session status: no-show (purple) */
+  --clr-noshow-light: #f3e8ff;
   --clr-hover-surface: #f3f4f6;    /* rows, cells and ghost buttons on hover */
   --clr-veil: rgba(15, 23, 42, 0.35);   /* modal and drawer backdrops */
   --clr-focus-ring: rgba(13, 115, 119, 0.10);
@@ -635,6 +639,15 @@ a:hover { color: var(--clr-primary-dark); }
 .badge-draft { background: var(--clr-warning-light); color: var(--clr-warning-text); }
 .badge-category { background: var(--clr-primary-light); color: var(--clr-primary); }
 
+/* Session status: six distinct colours (pending amber, confirmed blue,
+   declined orange, completed green, cancelled red, no-show purple) */
+.badge-session-pending   { background: var(--clr-warning-light);  color: var(--clr-warning-text); }
+.badge-session-confirmed { background: var(--clr-info-light);     color: var(--clr-info); }
+.badge-session-rejected  { background: var(--clr-declined-light); color: var(--clr-declined); }
+.badge-session-completed { background: var(--clr-success-light);  color: var(--clr-success); }
+.badge-session-cancelled { background: var(--clr-danger-light);   color: var(--clr-danger); }
+.badge-session-no-show   { background: var(--clr-noshow-light);   color: var(--clr-noshow); }
+
 /* Intake link lifecycle */
 .badge-intake-sent      { background: var(--clr-neutral-pill); color: var(--clr-text-secondary); }
 .badge-intake-opened    { background: var(--clr-info-light); color: var(--clr-info); }
@@ -887,10 +900,16 @@ a:hover { color: var(--clr-primary-dark); }
   color: var(--clr-text-muted);
   justify-content: center;
 }
-.cal-slot-pill.is-booked { background: var(--clr-info-light); color: var(--clr-info); }
-.cal-slot-pill.is-blocked { background: var(--clr-warning-light); color: var(--clr-warning-text); }
-.cal-slot-pill.is-cancelled { background: var(--clr-danger-light); color: var(--clr-danger); }
-.cal-slot-pill.is-holiday { background: var(--clr-success-light); color: var(--clr-success); }
+/* One colour per session status; the same six as .badge-session-* below.
+   Blocked and holiday are not statuses, so they stay off those hues. */
+.cal-slot-pill.is-pending   { background: var(--clr-warning-light);  color: var(--clr-warning-text); }
+.cal-slot-pill.is-confirmed { background: var(--clr-info-light);     color: var(--clr-info); }
+.cal-slot-pill.is-rejected  { background: var(--clr-declined-light); color: var(--clr-declined); }
+.cal-slot-pill.is-completed { background: var(--clr-success-light);  color: var(--clr-success); }
+.cal-slot-pill.is-cancelled { background: var(--clr-danger-light);   color: var(--clr-danger); text-decoration: line-through; }
+.cal-slot-pill.is-no-show   { background: var(--clr-noshow-light);   color: var(--clr-noshow); }
+.cal-slot-pill.is-blocked   { background: var(--clr-hover-surface);  color: var(--clr-text-muted); }
+.cal-slot-pill.is-holiday   { background: var(--clr-primary-light);  color: var(--clr-primary); }
 
 /* ─── Day modal: per-slot availability ─── */
 .availability-list { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
@@ -1780,6 +1799,10 @@ body.admin-body.admin-dark-theme {
      become the bright hue itself. */
   --clr-warning-text: #f7b13b;
   --clr-neutral-pill: rgba(255, 255, 255, 0.08);
+  --clr-declined: #fb923c;
+  --clr-declined-light: rgba(251, 146, 60, 0.16);
+  --clr-noshow: #c4a1f7;
+  --clr-noshow-light: rgba(168, 120, 247, 0.18);
   /* Hover must LIFT. Pointing this at --clr-bg, as the light theme could,
      would punch a black hole in a panel instead of raising the row. */
   --clr-hover-surface: #1a1a1a;
@@ -1907,6 +1930,15 @@ body.admin-body.admin-dark-theme {
   margin-top: auto;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* Action-button footer (patient intake): buttons share the row equally and
+   any that wrap stretch to full width, so nothing dangles left-aligned. */
+.grid-card-footer.is-actions { align-items: stretch; }
+.grid-card-footer.is-actions .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 /* Dynamic toggling classes */

@@ -170,7 +170,8 @@ function sendIntakeLinkEmail($toEmail, $recipientName, $url, $expiresAt) {
     $practiceName  = getSetting('practice_name');
     $practiceEmail = getSetting('practice_email');
     $greetingName  = trim((string) $recipientName);
-    $greeting      = $greetingName !== '' ? $greetingName : 'there';
+    // 'Valued Client' is the placeholder stored on leads with no real name.
+    $greeting      = ($greetingName !== '' && $greetingName !== 'Valued Client') ? $greetingName : 'there';
     $expiryLabel   = date('d M Y', strtotime($expiresAt));
 
     // Copy comes from Settings so the therapist can reword it without a
@@ -200,7 +201,8 @@ function sendIntakeReminderEmail($toEmail, $recipientName, $url, $expiresAt) {
     $practiceName  = getSetting('practice_name');
     $practiceEmail = getSetting('practice_email');
     $greetingName  = trim((string) $recipientName);
-    $greeting      = $greetingName !== '' ? $greetingName : 'there';
+    // 'Valued Client' is the placeholder stored on leads with no real name.
+    $greeting      = ($greetingName !== '' && $greetingName !== 'Valued Client') ? $greetingName : 'there';
     $expiryLabel   = date('d M Y', strtotime($expiresAt));
 
     $vars = [

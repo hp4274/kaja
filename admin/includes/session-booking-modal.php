@@ -439,7 +439,7 @@ function showDaySessions(day) {
     html += '<div class="session-row-name">' + escapeHtml(s.client_name || 'Unknown') + '</div>';
     var startsAt = s.start_time.split(' ')[1].substring(0, 5);
     var mins = Math.round((Date.parse(s.end_time.replace(' ', 'T')) - Date.parse(s.start_time.replace(' ', 'T'))) / 60000);
-    html += '<div class="session-row-meta">' + startsAt + ' · ' + mins + ' min · <span class="badge badge-' + s.status + '">' + s.status + '</span></div>';
+    html += '<div class="session-row-meta">' + startsAt + ' · ' + mins + ' min · <span class="badge badge-session-' + s.status + '">' + s.status + '</span></div>';
     html += '</div>';
     html += '</div>';
     html += '<div class="session-row-controls">';
