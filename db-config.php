@@ -25,7 +25,8 @@
 $_local = [
     'APP_ENV'               => stripos(__DIR__, 'xampp') !== false ? 'development' : 'production',
     'DB_HOST'               => 'localhost',
-    'DB_NAME'               => 'rewirewithkajal',
+    // A XAMPP checkout uses the local database; production keeps its own name.
+    'DB_NAME'               => stripos(__DIR__, 'xampp') !== false ? 'kaja_db' : 'rewirewithkajal',
     'DB_USER'               => 'rewire_user',
     'DB_PASS'               => '123456',
     'INTAKE_ENCRYPTION_KEY' => 'f90eb577e4873383b16a24c78f7688f4c4c7dd74717ac8c12f5871145450a264',
@@ -91,6 +92,8 @@ function getDbConnection() {
         return new PDO($dsn, DB_USER, DB_PASS, $options);
     } catch (PDOException $e) {
         error_log('[db] connection failed: ' . $e->getMessage());
+        // A CLI tool must fail loudly with a non-zero exit, not print JSON and exit 0.
+        if (PHP_SAPI === 'cli') { configFail('database connection failed: ' . $e->getMessage()); }
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => 'Service temporarily unavailable.']);
