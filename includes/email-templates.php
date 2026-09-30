@@ -255,6 +255,23 @@ function emailTemplates() {
                 'practice_name' => $practice,
             ],
         ],
+        'client_otp' => [
+            'label'       => 'Portal login code',
+            'icon'        => 'bi-shield-lock',
+            'trigger'     => 'When a client asks to sign in to the client portal',
+            'blurb'       => 'The six-digit code that signs a client in. Expires in minutes; never sent by hand.',
+            'subject_key' => 'notify_client_otp_subject',
+            'body_key'    => 'notify_client_otp_body',
+            'bg_key'      => 'notify_client_otp_bg',
+            'to'          => 'the client',
+            'required'    => ['otp_code'],
+            'vars'        => [
+                'client_name'     => 'Ananya Rao',
+                'otp_code'        => '482913',
+                'expires_minutes' => '10',
+                'practice_name'   => $practice,
+            ],
+        ],
     ];
 }
 
@@ -263,7 +280,7 @@ function emailTemplates() {
  * queued (kind templated_mail; the hourly job replays it as-is) and false is
  * returned. Never call this inside a DB transaction: SMTP is slow.
  */
-function sendTemplatedMail($templateId, $to, array $vars) {
+function sendTemplatedMail($templateId, $to, array $vars, $queueOnFail = true) {
     $to = trim((string) $to);
     if ($to === '') {
         return false;
@@ -274,6 +291,9 @@ function sendTemplatedMail($templateId, $to, array $vars) {
 
     if (sendMail($to, $subject, $body, getSetting('practice_email'), $background)) {
         return true;
+    }
+    if (!$queueOnFail) {
+        return false; // e.g. login codes: never spool a secret to disk or replay it stale
     }
     require_once __DIR__ . '/mail-queue.php';
     queueFailedMail([

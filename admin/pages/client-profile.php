@@ -35,7 +35,16 @@ $sessions = $sessions->fetchAll(PDO::FETCH_ASSOC);
 
 $notes         = clientNotes($db, $clientId);
 $correctedIds  = correctedNoteIds($db, $clientId);
-$documents     = clientDocuments($db, $clientId);
+$documents         = clientDocuments($db, $clientId);
+$clientDocBytes    = clientTotalDocumentBytes($db, $clientId, true);
+$totalDocBytes     = clientTotalDocumentBytes($db, $clientId, false);
+$maxTotalDocBytes  = clientMaxTotalDocumentBytes();
+$clientUsedDocMb   = round($clientDocBytes / (1024 * 1024), 1);
+$totalUsedDocMb    = round($totalDocBytes / (1024 * 1024), 1);
+$maxDocMb          = (int) round($maxTotalDocBytes / (1024 * 1024));
+$clientRemDocMb    = max(0, round(($maxTotalDocBytes - $clientDocBytes) / (1024 * 1024), 1));
+$usedDocMb         = $clientUsedDocMb;
+$remDocMb          = $clientRemDocMb;
 
 // Other non-archived clients, for the merge picker.
 $noShowRun = consecutiveNoShows($db, $clientId);
@@ -48,16 +57,31 @@ $fees = $db->prepare("SELECT * FROM `client_fees` WHERE `client_id`=:cid ORDER B
 $fees->execute([':cid'=>$clientId]);
 $fees = $fees->fetchAll(PDO::FETCH_ASSOC);
 
-$totalFees = 0; $paidFees = 0; $pendingFees = 0;
+$totalFees = 0; $paidFees = 0; $pendingFees = 0; $waivedFees = 0;
 foreach ($fees as $f) {
-    $totalFees += $f['amount'];
-    if ($f['status'] === 'paid') $paidFees += $f['amount'];
-    if ($f['status'] === 'pending') $pendingFees += $f['amount'];
+    if ($f['status'] === 'waived') {
+        $waivedFees += (float) $f['amount'];
+        continue;
+    }
+    $totalFees += (float) $f['amount'];
+    if ($f['status'] === 'paid') $paidFees += (float) $f['amount'];
+    if ($f['status'] === 'pending') $pendingFees += (float) $f['amount'];
 }
 
-// Check matching patient intakes by email AND phone
-$piStmt = $db->prepare("SELECT * FROM `patient-intake` WHERE `email` = :email AND `phone` = :phone ORDER BY `created_at` ASC");
-$piStmt->execute([':email' => $client['email'], ':phone' => $client['phone']]);
+// Client payment reports from portal awaiting verification
+$cprStmt = $db->prepare("SELECT * FROM `client_payment_reports` WHERE `client_id` = :cid AND `status` = 'pending' ORDER BY `created_at` DESC");
+$cprStmt->execute([':cid' => $clientId]);
+$pendingPaymentReports = $cprStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Check matching patient intakes by client_id OR email
+$clientEmail = trim($client['email'] ?? '');
+if ($clientEmail !== '') {
+    $piStmt = $db->prepare("SELECT * FROM `patient-intake` WHERE `client_id` = :cid OR `email` = :email ORDER BY `created_at` ASC");
+    $piStmt->execute([':cid' => $clientId, ':email' => $clientEmail]);
+} else {
+    $piStmt = $db->prepare("SELECT * FROM `patient-intake` WHERE `client_id` = :cid ORDER BY `created_at` ASC");
+    $piStmt->execute([':cid' => $clientId]);
+}
 $intakes = $piStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $latestIntake = !empty($intakes) ? $intakes[count($intakes) - 1] : null;
@@ -94,6 +118,17 @@ $submittedFormsStmt = $db->prepare('SELECT COUNT(*) FROM `intake_links` WHERE `c
 $submittedFormsStmt->execute([':id' => $clientId]);
 $submittedFormsCount = (int) $submittedFormsStmt->fetchColumn();
 
+// Client Portal connection data
+$otpStmt = $db->prepare('SELECT `used_at` FROM `client_otps` WHERE `client_id` = :id AND `used_at` IS NOT NULL ORDER BY `used_at` DESC LIMIT 1');
+$otpStmt->execute([':id' => $clientId]);
+$lastPortalLogin = $otpStmt->fetchColumn();
+
+$pendingReqStmt = $db->prepare('SELECT * FROM `sessions` WHERE `client_id` = :id AND `status` = "pending" AND `start_time` >= NOW() ORDER BY `start_time` ASC LIMIT 1');
+$pendingReqStmt->execute([':id' => $clientId]);
+$pendingSessionReq = $pendingReqStmt->fetch(PDO::FETCH_ASSOC);
+
+$clientUploadedDocCount = count(array_filter($documents, function($d) { return !empty($d['client_uploaded']); }));
+
 $formTemplatesAvailable = formTemplates($db);
 ?>
 
@@ -103,17 +138,44 @@ $formTemplatesAvailable = formTemplates($db);
 </a>
 
 <!-- Profile Header -->
-<div class="profile-header">
-  <div class="profile-avatar"><?php echo $initials; ?></div>
-  <div>
-    <div class="profile-name"><?php echo htmlspecialchars($client['first_name'] . ' ' . $client['last_name']); ?></div>
-    <div class="profile-meta">
-      <span><?php echo htmlspecialchars($client['email']); ?></span>
-      <span><?php echo htmlspecialchars($client['phone'] ?? ''); ?></span>
-      <span><span class="badge badge-<?php echo $client['status']; ?>"><?php echo $client['status']; ?></span></span>
+<div class="profile-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+  <div style="display:flex; align-items:center; gap:1.25rem;">
+    <div class="profile-avatar"><?php echo $initials; ?></div>
+    <div>
+      <div class="profile-name"><?php echo htmlspecialchars($client['first_name'] . ' ' . $client['last_name']); ?></div>
+      <div class="profile-meta">
+        <span><i class="bi bi-envelope"></i> <?php echo htmlspecialchars($client['email']); ?></span>
+        <span><i class="bi bi-telephone"></i> <?php echo htmlspecialchars($client['phone'] ?? ''); ?></span>
+        <span><span class="badge badge-<?php echo $client['status']; ?>"><?php echo $client['status']; ?></span></span>
+      </div>
     </div>
   </div>
+  <div class="profile-header-actions" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+    <button type="button" class="btn btn-secondary btn-sm" onclick="launchPortal(<?php echo (int) $client['id']; ?>)">
+      <i class="bi bi-box-arrow-up-right"></i> View Client Portal
+    </button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="sendPortalInvite(<?php echo (int) $client['id']; ?>)">
+      <i class="bi bi-send"></i> Send Portal Invite
+    </button>
+  </div>
 </div>
+
+<?php if ($pendingSessionReq): ?>
+  <div class="bulk-bar is-warning" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+    <div>
+      <i class="bi bi-calendar-event"></i>
+      <strong>Pending Session Request:</strong> Client requested a session on <strong><?php echo date('D, d M Y \a\t h:i A', strtotime($pendingSessionReq['start_time'])); ?></strong> (<?php echo ucfirst($pendingSessionReq['session_type']); ?>).
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+      <button class="btn btn-primary btn-sm" onclick="confirmSession(<?php echo (int) $pendingSessionReq['id']; ?>)">
+        <i class="bi bi-check-lg"></i> Confirm Session
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="openRescheduleModal(<?php echo (int) $pendingSessionReq['id']; ?>, '<?php echo date('Y-m-d', strtotime($pendingSessionReq['start_time'])); ?>', '<?php echo date('H:i', strtotime($pendingSessionReq['start_time'])); ?>')">
+        <i class="bi bi-pencil-square"></i> Reschedule
+      </button>
+    </div>
+  </div>
+<?php endif; ?>
 
 <?php if ($noShowRun >= 2): ?>
   <!-- A visibility nudge, never an automatic action. What to do about a run of
@@ -134,13 +196,13 @@ $formTemplatesAvailable = formTemplates($db);
 
 <!-- Tabs -->
 <div class="profile-tabs">
-  <button class="profile-tab active" onclick="showProfileTab('overview')">Overview</button>
-  <button class="profile-tab" onclick="showProfileTab('sessions')">Sessions (<?php echo count($sessions); ?>)</button>
-  <button class="profile-tab" onclick="showProfileTab('notes')">Notes (<?php echo count($notes); ?>)</button>
-  <button class="profile-tab" onclick="showProfileTab('fees')">Fees (₹<?php echo number_format($totalFees,2); ?>)</button>
-  <button class="profile-tab" onclick="showProfileTab('intake')">Intake Data (<?php echo $submittedFormsCount; ?>)</button>
-  <button class="profile-tab" onclick="showProfileTab('profile')">Profile</button>
-  <button class="profile-tab" onclick="showProfileTab('documents')">Documents (<?php echo count($documents); ?>)</button>
+  <button class="profile-tab active" data-tab="overview" onclick="showProfileTab('overview')">Overview</button>
+  <button class="profile-tab" data-tab="sessions" onclick="showProfileTab('sessions')">Sessions (<?php echo count($sessions); ?>)</button>
+  <button class="profile-tab" data-tab="notes" onclick="showProfileTab('notes')">Notes (<?php echo count($notes); ?>)</button>
+  <button class="profile-tab" data-tab="fees" onclick="showProfileTab('fees')">Fees (₹<?php echo number_format($totalFees,2); ?>)</button>
+  <button class="profile-tab" data-tab="intake" onclick="showProfileTab('intake')">Intake Data (<?php echo $submittedFormsCount; ?>)</button>
+  <button class="profile-tab" data-tab="profile" onclick="showProfileTab('profile')">Profile</button>
+  <button class="profile-tab" data-tab="documents" onclick="showProfileTab('documents')">Documents (<?php echo count($documents); ?>)</button>
 </div>
 
 <!-- Overview Tab -->
@@ -174,6 +236,28 @@ $formTemplatesAvailable = formTemplates($db);
               <?php endif; ?>
             </div>
           </div>
+          <div>
+            <div class="detail-label">Preferred Session Mode</div>
+            <div class="detail-value">
+              <?php if (!empty($client['pref_mode'])): ?>
+                <span class="badge badge-<?php echo strtolower($client['pref_mode']) === 'online' ? 'online' : 'inperson'; ?>">
+                  <i class="bi <?php echo strtolower($client['pref_mode']) === 'online' ? 'bi-camera-video' : 'bi-building'; ?>"></i> <?php echo htmlspecialchars($client['pref_mode']); ?>
+                </span>
+              <?php else: ?>
+                <span class="td-muted">No preference</span>
+              <?php endif; ?>
+            </div>
+          </div>
+          <div>
+            <div class="detail-label">Preferred Times / Days</div>
+            <div class="detail-value">
+              <?php if (!empty($client['pref_times'])): ?>
+                <span><?php echo htmlspecialchars(str_replace(',', ', ', ucwords($client['pref_times']))); ?></span>
+              <?php else: ?>
+                <span class="td-muted">Flexible</span>
+              <?php endif; ?>
+            </div>
+          </div>
         </div>
         <div class="status-actions">
           <?php foreach (['inactive' => 'Inactive', 'completed' => 'Completed'] as $k => $lbl): if ($client['status'] === $k) continue; ?>
@@ -183,56 +267,121 @@ $formTemplatesAvailable = formTemplates($db);
       </div>
     </div>
 
-    <!-- Quick Stats -->
+    <!-- Quick Stats & Assessment Column -->
     <div>
       <?php if ($nextSession): ?>
-        <div class="stat-strip-card">
+        <div class="stat-strip-card" style="margin-bottom: 1rem;">
           <div class="stat-strip-icon teal"><i class="bi bi-calendar-event"></i></div>
           <div>
             <div class="detail-label">Next Session</div>
             <div class="detail-value"><?php echo date('d M Y, h:i A', strtotime($nextSession['start_time'])); ?></div>
-            <div class="hint"><?php echo $nextSession['session_type']; ?> · <?php echo round((strtotime($nextSession['end_time']) - strtotime($nextSession['start_time'])) / 60); ?> min</div>
+            <div class="hint"><?php echo ucfirst($nextSession['session_type']); ?> · <?php echo round((strtotime($nextSession['end_time']) - strtotime($nextSession['start_time'])) / 60); ?> min</div>
           </div>
         </div>
       <?php endif; ?>
 
-      <?php if ($intakeScore): ?>
-        <div class="panel">
-          <div class="panel-header"><div class="panel-title">Intake Assessment Score</div></div>
-          <div class="panel-body">
-            <?php
-            $ts = $intakeScore['total'];
-            $tcls = $ts >= 24 ? 'high' : ($ts >= 12 ? 'mid' : 'low');
-            ?>
-            <div class="stat-tile is-banner">
-              <div class="score-text is-hero <?php echo $tcls; ?>"><?php echo $ts; ?>/36</div>
-              <div class="score-bar"><div class="score-bar-fill <?php echo $tcls; ?>" style="width:<?php echo round(($ts/36)*100); ?>%;"></div></div>
-            </div>
-            <div class="split-grid stat-tile">
-              <div><div class="detail-label">Q1 Self-Awareness</div><div class="score-text <?php echo $intakeScore['q1']>=12?'high':($intakeScore['q1']>=6?'mid':'low'); ?>"><?php echo $intakeScore['q1']; ?>/18</div></div>
-              <div><div class="detail-label">Q2 Well-being</div><div class="score-text <?php echo $intakeScore['q2']>=12?'high':($intakeScore['q2']>=6?'mid':'low'); ?>"><?php echo $intakeScore['q2']; ?>/18</div></div>
-            </div>
+      <!-- Redesigned Intake Assessment Section -->
+      <div class="panel intake-assessment-panel">
+        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="panel-title" style="display:flex; align-items:center; gap:0.5rem;">
+            <i class="bi bi-clipboard2-pulse" style="color:var(--clr-primary);"></i>
+            <span>Intake Assessment</span>
           </div>
+          <?php if ($latestIntake): ?>
+            <span class="badge badge-completed"><i class="bi bi-check2"></i> Completed</span>
+          <?php else: ?>
+            <span class="badge badge-pending">Pending</span>
+          <?php endif; ?>
         </div>
-      <?php endif; ?>
+        <div class="panel-body">
+          <?php if ($intakeScore && $latestIntake):
+            $ts = $intakeScore['total'];
+            $pct = round(($ts / 36) * 100);
+            $tcls = $ts >= 24 ? 'high' : ($ts >= 12 ? 'mid' : 'low');
+            $tierLabel = $ts >= 24 ? 'High Support Need' : ($ts >= 12 ? 'Moderate Support' : 'Mild / Preventive');
+            $tierColor = $ts >= 24 ? 'var(--clr-danger)' : ($ts >= 12 ? 'var(--clr-warning-text)' : 'var(--clr-success)');
+            $tierBg = $ts >= 24 ? 'var(--clr-danger-light)' : ($ts >= 12 ? 'var(--clr-warning-light)' : 'var(--clr-success-light)');
+          ?>
+            <div class="intake-score-hero-card">
+              <div class="score-hero-left">
+                <div class="score-hero-number-wrap">
+                  <span class="score-hero-val" style="color: <?php echo $tierColor; ?>;"><?php echo $ts; ?></span>
+                  <span class="score-hero-max">/36</span>
+                </div>
+                <div class="score-hero-meta">
+                  <span class="score-tier-pill" style="background: <?php echo $tierBg; ?>; color: <?php echo $tierColor; ?>;">
+                    <?php echo $tierLabel; ?>
+                  </span>
+                  <span class="hint" style="margin-top: 4px; display: block;">
+                    Completed <?php echo date('d M Y', strtotime($latestIntake['created_at'])); ?>
+                  </span>
+                </div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="openIntakeDrawer(<?php echo (int) $latestIntake['id']; ?>)">
+                <i class="bi bi-eye"></i> View Form
+              </button>
+            </div>
+
+            <!-- Score Progress Bar -->
+            <div class="intake-meter-bar">
+              <div class="intake-meter-fill <?php echo $tcls; ?>" style="width: <?php echo $pct; ?>%;"></div>
+            </div>
+
+            <!-- Subscores Breakdown -->
+            <div class="intake-subscores-grid">
+              <div class="intake-subscore-box">
+                <div class="subscore-head">
+                  <span class="subscore-title"><i class="bi bi-person-bounding-box"></i> Q1 Self-Awareness</span>
+                  <span class="subscore-num"><?php echo $intakeScore['q1']; ?> <small>/ 18</small></span>
+                </div>
+                <div class="intake-submeter">
+                  <div class="intake-submeter-fill" style="width: <?php echo round(($intakeScore['q1'] / 18) * 100); ?>%;"></div>
+                </div>
+              </div>
+
+              <div class="intake-subscore-box">
+                <div class="subscore-head">
+                  <span class="subscore-title"><i class="bi bi-heart-pulse"></i> Q2 Well-Being</span>
+                  <span class="subscore-num"><?php echo $intakeScore['q2']; ?> <small>/ 18</small></span>
+                </div>
+                <div class="intake-submeter">
+                  <div class="intake-submeter-fill submeter-teal" style="width: <?php echo round(($intakeScore['q2'] / 18) * 100); ?>%;"></div>
+                </div>
+              </div>
+            </div>
+
+          <?php else: ?>
+            <div class="empty-state" style="padding: 1.5rem 1rem;">
+              <i class="bi bi-clipboard2-x" style="font-size: 2rem; color: var(--clr-text-muted);"></i>
+              <p style="margin: 0.5rem 0; font-size: 0.9rem; color: var(--clr-text-secondary);">No assessment submitted yet.</p>
+              <?php if (!empty($client['lead_id'])): ?>
+                <button class="btn btn-primary btn-sm" onclick="openResendIntakeModal()" style="margin-top: 0.5rem;">
+                  <i class="bi bi-send"></i> Send Intake Link
+                </button>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
 
       <?php if (!empty($intakes)): ?>
-        <div class="panel">
-          <div class="panel-header"><div class="panel-title">Intake History</div></div>
+        <div class="panel" style="margin-top: 1rem;">
+          <div class="panel-header"><div class="panel-title">Assessment History</div></div>
           <div class="panel-body panel-body-flush">
             <div class="data-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Intake</th>
+                    <th>Form</th>
                     <th>Date</th>
                     <th class="th-right">Score</th>
+                    <th class="th-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php 
                   $attemptNum = 1;
-                  foreach ($intakes as $intakeRow):
+                  foreach (array_reverse($intakes) as $intakeRow):
                     $iq1 = 0; $iq2 = 0;
                     for ($i=1;$i<=18;$i++) { if (strtolower($intakeRow["q1_{$i}"]??'') === 'yes') $iq1++; }
                     for ($i=1;$i<=18;$i++) { if (strtolower($intakeRow["q2_{$i}"]??'') === 'yes') $iq2++; }
@@ -240,10 +389,15 @@ $formTemplatesAvailable = formTemplates($db);
                     $itcls = $itotal >= 24 ? 'high' : ($itotal >= 12 ? 'mid' : 'low');
                   ?>
                     <tr>
-                      <td class="td-name">Session <?php echo $attemptNum++; ?></td>
+                      <td class="td-name">Intake <?php echo !empty($intakeRow['form_version']) ? 'v' . (int)$intakeRow['form_version'] : '#' . $attemptNum++; ?></td>
                       <td class="td-muted"><?php echo date('d M Y', strtotime($intakeRow['created_at'])); ?></td>
                       <td class="td-actions">
                         <span class="score-text <?php echo $itcls; ?>"><?php echo $itotal; ?>/36</span>
+                      </td>
+                      <td class="td-actions">
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="openIntakeDrawer(<?php echo (int) $intakeRow['id']; ?>)">
+                          <i class="bi bi-eye"></i>
+                        </button>
                       </td>
                     </tr>
                   <?php endforeach; ?>
@@ -254,7 +408,7 @@ $formTemplatesAvailable = formTemplates($db);
         </div>
       <?php endif; ?>
 
-      <div class="panel">
+      <div class="panel" style="margin-top: 1rem;">
         <div class="panel-body">
           <div class="split-grid stat-tile">
             <div>
@@ -262,8 +416,11 @@ $formTemplatesAvailable = formTemplates($db);
               <div class="stat-tile-value"><?php echo count($sessions); ?></div>
             </div>
             <div>
-              <div class="detail-label">Total Fees</div>
-              <div class="stat-tile-value">₹<?php echo number_format($totalFees,2); ?></div>
+              <div class="detail-label">Balance Due</div>
+              <div class="stat-tile-value <?php echo $pendingFees > 0 ? 'is-pending' : 'is-paid'; ?>">₹<?php echo number_format($pendingFees, 2); ?></div>
+              <?php if ($paidFees > 0): ?>
+                <div class="hint" style="margin-top: 2px;">₹<?php echo number_format($paidFees, 2); ?> paid</div>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -296,17 +453,33 @@ $formTemplatesAvailable = formTemplates($db);
                   <td class="td-nowrap"><?php echo date('h:i A', strtotime($s['start_time'])); ?></td>
                   <td><?php echo round((strtotime($s['end_time']) - strtotime($s['start_time'])) / 60); ?> min</td>
                   <td><span class="badge badge-<?php echo $s['session_type']; ?>"><?php echo $s['session_type']; ?></span></td>
-                  <td>
-                    <select class="status-select" aria-label="Session status" onchange="updateSessionStatus(<?php echo $s['id']; ?>, this.value)">
-                      <option value="pending" <?php echo $s['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                      <option value="confirmed" <?php echo $s['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
-                      <option value="completed" <?php echo $s['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                      <option value="cancelled" <?php echo $s['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                    </select>
+                  <td class="td-nowrap">
+                    <span class="badge badge-session-<?php echo htmlspecialchars($s['status']); ?>"><?php echo htmlspecialchars(sessionStatusLabel($s['status'])); ?></span>
                   </td>
                   <td class="td-muted td-clip"><?php echo htmlspecialchars($s['notes'] ?? '-'); ?></td>
-                  <td class="td-nowrap">
-                    <button class="btn btn-icon" onclick="openRescheduleModal(<?php echo $s['id']; ?>, '<?php echo date('Y-m-d', strtotime($s['start_time'])); ?>', '<?php echo date('H:i', strtotime($s['start_time'])); ?>')" title="Reschedule"><i class="bi bi-pencil-square"></i></button>
+                  <td class="td-nowrap td-actions">
+                    <div style="display:inline-flex; gap:0.35rem; align-items:center;">
+                      <?php if ($s['status'] === 'pending'): ?>
+                        <button type="button" class="btn btn-sm btn-success" onclick="updateSessionStatus(<?php echo (int) $s['id']; ?>, 'confirmed')" title="Confirm Session">
+                          <i class="bi bi-check-lg"></i> Confirm
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="updateSessionStatus(<?php echo (int) $s['id']; ?>, 'completed')" title="Complete Session">
+                          <i class="bi bi-check2-all"></i> Complete
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="updateSessionStatus(<?php echo (int) $s['id']; ?>, 'cancelled')" title="Cancel Session">
+                          <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                      <?php elseif ($s['status'] === 'confirmed'): ?>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="updateSessionStatus(<?php echo (int) $s['id']; ?>, 'completed')" title="Complete Session">
+                          <i class="bi bi-check2-all"></i> Complete
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="updateSessionStatus(<?php echo (int) $s['id']; ?>, 'cancelled')" title="Cancel Session">
+                          <i class="bi bi-x-lg"></i> Cancel
+                        </button>
+                      <?php else: ?>
+                        <span class="td-muted">—</span>
+                      <?php endif; ?>
+                    </div>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -359,12 +532,8 @@ $formTemplatesAvailable = formTemplates($db);
 <!-- Fees Tab -->
 <div class="profile-tab-content" id="tab-fees">
   <div class="subsection-head">
-    <h3 class="subsection-title">Fees</h3>
+    <h3 class="subsection-title">Fees &amp; Billing</h3>
     <div class="row-actions">
-      <!-- Sent by hand, one client at a time. Chasing money on a schedule is a
-           decision about a relationship, not a cron job. Offered only when
-           something is actually outstanding: the commonest way to lose
-           somebody's trust over money is to ask for money they do not owe. -->
       <?php if ($pendingFees > 0): ?>
         <button class="btn btn-ghost btn-sm" id="fee-remind"
                 onclick="sendFeeReminder(<?php echo (int) $client['id']; ?>)">
@@ -374,12 +543,50 @@ $formTemplatesAvailable = formTemplates($db);
       <button class="btn btn-primary btn-sm" onclick="openFeeModal()"><i class="bi bi-plus"></i> Add Fee</button>
     </div>
   </div>
+
+  <?php if (!empty($pendingPaymentReports)): ?>
+    <!-- Client Portal Reported Payments Alert -->
+    <div class="panel" style="border-left: 4px solid var(--clr-primary); margin-bottom: 1.25rem;">
+      <div class="panel-header" style="background: rgba(13, 115, 119, 0.05); padding: 0.85rem 1.25rem;">
+        <div class="panel-title" style="display:flex; align-items:center; gap:0.5rem; color: var(--clr-primary); font-size: 0.95rem;">
+          <i class="bi bi-bell-fill"></i> Client Reported Payment Awaiting Verification
+        </div>
+      </div>
+      <div class="panel-body" style="padding: 0.85rem 1.25rem;">
+        <?php foreach ($pendingPaymentReports as $cpr): ?>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; padding: 0.5rem 0;">
+            <div>
+              <strong style="font-size:1.05rem;">₹<?php echo number_format($cpr['amount'], 2); ?></strong>
+              <span class="badge badge-session-confirmed" style="margin-left: 6px;"><?php echo htmlspecialchars(strtoupper($cpr['method'])); ?></span>
+              <span class="hint" style="margin-left: 8px;">
+                Paid on <?php echo date('d M Y', strtotime($cpr['paid_on'])); ?>
+                <?php if (!empty($cpr['reference'])): ?> · Ref: <code><?php echo htmlspecialchars($cpr['reference']); ?></code><?php endif; ?>
+              </span>
+            </div>
+            <div style="display:flex; gap:0.4rem;">
+              <button type="button" class="btn btn-sm btn-success" onclick="verifyPaymentReport(<?php echo (int) $cpr['id']; ?>)">
+                <i class="bi bi-check-lg"></i> Approve &amp; Mark Paid
+              </button>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="rejectPaymentReport(<?php echo (int) $cpr['id']; ?>)">
+                <i class="bi bi-x-lg"></i> Dismiss
+              </button>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
   <!-- Fee Summary -->
   <div class="stat-row">
-    <div class="panel"><div class="panel-body stat-tile"><div class="detail-label">Total</div><div class="stat-tile-value">₹<?php echo number_format($totalFees,2); ?></div></div></div>
+    <div class="panel"><div class="panel-body stat-tile"><div class="detail-label">Total Billed</div><div class="stat-tile-value">₹<?php echo number_format($totalFees,2); ?></div></div></div>
     <div class="panel"><div class="panel-body stat-tile"><div class="detail-label">Paid</div><div class="stat-tile-value is-paid">₹<?php echo number_format($paidFees,2); ?></div></div></div>
-    <div class="panel"><div class="panel-body stat-tile"><div class="detail-label">Pending</div><div class="stat-tile-value is-pending">₹<?php echo number_format($pendingFees,2); ?></div><?php if ($pendingFees > 0): ?><div class="hint">What a reminder would ask for</div><?php endif; ?></div></div>
+    <div class="panel"><div class="panel-body stat-tile"><div class="detail-label">Balance Due</div><div class="stat-tile-value is-pending">₹<?php echo number_format($pendingFees,2); ?></div></div></div>
+    <?php if ($waivedFees > 0): ?>
+      <div class="panel"><div class="panel-body stat-tile"><div class="detail-label">Waived</div><div class="stat-tile-value" style="color:var(--clr-text-muted);">₹<?php echo number_format($waivedFees,2); ?></div></div></div>
+    <?php endif; ?>
   </div>
+
   <div class="panel">
     <div class="panel-body-flush">
       <?php if (empty($fees)): ?>
@@ -387,16 +594,60 @@ $formTemplatesAvailable = formTemplates($db);
       <?php else: ?>
         <div class="data-table-wrap">
           <table class="data-table">
-            <thead><tr><th>Date</th><th>Description</th><th>Method</th><th>Reference</th><th>Amount</th><th>Status</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th class="th-right">Actions</th>
+              </tr>
+            </thead>
             <tbody>
               <?php foreach ($fees as $f): ?>
                 <tr>
                   <td class="td-nowrap td-muted"><?php echo date('d M Y', strtotime($f['fee_date'])); ?></td>
-                  <td><?php echo htmlspecialchars($f['description'] ?? '-'); ?></td>
+                  <td><?php echo htmlspecialchars($f['description'] ?? 'Session Fee'); ?></td>
                   <td class="td-muted"><?php echo $f['status'] === 'paid' ? htmlspecialchars(clientPaymentMethodLabel($f['method'] ?? 'other')) : '—'; ?></td>
                   <td class="td-muted"><?php echo htmlspecialchars(($f['reference'] ?? '') !== '' ? $f['reference'] : '—'); ?></td>
                   <td class="td-name">₹<?php echo number_format($f['amount'],2); ?></td>
-                  <td><span class="badge badge-<?php echo $f['status']; ?>"><?php echo $f['status']; ?></span></td>
+                  <td>
+                    <?php if ($f['status'] === 'paid'): ?>
+                      <span class="badge badge-completed"><i class="bi bi-check-circle"></i> Paid</span>
+                    <?php elseif ($f['status'] === 'pending'): ?>
+                      <span class="badge badge-pending"><i class="bi bi-hourglass-split"></i> Pending</span>
+                    <?php else: ?>
+                      <span class="badge badge-archived">Waived</span>
+                    <?php endif; ?>
+                  </td>
+                  <td class="td-nowrap td-actions">
+                    <div style="display:inline-flex; gap:0.35rem; align-items:center;">
+                      <?php if ($f['status'] === 'pending'): ?>
+                        <button type="button" class="btn btn-sm btn-success" onclick="openRecordPaymentModal(<?php echo (int) $f['id']; ?>, <?php echo (float) $f['amount']; ?>, '<?php echo htmlspecialchars(addslashes($f['description'] ?? 'Session Fee')); ?>')" title="Record Payment">
+                          <i class="bi bi-credit-card-2-front"></i> Mark Paid
+                        </button>
+                        <button type="button" class="btn btn-sm btn-ghost" onclick="waiveFee(<?php echo (int) $f['id']; ?>, <?php echo (float) $f['amount']; ?>)" title="Waive this fee">
+                          <i class="bi bi-slash-circle"></i> Waive
+                        </button>
+                        <button type="button" class="btn btn-icon btn-sm" onclick="deleteFee(<?php echo (int) $f['id']; ?>)" title="Delete fee" style="color:var(--clr-danger);">
+                          <i class="bi bi-trash3"></i>
+                        </button>
+                      <?php elseif ($f['status'] === 'paid'): ?>
+                        <a class="btn btn-ghost btn-sm" href="../portal/api/receipt.php?id=<?php echo (int) $f['id']; ?>" target="_blank" rel="noopener" title="Print/View Receipt">
+                          <i class="bi bi-receipt"></i> Receipt
+                        </a>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="revertFeeToPending(<?php echo (int) $f['id']; ?>)" title="Revert to pending">
+                          <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                      <?php else: ?>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="revertFeeToPending(<?php echo (int) $f['id']; ?>)" title="Restore fee">
+                          <i class="bi bi-arrow-counterclockwise"></i> Restore
+                        </button>
+                      <?php endif; ?>
+                    </div>
+                  </td>
                 </tr>
               <?php endforeach; ?>
             </tbody>
@@ -559,6 +810,19 @@ $formTemplatesAvailable = formTemplates($db);
             <input class="form-input" id="p-dob" name="dob" type="date" value="<?php echo htmlspecialchars($client['dob'] ?? ''); ?>" /></div>
           <div class="form-group"><label class="form-label" for="p-concern">Primary concern</label>
             <input class="form-input" id="p-concern" name="concern" value="<?php echo htmlspecialchars($client['concern'] ?? ''); ?>" /></div>
+          <div class="form-group">
+            <label class="form-label" for="p-pref-mode">Preferred Consultation Mode</label>
+            <select class="form-select" id="p-pref-mode" name="pref_mode">
+              <option value="">No preference / Flexible</option>
+              <option value="Online" <?php echo ($client['pref_mode'] ?? '') === 'Online' ? 'selected' : ''; ?>>Online (Video / Call)</option>
+              <option value="In-person" <?php echo ($client['pref_mode'] ?? '') === 'In-person' ? 'selected' : ''; ?>>In-person (Clinic)</option>
+              <option value="Flexible" <?php echo ($client['pref_mode'] ?? '') === 'Flexible' ? 'selected' : ''; ?>>Flexible / Either</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="p-pref-times">Preferred Times / Availability</label>
+            <input class="form-input" id="p-pref-times" name="pref_times" value="<?php echo htmlspecialchars($client['pref_times'] ?? ''); ?>" placeholder="e.g. morning, evening, weekends" />
+          </div>
         </div>
         <button type="submit" class="btn btn-primary">Save changes</button>
         <span class="hint">Status is changed on the Overview tab, so every move is logged.</span>
@@ -616,53 +880,363 @@ $formTemplatesAvailable = formTemplates($db);
 </div>
 
 <!-- Documents Tab -->
+<style>
+/* ── Documents Tab – Redesigned ── */
+.doc-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.doc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.doc-header-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0d7377 0%, #14b8a6 100%);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.doc-header-text h3 {
+  font-size: 1.05rem; font-weight: 700; color: var(--clr-text, #1f2937); margin: 0;
+}
+.doc-header-text .doc-count-line {
+  font-size: 0.8rem; color: var(--clr-text-secondary, #6b7280); margin-top: 2px;
+}
+/* Storage Meter */
+.doc-storage-meter {
+  display: flex; align-items: center; gap: 0.75rem;
+  background: var(--clr-surface, #fff);
+  border: 1px solid var(--clr-border-light, #e5e7eb);
+  border-radius: 10px;
+  padding: 0.5rem 0.875rem;
+}
+.doc-storage-meter-info { font-size: 0.78rem; color: var(--clr-text-secondary); white-space: nowrap; }
+.doc-storage-meter-info strong { color: var(--clr-text, #1f2937); }
+.doc-meter-track {
+  width: 100px; height: 6px; border-radius: 99px;
+  background: #e5e7eb; overflow: hidden; flex-shrink: 0;
+}
+.doc-meter-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #0d7377, #14b8a6);
+  transition: width 0.4s ease;
+}
+.doc-meter-fill.is-warn { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+/* Upload Card */
+.doc-upload-card {
+  background: var(--clr-surface, #fff);
+  border: 1px solid var(--clr-border, #e5e7eb);
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.doc-drop {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.doc-drop:hover, .doc-drop.is-dragover {
+  border-color: #0d7377; background: #f0fdfa; transform: translateY(-1px);
+}
+.doc-drop-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: #e8f4f4; color: #0d7377;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.35rem; margin-bottom: 0.35rem;
+  transition: transform 0.2s ease;
+}
+.doc-drop:hover .doc-drop-icon { transform: scale(1.08); }
+.doc-drop-text { font-size: 0.88rem; font-weight: 600; color: #334155; }
+.doc-drop-text a { color: #0d7377; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.doc-drop-hint { font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
+/* File preview inside drop area */
+.doc-file-preview {
+  display: none; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 0.65rem 0.875rem; max-width: 420px; margin: 0 auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.doc-file-preview.is-active { display: flex; }
+.doc-fpv-left { display: flex; align-items: center; gap: 0.65rem; overflow: hidden; text-align: left; }
+.doc-fpv-icon { width: 34px; height: 34px; border-radius: 8px; background: #e8f4f4; color: #0d7377;
+  display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; }
+.doc-fpv-name { font-size: 0.84rem; font-weight: 600; color: #1e293b; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.doc-fpv-size { font-size: 0.72rem; color: #94a3b8; }
+.doc-fpv-clear { background: none; border: none; color: #94a3b8; padding: 4px; border-radius: 6px;
+  cursor: pointer; font-size: 0.9rem; display: flex; transition: all 0.15s; }
+.doc-fpv-clear:hover { color: #ef4444; background: #fee2e2; }
+/* Upload footer */
+.doc-upload-footer {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 0.75rem; margin-top: 1rem; padding-top: 0.875rem; border-top: 1px solid #f1f5f9;
+}
+/* Toggle switch */
+.doc-toggle-wrap {
+  display: flex; align-items: center; gap: 0.6rem; cursor: pointer; user-select: none;
+}
+.doc-toggle-track {
+  width: 36px; height: 20px; border-radius: 99px; background: #cbd5e1;
+  position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.doc-toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s;
+}
+.doc-toggle-wrap input { display: none; }
+.doc-toggle-wrap input:checked + .doc-toggle-track { background: #0d7377; }
+.doc-toggle-wrap input:checked + .doc-toggle-track::after { transform: translateX(16px); }
+.doc-toggle-label { font-size: 0.82rem; font-weight: 500; color: #475569; }
+.doc-toggle-label i { color: #0d7377; margin-right: 3px; }
+.doc-quota-note {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; font-weight: 500; color: #047857; background: #ecfdf5;
+  padding: 3px 8px; border-radius: 99px; margin-top: 0.5rem;
+}
+
+/* Document list – card rows */
+.doc-list-card {
+  background: var(--clr-surface, #fff);
+  border: 1px solid var(--clr-border, #e5e7eb);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.doc-list-head {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 0.5rem; padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--clr-border-light, #f0f1f3);
+  background: var(--clr-surface-alt, #fafbfc);
+}
+.doc-list-head-title {
+  font-size: 0.88rem; font-weight: 700; color: var(--clr-text, #1f2937);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.doc-list-storage-note { font-size: 0.76rem; color: var(--clr-text-secondary); }
+.doc-list-storage-note strong { color: var(--clr-text); }
+.doc-item {
+  display: flex; align-items: center; gap: 0.875rem; padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+.doc-item:last-child { border-bottom: none; }
+.doc-item:hover { background: #f9fafb; }
+.doc-item-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0;
+}
+.doc-item-body { flex: 1; min-width: 0; }
+.doc-item-name { font-size: 0.88rem; font-weight: 600; color: #1e293b; word-break: break-word; }
+.doc-item-meta {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 3px;
+}
+.doc-item-meta span { font-size: 0.74rem; color: #94a3b8; }
+.doc-item-meta .doc-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 5px; font-size: 0.7rem; font-weight: 600;
+}
+.doc-pill-client { background: #eff6ff; color: #1d4ed8; }
+.doc-pill-therapist { background: #f0fdf4; color: #15803d; }
+.doc-pill-shared { background: #e8f4f4; color: #0d7377; }
+.doc-pill-internal { background: #f1f5f9; color: #64748b; }
+.doc-item-actions {
+  display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;
+}
+.doc-item-actions .doc-act-btn {
+  background: none; border: none; padding: 0.375rem; border-radius: 8px;
+  cursor: pointer; color: #64748b; font-size: 1rem; display: flex;
+  transition: all 0.15s;
+}
+.doc-act-btn:hover { background: #f1f5f9; color: #334155; }
+.doc-act-btn.is-danger:hover { background: #fee2e2; color: #ef4444; }
+/* Toggle in list */
+.doc-item-toggle {
+  display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; margin-right: 0.25rem;
+}
+.doc-mini-toggle {
+  width: 30px; height: 16px; border-radius: 99px; background: #cbd5e1;
+  position: relative; transition: background 0.2s; cursor: pointer; flex-shrink: 0;
+}
+.doc-mini-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  transition: transform 0.2s;
+}
+.doc-mini-toggle.is-on { background: #0d7377; }
+.doc-mini-toggle.is-on::after { transform: translateX(14px); }
+.doc-toggle-tip { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; }
+
+/* Empty state */
+.doc-empty {
+  padding: 3rem 1.5rem; text-align: center;
+}
+.doc-empty-icon {
+  width: 56px; height: 56px; border-radius: 14px; background: #e8f4f4; color: #0d7377;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; margin-bottom: 0.75rem;
+}
+.doc-empty h4 { font-size: 0.95rem; font-weight: 600; color: var(--clr-text); margin: 0 0 0.25rem; }
+.doc-empty p { font-size: 0.84rem; color: var(--clr-text-secondary); max-width: 380px; margin: 0 auto; }
+</style>
+
 <div class="profile-tab-content" id="tab-documents">
-  <div class="panel">
-    <div class="panel-body">
-      <form id="doc-upload-form" enctype="multipart/form-data" class="form-inline">
-        <input type="hidden" name="client_id" value="<?php echo (int) $client['id']; ?>" />
-        <div class="form-group is-grow">
-          <label class="form-label" for="doc-file">Add a document</label>
-          <input class="form-input" type="file" id="doc-file" name="document" required />
-          <small class="hint">
-            Up to <?php echo getSettingInt('upload_max_mb', 10); ?> MB.
-            Accepted: <?php echo htmlspecialchars(implode(', ', documentAllowedExtensions())); ?>.
-          </small>
-        </div>
-        <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Upload</button>
-      </form>
+
+  <!-- Header Bar -->
+  <div class="doc-header-bar">
+    <div class="doc-header-left">
+      <div class="doc-header-icon"><i class="bi bi-folder2-open"></i></div>
+      <div class="doc-header-text">
+        <h3>Documents</h3>
+        <div class="doc-count-line"><?php echo count($documents); ?> file<?php echo count($documents) === 1 ? '' : 's'; ?> · <?php echo $totalUsedDocMb; ?> MB total</div>
+      </div>
+    </div>
+    <div class="doc-storage-meter" title="Only client-uploaded files count toward the 50 MB portal quota. Therapist uploads are exempt.">
+      <div class="doc-storage-meter-info"><strong><?php echo $clientUsedDocMb; ?></strong> / <?php echo $maxDocMb; ?> MB</div>
+      <div class="doc-meter-track">
+        <?php $meterPct = $maxTotalDocBytes > 0 ? min(100, round(($clientDocBytes / $maxTotalDocBytes) * 100)) : 0; ?>
+        <div class="doc-meter-fill <?php echo $meterPct > 85 ? 'is-warn' : ''; ?>" style="width:<?php echo $meterPct; ?>%;"></div>
+      </div>
+      <div class="doc-storage-meter-info" style="color:#94a3b8;"><?php echo $clientRemDocMb; ?> MB free</div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="panel-body-flush">
-      <div id="doc-list">
-        <?php if (empty($documents)): ?>
-          <div class="empty-state"><i class="bi bi-folder2-open"></i><p>No documents yet</p></div>
-        <?php else: ?>
-          <div class="data-table-wrap">
-            <table class="data-table">
-              <thead><tr><th>File</th><th>Uploaded</th><th>By</th><th>Size</th><th class="th-right">Actions</th></tr></thead>
-              <tbody>
-                <?php foreach ($documents as $d): ?>
-                  <tr>
-                    <td class="td-name"><?php echo htmlspecialchars($d['original_name']); ?></td>
-                    <td class="td-nowrap td-muted"><?php echo date('d M Y, H:i', strtotime($d['uploaded_at'])); ?></td>
-                    <td class="td-muted"><?php echo htmlspecialchars($d['uploader']); ?></td>
-                    <td class="td-nowrap td-muted"><?php echo number_format($d['size_bytes'] / 1024, 0); ?> KB</td>
-                    <td class="td-actions">
-                      <!-- Never a static URL: document.php checks the session
-                           and logs the download before sending a byte. -->
-                      <a class="btn btn-ghost btn-sm" href="document.php?id=<?php echo (int) $d['id']; ?>"><i class="bi bi-download"></i> Download</a>
-                      <button class="btn btn-danger btn-sm" onclick="archiveDocument(<?php echo (int) $d['id']; ?>)"><i class="bi bi-x-lg"></i></button>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
+  <!-- Upload Card -->
+  <div class="doc-upload-card">
+    <form id="doc-upload-form" enctype="multipart/form-data">
+      <input type="hidden" name="client_id" value="<?php echo (int) $client['id']; ?>" />
+
+      <div class="doc-drop" id="doc-dropzone" onclick="document.getElementById('doc-file').click()">
+        <input type="file" id="doc-file" name="document" style="display:none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required />
+
+        <div id="doc-dropzone-prompt">
+          <div class="doc-drop-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+          <div class="doc-drop-text"><a>Browse</a> or drop a file here</div>
+          <div class="doc-drop-hint"><?php echo getSettingInt('upload_max_mb', 10); ?> MB max · <?php echo htmlspecialchars(strtoupper(implode(', ', documentAllowedExtensions()))); ?></div>
+        </div>
+
+        <div class="doc-file-preview" id="doc-selected-card" onclick="event.stopPropagation();">
+          <div class="doc-fpv-left">
+            <div class="doc-fpv-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
+            <div>
+              <div class="doc-fpv-name" id="doc-selected-name">file.pdf</div>
+              <div class="doc-fpv-size" id="doc-selected-size">0 KB</div>
+            </div>
           </div>
-        <?php endif; ?>
+          <button type="button" class="doc-fpv-clear" title="Remove" onclick="clearSelectedDoc();"><i class="bi bi-x-lg"></i></button>
+        </div>
       </div>
+
+      <div class="doc-upload-footer">
+        <div>
+          <label class="doc-toggle-wrap">
+            <input type="checkbox" name="shared_with_client" value="1" checked />
+            <span class="doc-toggle-track"></span>
+            <span class="doc-toggle-label"><i class="bi bi-eye"></i> Share with client</span>
+          </label>
+          <div class="doc-quota-note"><i class="bi bi-shield-check"></i> Admin uploads don't count toward quota</div>
+        </div>
+        <button type="submit" class="btn btn-primary" id="doc-upload-btn" style="padding:0.5rem 1.15rem; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+          <i class="bi bi-cloud-arrow-up"></i> Upload
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Document List -->
+  <div class="doc-list-card">
+    <div class="doc-list-head">
+      <span class="doc-list-head-title"><i class="bi bi-files"></i> All Documents</span>
+      <?php if (!empty($documents)): ?>
+        <span class="doc-list-storage-note">Client uploads: <strong><?php echo $clientUsedDocMb; ?> MB</strong> · Total: <strong><?php echo $totalUsedDocMb; ?> MB</strong></span>
+      <?php endif; ?>
+    </div>
+
+    <div id="doc-list">
+      <?php if (empty($documents)): ?>
+        <div class="doc-empty">
+          <div class="doc-empty-icon"><i class="bi bi-folder2-open"></i></div>
+          <h4>No documents yet</h4>
+          <p>Upload treatment plans, worksheets, or care records. Client-uploaded files will also appear here.</p>
+        </div>
+      <?php else: ?>
+        <?php
+        function adminDocFileMeta($name) {
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            switch ($ext) {
+                case 'pdf':  return ['icon' => 'bi-filetype-pdf',        'color' => '#dc2626', 'bg' => '#fee2e2'];
+                case 'doc':
+                case 'docx': return ['icon' => 'bi-filetype-docx',       'color' => '#2563eb', 'bg' => '#dbeafe'];
+                case 'jpg':
+                case 'jpeg':
+                case 'png':  return ['icon' => 'bi-file-earmark-image',  'color' => '#059669', 'bg' => '#d1fae5'];
+                default:     return ['icon' => 'bi-file-earmark-text',   'color' => '#475569', 'bg' => '#f1f5f9'];
+            }
+        }
+        ?>
+        <?php foreach ($documents as $d):
+          $meta = adminDocFileMeta($d['original_name']);
+          $isClient = !empty($d['client_uploaded']);
+          $sizeKb = $d['size_bytes'] / 1024;
+          $sizeFormatted = $sizeKb >= 1024 ? round($sizeKb / 1024, 1) . ' MB' : round($sizeKb) . ' KB';
+          $isShared = !empty($d['shared_with_client']);
+        ?>
+          <div class="doc-item">
+            <div class="doc-item-icon" style="background:<?php echo $meta['bg']; ?>; color:<?php echo $meta['color']; ?>;">
+              <i class="bi <?php echo $meta['icon']; ?>"></i>
+            </div>
+            <div class="doc-item-body">
+              <div class="doc-item-name"><?php echo htmlspecialchars($d['original_name']); ?></div>
+              <div class="doc-item-meta">
+                <span><?php echo $sizeFormatted; ?></span>
+                <span>·</span>
+                <span><?php echo date('d M Y, h:i A', strtotime($d['uploaded_at'])); ?></span>
+                <span class="doc-pill <?php echo $isClient ? 'doc-pill-client' : 'doc-pill-therapist'; ?>">
+                  <i class="bi <?php echo $isClient ? 'bi-person-fill' : 'bi-shield-check'; ?>"></i>
+                  <?php echo $isClient ? 'Client' : 'Therapist'; ?>
+                </span>
+                <?php if ($isClient || $isShared): ?>
+                  <span class="doc-pill doc-pill-shared"><i class="bi bi-eye-fill"></i> Shared</span>
+                <?php endif; ?>
+              </div>
+            </div>
+
+            <?php if (!$isClient): ?>
+              <div class="doc-item-toggle" title="<?php echo $isShared ? 'Visible in client portal – click to hide' : 'Hidden from client – click to share'; ?>">
+                <div class="doc-mini-toggle <?php echo $isShared ? 'is-on' : ''; ?>"
+                     onclick="toggleShareDoc(<?php echo (int) $d['id']; ?>, this)"
+                     id="doc-toggle-<?php echo (int) $d['id']; ?>"></div>
+                <span class="doc-toggle-tip" id="share-label-<?php echo (int) $d['id']; ?>"><?php echo $isShared ? 'Portal' : 'Internal'; ?></span>
+              </div>
+            <?php else: ?>
+              <div class="doc-item-toggle" title="Client uploads are always visible in portal">
+                <div class="doc-mini-toggle is-on" style="opacity:0.5; cursor:default;"></div>
+                <span class="doc-toggle-tip">Portal</span>
+              </div>
+            <?php endif; ?>
+
+            <div class="doc-item-actions">
+              <a class="doc-act-btn" href="document.php?id=<?php echo (int) $d['id']; ?>" title="Download"><i class="bi bi-download"></i></a>
+              <button type="button" class="doc-act-btn is-danger" title="Delete" onclick="archiveDocument(<?php echo (int) $d['id']; ?>)"><i class="bi bi-trash3"></i></button>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
     </div>
   </div>
 </div>
@@ -736,6 +1310,54 @@ $formTemplatesAvailable = formTemplates($db);
         </div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="document.getElementById('feeModal').classList.remove('open')">Cancel</button><button type="submit" class="btn btn-primary">Save Fee</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Record Payment Modal -->
+<div class="modal-overlay" id="recordPaymentModal">
+  <div class="modal-box is-narrow">
+    <div class="modal-header">
+      <div class="modal-title"><i class="bi bi-credit-card-2-front"></i> Record Fee Payment</div>
+      <button class="modal-close" onclick="document.getElementById('recordPaymentModal').classList.remove('open')">&times;</button>
+    </div>
+    <form onsubmit="submitRecordPayment(event)">
+      <input type="hidden" name="fee_id" id="rec_fee_id" />
+      <div class="modal-body">
+        <div style="background:var(--clr-surface-alt, #f8fafc); padding:0.85rem 1rem; border-radius:var(--radius-sm, 8px); margin-bottom:1rem; border:1px solid var(--clr-border-light, #eef2f6);">
+          <div class="detail-label" id="rec_fee_desc">Session Fee</div>
+          <div style="font-size:1.45rem; font-weight:700; color:var(--clr-text); margin-top:2px;" id="rec_fee_amount_display">₹0.00</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="rec_paid_date">Payment Date</label>
+            <input type="date" class="form-input" id="rec_paid_date" name="paid_date" value="<?php echo date('Y-m-d'); ?>" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="rec_method">Payment Method</label>
+            <select class="form-select" id="rec_method" name="method" required>
+              <option value="upi">UPI</option>
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="rec_reference">Reference / Transaction ID</label>
+          <input type="text" class="form-input" id="rec_reference" name="reference" placeholder="e.g. UPI Ref, transaction number..." />
+        </div>
+        <div class="form-group" style="margin-top:0.75rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.88rem; cursor:pointer;">
+            <input type="checkbox" name="send_receipt" id="rec_send_receipt" value="1" checked />
+            <span>Email payment receipt to client</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('recordPaymentModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn btn-success" id="recSubmitBtn"><i class="bi bi-check2-circle"></i> Confirm Payment</button>
+      </div>
     </form>
   </div>
 </div>
@@ -869,7 +1491,7 @@ function submitSession(e) {
         msg += ' — ' + d.skipped.length + ' skipped (already booked)';
       }
       showToast(msg);
-      setTimeout(function () { location.reload(); }, 600);
+      setTimeout(function () { reloadTab('sessions'); }, 600);
     })
     .catch(function (err) {
       showToast(err.message || 'Network error', 'error');
@@ -896,7 +1518,7 @@ function submitReschedule(e) {
     .then(function(d) {
       if (d.success) {
         showToast(d.moved > 1 ? (d.moved + ' sessions rescheduled') : 'Session rescheduled');
-        setTimeout(function(){ location.reload(); }, 600);
+        setTimeout(function(){ reloadTab('sessions'); }, 600);
       } else {
         showToast(d.error || 'Error', 'error');
       }
@@ -905,8 +1527,14 @@ function submitReschedule(e) {
 }
 
 async function updateSessionStatus(id, status) {
+  if (status === 'cancelled') {
+    if (!await showConfirm('Cancel this session? The client will be notified and the booking slot freed.', { danger: true, okText: 'Cancel Session' })) {
+      return;
+    }
+  }
+
   var scope = await seriesScopeFor(id, status === 'cancelled' ? 'cancel' : 'change');
-  if (scope === null) { location.reload(); return; }   // abandoned; undo the select
+  if (scope === null) return;
 
   var fd = new FormData();
   fd.append('action', 'update_status');
@@ -922,7 +1550,7 @@ async function updateSessionStatus(id, status) {
         if (d.changed > 1) msg = d.changed + ' sessions updated';
         if (d.skipped && d.skipped.length) msg += ', ' + d.skipped.length + ' skipped';
         showToast(msg);
-        setTimeout(function(){ location.reload(); }, 600);
+        setTimeout(function(){ reloadTab('sessions'); }, 600);
       } else {
         showToast(d.error || 'Error', 'error');
       }
@@ -939,16 +1567,46 @@ function markReviewed(id) {
     .then(function(d) {
       if (!d.success) { showToast(d.error || 'Error', 'error'); return; }
       showToast('Client marked reviewed and is now active');
-      setTimeout(function() { location.reload(); }, 700);
+      setTimeout(function() { reloadTab('overview'); }, 700);
     })
     .catch(function() { showToast('Network error', 'error'); });
 }
 
 function showProfileTab(tab) {
+  if (!tab) tab = 'overview';
+  var target = document.getElementById('tab-' + tab);
+  if (!target) return;
   document.querySelectorAll('.profile-tab-content').forEach(function(el) { el.classList.remove('active'); });
-  document.querySelectorAll('.profile-tab').forEach(function(el) { el.classList.remove('active'); });
-  document.getElementById('tab-' + tab).classList.add('active');
-  event.target.classList.add('active');
+  document.querySelectorAll('.profile-tab').forEach(function(el) {
+    if (el.getAttribute('data-tab') === tab) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+  target.classList.add('active');
+  try {
+    sessionStorage.setItem('client_profile_active_tab_' + clientId, tab);
+    if (history.replaceState) {
+      history.replaceState(null, null, '#tab=' + tab);
+    } else {
+      location.hash = 'tab=' + tab;
+    }
+  } catch (err) {}
+}
+
+function reloadTab(tab) {
+  if (tab) {
+    try {
+      sessionStorage.setItem('client_profile_active_tab_' + clientId, tab);
+      if (history.replaceState) {
+        history.replaceState(null, null, '#tab=' + tab);
+      } else {
+        location.hash = 'tab=' + tab;
+      }
+    } catch (err) {}
+  }
+  location.reload();
 }
 
 function openSessionModal() {
@@ -992,7 +1650,7 @@ function submitNote(e) {
     .then(function(d) {
       if (d.success) {
         showToast(isCorrection ? 'Correction added' : 'Note added');
-        setTimeout(function(){ location.reload(); }, 600);
+        setTimeout(function(){ reloadTab('notes'); }, 600);
       } else { showToast(d.error || 'Error', 'error'); }
     })
     .catch(function() { showToast('Network error','error'); });
@@ -1006,7 +1664,7 @@ function submitProfile(e) {
   fetch('api/clients.php', { method:'POST', body: fd })
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d.success) { showToast('Profile saved'); setTimeout(function(){ location.reload(); }, 600); }
+      if (d.success) { showToast('Profile saved'); setTimeout(function(){ reloadTab('profile'); }, 600); }
       else { showToast(d.error || 'Error', 'error'); }
     })
     .catch(function(){ showToast('Network error','error'); });
@@ -1014,20 +1672,152 @@ function submitProfile(e) {
 
 (function() {
   var form = document.getElementById('doc-upload-form');
-  if (!form) return;
+  var fileInput = document.getElementById('doc-file');
+  var dropzone = document.getElementById('doc-dropzone');
+  var promptEl = document.getElementById('doc-dropzone-prompt');
+  var selectedCard = document.getElementById('doc-selected-card');
+  var nameEl = document.getElementById('doc-selected-name');
+  var sizeEl = document.getElementById('doc-selected-size');
+  var submitBtn = document.getElementById('doc-upload-btn');
+
+  if (!form || !fileInput || !dropzone) return;
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    var k = 1024;
+    var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  function handleFileSelected(file) {
+    if (!file) return;
+    if (nameEl) nameEl.textContent = file.name;
+    if (sizeEl) sizeEl.textContent = formatBytes(file.size);
+    if (promptEl) promptEl.style.display = 'none';
+    if (selectedCard) selectedCard.classList.add('is-active');
+  }
+
+  window.clearSelectedDoc = function() {
+    fileInput.value = '';
+    if (promptEl) promptEl.style.display = '';
+    if (selectedCard) selectedCard.classList.remove('is-active');
+  };
+
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files && fileInput.files[0]) {
+      handleFileSelected(fileInput.files[0]);
+    }
+  });
+
+  // Drag and drop listeners
+  ['dragenter', 'dragover'].forEach(function(evt) {
+    dropzone.addEventListener(evt, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('is-dragover');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(function(evt) {
+    dropzone.addEventListener(evt, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('is-dragover');
+    }, false);
+  });
+
+  dropzone.addEventListener('drop', function(e) {
+    var dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length > 0) {
+      fileInput.files = dt.files;
+      handleFileSelected(dt.files[0]);
+    }
+  });
+
   form.addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!fileInput.files || fileInput.files.length === 0) {
+      showToast('Please select a file to upload.', 'error');
+      return;
+    }
+    var origBtnHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:6px;"></span> Uploading...';
+
     var fd = new FormData(form);
     fd.append('action', 'upload');
     fetch('api/client-documents.php', { method:'POST', body: fd })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.success) { showToast('Document uploaded'); setTimeout(function(){ location.reload(); }, 600); }
-        else { showToast(d.error || 'Error', 'error'); }
+        if (d.success) { 
+          showToast('Document uploaded successfully'); 
+          setTimeout(function(){ reloadTab('documents'); }, 500); 
+        } else { 
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = origBtnHtml;
+          showToast(d.error || 'Upload failed', 'error'); 
+        }
       })
-      .catch(function(){ showToast('Network error','error'); });
+      .catch(function(){ 
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origBtnHtml;
+        showToast('Network error while uploading','error'); 
+      });
   });
 })();
+
+function toggleShareDoc(id, el) {
+  var isOn = el.classList.contains('is-on');
+  var newShared = isOn ? 0 : 1;
+
+  // Optimistic UI update
+  el.classList.toggle('is-on');
+  var labelSpan = document.getElementById('share-label-' + id);
+  if (labelSpan) labelSpan.textContent = newShared ? 'Portal' : 'Internal';
+
+  // Also update the "Shared" pill in meta
+  var item = el.closest('.doc-item');
+  if (item) {
+    var pills = item.querySelectorAll('.doc-pill-shared');
+    pills.forEach(function(p) { p.style.display = newShared ? '' : 'none'; });
+    if (newShared && pills.length === 0) {
+      var meta = item.querySelector('.doc-item-meta');
+      if (meta) {
+        var pill = document.createElement('span');
+        pill.className = 'doc-pill doc-pill-shared';
+        pill.innerHTML = '<i class="bi bi-eye-fill"></i> Shared';
+        meta.appendChild(pill);
+      }
+    }
+  }
+
+  var fd = new FormData();
+  fd.append('action', 'share');
+  fd.append('document_id', id);
+  fd.append('shared', newShared);
+  fetch('api/client-documents.php', { method:'POST', body: fd })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.success) { showToast(newShared ? 'Shared with client' : 'Removed from portal'); }
+      else {
+        // Revert
+        el.classList.toggle('is-on');
+        if (labelSpan) labelSpan.textContent = isOn ? 'Portal' : 'Internal';
+        showToast(d.error || 'Error', 'error');
+      }
+    })
+    .catch(function(){
+      el.classList.toggle('is-on');
+      if (labelSpan) labelSpan.textContent = isOn ? 'Portal' : 'Internal';
+      showToast('Network error','error');
+    });
+}
+
+// Keep legacy shareDocument for backwards compat (unused in new UI)
+function shareDocument(id, box) {
+  toggleShareDoc(id, document.getElementById('doc-toggle-' + id) || box);
+}
 
 async function archiveDocument(id) {
   if (!await showConfirm('Remove this document from the client record?', { danger: true, okText: 'Remove' })) return;
@@ -1154,8 +1944,142 @@ function submitFee(e) {
   fd.append('client_id', clientId);
   fetch('api/clients.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })
-    .then(function(d) { if(d.success){showToast('Fee recorded');setTimeout(function(){location.reload();},600);}else{showToast(d.error||'Error','error');} })
+    .then(function(d) {
+      if(d.success){
+        showToast('Fee recorded successfully');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error||'Error','error');
+      }
+    })
     .catch(function() { showToast('Network error','error'); });
+}
+
+function openRecordPaymentModal(feeId, amount, description) {
+  document.getElementById('rec_fee_id').value = feeId;
+  document.getElementById('rec_fee_amount_display').textContent = '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('rec_fee_desc').textContent = description || 'Session Fee';
+  document.getElementById('rec_paid_date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('rec_reference').value = '';
+  document.getElementById('rec_send_receipt').checked = true;
+  document.getElementById('recordPaymentModal').classList.add('open');
+}
+
+function submitRecordPayment(e) {
+  e.preventDefault();
+  var btn = document.getElementById('recSubmitBtn');
+  if (btn) btn.disabled = true;
+  var fd = new FormData(e.target);
+  fd.append('action', 'update_fee_status');
+  fd.append('status', 'paid');
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (btn) btn.disabled = false;
+      if (d.success) {
+        showToast('Payment confirmed and recorded');
+        document.getElementById('recordPaymentModal').classList.remove('open');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to record payment', 'error');
+      }
+    })
+    .catch(function() {
+      if (btn) btn.disabled = false;
+      showToast('Network error recording payment', 'error');
+    });
+}
+
+async function waiveFee(feeId, amount) {
+  if (!await showConfirm('Waive this fee of ₹' + amount + '? The client will not be billed for it.', { okText: 'Waive Fee' })) return;
+  var fd = new FormData();
+  fd.append('action', 'update_fee_status');
+  fd.append('fee_id', feeId);
+  fd.append('status', 'waived');
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Fee waived');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to waive fee', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error waiving fee', 'error'); });
+}
+
+async function revertFeeToPending(feeId) {
+  if (!await showConfirm('Restore fee status to Pending?')) return;
+  var fd = new FormData();
+  fd.append('action', 'update_fee_status');
+  fd.append('fee_id', feeId);
+  fd.append('status', 'pending');
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Fee restored to pending');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to update fee', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error updating fee', 'error'); });
+}
+
+async function deleteFee(feeId) {
+  if (!await showConfirm('Permanently delete this fee entry? This cannot be undone.', { danger: true, okText: 'Delete Fee' })) return;
+  var fd = new FormData();
+  fd.append('action', 'delete_fee');
+  fd.append('fee_id', feeId);
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Fee deleted');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to delete fee', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error deleting fee', 'error'); });
+}
+
+async function verifyPaymentReport(reportId) {
+  if (!await showConfirm('Approve this client-reported payment? This marks the fee as paid and sends a confirmation receipt.')) return;
+  var fd = new FormData();
+  fd.append('action', 'verify_payment_report');
+  fd.append('report_id', reportId);
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Payment verified and recorded');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to verify payment', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error verifying payment', 'error'); });
+}
+
+async function rejectPaymentReport(reportId) {
+  if (!await showConfirm('Dismiss this payment report?', { danger: true, okText: 'Dismiss' })) return;
+  var fd = new FormData();
+  fd.append('action', 'reject_payment_report');
+  fd.append('report_id', reportId);
+  fetch('api/clients.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Payment report dismissed');
+        setTimeout(function(){ reloadTab('fees'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to dismiss payment report', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error dismissing report', 'error'); });
 }
 
 async function setClientStatus(status, label) {
@@ -1166,7 +2090,7 @@ async function setClientStatus(status, label) {
   fd.append('status', status);
   fetch('api/clients.php', { method:'POST', body: fd })
     .then(function(r) { return r.json(); })
-    .then(function(d) { if(d.success){ showToast('Status updated'); setTimeout(function(){ location.reload(); }, 600); } else showToast(d.error||'Error','error'); })
+    .then(function(d) { if(d.success){ showToast('Status updated'); setTimeout(function(){ reloadTab('overview'); }, 600); } else showToast(d.error||'Error','error'); })
     .catch(function() { showToast('Network error','error'); });
 }
 
@@ -1180,7 +2104,88 @@ document.querySelectorAll('.modal-overlay').forEach(function(m) {
 (function() {
   var sel = document.getElementById('repeat-select-prof');
   var end = document.getElementById('repeat-end-prof');
-  if (!sel || !end) return;
-  sel.addEventListener('change', function() { end.hidden = (sel.value === 'none'); });
+  if (sel && end) {
+    sel.addEventListener('change', function() { end.hidden = (sel.value === 'none'); });
+  }
+
+  var feeStatusSel = document.getElementById('fee-status');
+  var feeMethodGrp = document.getElementById('fee-method-group');
+  var feeRefGrp    = document.getElementById('fee-reference-group');
+  if (feeStatusSel && feeMethodGrp && feeRefGrp) {
+    feeStatusSel.addEventListener('change', function() {
+      var isPaid = (feeStatusSel.value === 'paid');
+      feeMethodGrp.hidden = !isPaid;
+      feeRefGrp.hidden = !isPaid;
+    });
+  }
+})();
+
+function launchPortal(cid) {
+  var fd = new FormData();
+  fd.append('client_id', cid);
+  fetch('api/client-portal-launch.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        window.open('../portal/index.php', '_blank');
+      } else {
+        showToast(d.error || 'Failed to launch portal', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error launching portal', 'error'); });
+}
+
+function sendPortalInvite(cid) {
+  showToast('Sending portal invitation...', 'info');
+  var fd = new FormData();
+  fd.append('client_id', cid);
+  fetch('api/client-portal-invite.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast(d.message || 'Invitation sent successfully');
+      } else {
+        showToast(d.error || 'Failed to send invite', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error sending invite', 'error'); });
+}
+
+async function confirmSession(sid) {
+  if (!await showConfirm('Confirm this session request and send confirmation email to client?')) return;
+  var fd = new FormData();
+  fd.append('action', 'update_status');
+  fd.append('session_id', sid);
+  fd.append('status', 'confirmed');
+  fetch('api/sessions.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Session confirmed and confirmation email sent');
+        setTimeout(function() { reloadTab('sessions'); }, 600);
+      } else {
+        showToast(d.error || 'Failed to confirm session', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error confirming session', 'error'); });
+}
+
+// Restore active tab on page load
+(function() {
+  function getTargetTab() {
+    var hash = location.hash || '';
+    var m = hash.match(/tab=([a-z0-9_-]+)/i);
+    if (m && m[1]) return m[1];
+    try {
+      var saved = sessionStorage.getItem('client_profile_active_tab_' + clientId);
+      if (saved) return saved;
+    } catch (e) {}
+    return null;
+  }
+  var tab = getTargetTab();
+  if (tab && document.getElementById('tab-' + tab)) {
+    showProfileTab(tab);
+  }
 })();
 </script>
+

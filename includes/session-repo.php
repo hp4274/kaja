@@ -91,7 +91,7 @@ function sessionConflictMessage(array $conflict) {
  * Book a session. Throws on any overlap rather than booking it anyway: two
  * people told to arrive at the same hour is not fixable after the fact.
  */
-function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type = 'online', $seriesId = null, $meetingLink = null) {
+function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type = 'online', $seriesId = null, $meetingLink = null, $status = 'confirmed') {
     $window = sessionWindowFor($startTime, $durationMinutes);
     if ($window === null) {
         throw new InvalidArgumentException('That is not a valid start time.');
@@ -135,7 +135,9 @@ function createSession(PDO $db, $clientId, $startTime, $durationMinutes, $type =
         throw new InvalidArgumentException('The meeting link must start with http:// or https://');
     }
     $videoLink = ($type === 'online') ? ($meetingLink ?: (getSetting('practice_video_link', '') ?: null)) : null;
-    $status    = getSettingInt('auto_confirm_sessions', 0) ? 'confirmed' : 'pending';
+    if ($status === null || !in_array($status, ['confirmed', 'pending', 'cancelled', 'completed'], true)) {
+        $status = 'confirmed';
+    }
 
     $ownTransaction = !$db->inTransaction();
     if ($ownTransaction) {

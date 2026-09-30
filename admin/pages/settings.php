@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['settings_action'])) {
         // whatever row the database already holds.
         $editable = [
             'intake_token_expiry_days', 'admin_reminder_hours', 'intake_form_version',
-            'intake_reply_days', 'booking_slots',
+            'intake_reply_days', 'booking_slots', 'client_max_total_documents_mb', 'upload_max_mb',
         ];
         foreach ($editable as $key) {
             if (array_key_exists($key, $_POST)) {
@@ -262,6 +262,26 @@ function settingChoice($name, $id, $value, $options, $unit) {
     </div>
   </div>
 
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Document Storage</div>
+        <div class="panel-subtitle">Limits for files uploaded by clients and staff.</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <?php
+      settingRow('Per-client storage limit', 'set-client-doc-limit',
+        'Maximum cumulative size of all active documents stored for an individual client across portal and admin. When reached, further uploads are rejected until older files are deleted or archived.',
+        settingNumber('client_max_total_documents_mb', 'set-client-doc-limit', getSetting('client_max_total_documents_mb'), 'MB', [25, 50, 100]));
+
+      settingRow('Max single file size', 'set-upload-max',
+        'Maximum allowed file size for any single document upload across both admin and client portal.',
+        settingNumber('upload_max_mb', 'set-upload-max', getSetting('upload_max_mb'), 'MB', [5, 10, 20]));
+      ?>
+    </div>
+  </div>
+
   <!-- The email templates used to sit here, as one of the five the
        application sends. They have a page of their own now: Settings > Emails
        in the sidebar. -->
@@ -446,7 +466,9 @@ async function confirmRemoveAdmin(e, username) {
     'intake_token_expiry_days': 'link expiry',
     'admin_reminder_hours': 'when you get chased',
     'intake_reply_days': 'the reply time you promise',
-    'booking_slots': 'the bookable times'
+    'booking_slots': 'the bookable times',
+    'client_max_total_documents_mb': 'per-client document storage limit',
+    'upload_max_mb': 'maximum single file size'
   };
 
   function changedKeys() {
@@ -635,6 +657,14 @@ async function confirmRemoveAdmin(e, username) {
       var note = n > 5 ? ' That is over a week — it is a promise made on your behalf while you are not there.' : '';
       return [tone, 'They are told to expect a reply within ' + n + ' working day'
                   + (n === 1 ? '' : 's') + '.' + note];
+    },
+    'set-client-doc-limit': function (n) {
+      if (!n) { return ['is-danger', 'Clients would be blocked from storing any documents.']; }
+      return ['', 'Each client can store up to ' + n + ' MB total of active health records, forms, and attachments.'];
+    },
+    'set-upload-max': function (n) {
+      if (!n) { return ['is-danger', 'No files could be uploaded.']; }
+      return ['', 'Single files up to ' + n + ' MB are allowed per upload.'];
     }
   };
 

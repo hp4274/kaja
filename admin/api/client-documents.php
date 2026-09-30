@@ -38,7 +38,7 @@ try {
             }
 
             try {
-                $docId = storeClientDocument($db, $clientId, $_FILES['document'], $userId);
+                $docId = storeClientDocument($db, $clientId, $_FILES['document'], $userId, false);
             } catch (RuntimeException $e) {
                 // The message is written for the person uploading; the reasons
                 // are all things they can fix (size, type, a failed transfer).
@@ -46,11 +46,17 @@ try {
                 exit;
             }
 
+            $shared = !empty($_POST['shared_with_client']) ? 1 : 0;
+            if ($shared) {
+                $db->prepare('UPDATE `client_documents` SET `shared_with_client` = 1 WHERE `id` = :id')
+                   ->execute([':id' => $docId]);
+            }
+
             $db->prepare("
                 INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`)
                 VALUES ('document_uploaded', :d, 'client', :rid)
             ")->execute([
-                ':d'   => 'Uploaded "' . $_FILES['document']['name'] . '"',
+                ':d'   => 'Uploaded "' . $_FILES['document']['name'] . '"' . ($shared ? ' (shared with client in portal)' : ''),
                 ':rid' => $clientId,
             ]);
 
@@ -59,6 +65,27 @@ try {
                 'document'  => $docId,
                 'documents' => clientDocuments($db, $clientId),
             ]);
+            break;
+
+        case 'share':
+            $docId  = intval($_POST['document_id'] ?? 0);
+            $doc    = $docId ? findClientDocument($db, $docId) : null;
+            $shared = !empty($_POST['shared']) ? 1 : 0;
+
+            if ($doc === null || $doc['client_uploaded']) {
+                echo json_encode(['success' => false, 'error' => 'Document not found']);
+                exit;
+            }
+            $db->prepare('UPDATE `client_documents` SET `shared_with_client` = :s WHERE `id` = :id')
+               ->execute([':s' => $shared, ':id' => $docId]);
+            $db->prepare("
+                INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`)
+                VALUES ('document_shared', :d, 'client', :rid)
+            ")->execute([
+                ':d'   => ($shared ? 'Shared' : 'Unshared') . ' "' . $doc['original_name'] . '" with client',
+                ':rid' => (int) $doc['client_id'],
+            ]);
+            echo json_encode(['success' => true]);
             break;
 
         case 'archive':

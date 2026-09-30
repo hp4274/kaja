@@ -16,8 +16,9 @@ DirectoryIndex index.html index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Server-side code and data are never fetched over HTTP.
-    RewriteRule ^(includes|admin/includes|tools|storage|cron|database|\.git)(/|$) - [F,L]
+    # Server-side code and data are never fetched over HTTP (except authorized tools/migrate.php).
+    RewriteCond %{REQUEST_URI} !^.*/tools/migrate\.php$ [NC]
+    RewriteRule ^(includes|admin/includes|portal/includes|portal/pages|tools|storage|cron|database|\.git)(/|$) - [F,L]
 
     # .html pages sit at the root. PHP pages live in php/, but public URLs stay
     # flat (/intake.php?token=...), so bookmarks and already-emailed links work.

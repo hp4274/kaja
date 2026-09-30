@@ -110,6 +110,7 @@ function clientsUrl(array $filters, array $overrides = []) {
                 <td class="td-actions">
                   <div class="row-actions">
                     <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="launchPortal(<?php echo (int) $c['id']; ?>)" title="View Client Portal"><i class="bi bi-box-arrow-up-right"></i> Portal</button>
                     <button type="button" class="btn btn-danger btn-sm" onclick="deleteClient(<?php echo $c['id']; ?>, '<?php echo htmlspecialchars(addslashes($c['first_name'] . ' ' . $c['last_name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
                   </div>
                 </td>
@@ -163,6 +164,7 @@ function clientsUrl(array $filters, array $overrides = []) {
               <span class="grid-card-label"><i class="bi bi-calendar3"></i> <?php echo $c['session_count']; ?> Sessions</span>
               <div class="row-actions">
                 <a href="index.php?page=client-profile&id=<?php echo $c['id']; ?>" class="btn btn-ghost btn-sm"><i class="bi bi-person-lines-fill"></i> Profile</a>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="launchPortal(<?php echo (int) $c['id']; ?>)" title="View Client Portal"><i class="bi bi-box-arrow-up-right"></i> Portal</button>
                 <button type="button" class="btn btn-danger btn-sm" onclick="deleteClient(<?php echo $c['id']; ?>, '<?php echo htmlspecialchars(addslashes($c['first_name'] . ' ' . $c['last_name']), ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
               </div>
             </div>
@@ -193,6 +195,22 @@ async function deleteClient(id, name) {
     })
     .catch(function() { showToast('Network error', 'error'); });
 }
+
+function launchPortal(cid) {
+  var fd = new FormData();
+  fd.append('client_id', cid);
+  fetch('api/client-portal-launch.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        window.open('../portal/index.php', '_blank');
+      } else {
+        showToast(d.error || 'Failed to launch portal', 'error');
+      }
+    })
+    .catch(function() { showToast('Network error launching portal', 'error'); });
+}
+
 
 (function() {
   const page = 'clients';

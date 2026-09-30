@@ -45,6 +45,8 @@ foreach ($_local as $_k => $_v) {
 }
 unset($_local, $_k, $_v, $_env, $_val);
 
+date_default_timezone_set('Asia/Kolkata');
+
 define('APP_DEBUG', APP_ENV === 'development');
 ini_set('display_errors', APP_DEBUG ? '1' : '0');
 ini_set('log_errors', '1');

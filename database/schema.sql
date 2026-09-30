@@ -178,7 +178,10 @@ CREATE TABLE IF NOT EXISTS `clients` (
     `archived_at` DATETIME DEFAULT NULL,
     -- Set when this row was merged INTO another, so the loser's history stays
     -- traceable rather than becoming a dead-end archived record.
-    `merged_into_id` INT DEFAULT NULL
+    `merged_into_id` INT DEFAULT NULL,
+    `pref_mode` VARCHAR(20) DEFAULT NULL,
+    `pref_times` VARCHAR(100) DEFAULT NULL,
+    `session_version` INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 
 -- 7. Sessions Table
@@ -269,6 +272,8 @@ CREATE TABLE IF NOT EXISTS `client_documents` (
     `uploaded_by` INT DEFAULT NULL,
     `uploaded_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `archived_at` DATETIME DEFAULT NULL,
+    `shared_with_client` TINYINT(1) NOT NULL DEFAULT 0,
+    `client_uploaded` TINYINT(1) NOT NULL DEFAULT 0,
     UNIQUE KEY `uniq_stored` (`stored_name`),
     KEY `idx_client` (`client_id`),
     CONSTRAINT `fk_client_documents_client`
@@ -500,3 +505,33 @@ INSERT INTO `blogs` (`title`, `slug`, `excerpt`, `content`, `category`, `read_ti
  'Healing rarely moves in a straight line. Here is how to honor your window of tolerance.',
  '<p>After a period of overwhelm — whether from trauma, grief, or prolonged stress — your system needs gentleness, not urgency. Healing is not linear, and pushing too fast can re-activate the very patterns you are trying to release.</p><p>The concept of a \"window of tolerance\" helps here: it is the zone where you can feel emotion without shutting down or becoming flooded. Staying within it, even if progress feels slow, is actually faster in the long run.</p><p>Pace yourself. Rest is not the opposite of progress — it is part of it.</p>',
  'Trauma', 7, NULL, 'published', '2026-02-08 10:00:00');
+
+-- Client portal login codes. client_id 0 = burned row for an unknown email
+-- (keeps the per-IP rate limit uniform), hence no foreign key.
+CREATE TABLE IF NOT EXISTS `client_otps` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `client_id` INT NOT NULL,
+    `code_hash` VARCHAR(255) NOT NULL,
+    `expires_at` DATETIME NOT NULL,
+    `attempts` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    `used_at` DATETIME DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `ip` VARCHAR(45) NOT NULL DEFAULT '',
+    INDEX `idx_client_created` (`client_id`, `created_at`),
+    INDEX `idx_ip_created` (`ip`, `created_at`)
+) ENGINE=InnoDB;
+
+-- Payment references a client reports from the portal. Unverified: the admin
+-- confirms and records the real payment in client_fees.
+CREATE TABLE IF NOT EXISTS `client_payment_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `client_id` INT NOT NULL,
+    `method` ENUM('upi','bank_transfer','cash') NOT NULL,
+    `amount` DECIMAL(10,2) NOT NULL,
+    `reference` VARCHAR(100) NOT NULL DEFAULT '',
+    `paid_on` DATE NOT NULL,
+    `status` ENUM('pending','verified','rejected') NOT NULL DEFAULT 'pending',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_client` (`client_id`),
+    CONSTRAINT `fk_cpr_client` FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;

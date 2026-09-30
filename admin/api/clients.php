@@ -119,7 +119,7 @@ try {
             }
 
             $fields = [];
-            foreach (['first_name','last_name','email','phone','city','occupation','dob','concern'] as $f) {
+            foreach (['first_name','last_name','email','phone','city','occupation','dob','concern','pref_mode','pref_times'] as $f) {
                 if (array_key_exists($f, $_POST)) {
                     $fields[$f] = trim($_POST[$f]);
                 }
@@ -242,6 +242,160 @@ try {
             }
 
             echo json_encode(['success' => true, 'fee_id' => $feeId]);
+            break;
+
+        case 'update_fee_status':
+            $feeId  = intval($_POST['fee_id'] ?? 0);
+            $status = trim($_POST['status'] ?? '');
+            if (!$feeId || !in_array($status, ['paid', 'pending', 'waived'], true)) {
+                echo json_encode(['success' => false, 'error' => 'Invalid fee ID or status']);
+                exit;
+            }
+
+            $fStmt = $db->prepare("SELECT * FROM `client_fees` WHERE `id` = :id");
+            $fStmt->execute([':id' => $feeId]);
+            $fee = $fStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$fee) {
+                echo json_encode(['success' => false, 'error' => 'Fee record not found']);
+                exit;
+            }
+            $clientId = (int) $fee['client_id'];
+            $name = clientLabel($db, $clientId);
+
+            if ($status === 'paid') {
+                $method    = trim($_POST['method'] ?? 'cash');
+                $reference = trim($_POST['reference'] ?? '');
+                $paidDate  = trim($_POST['paid_date'] ?? date('Y-m-d'));
+                if (!in_array($method, clientPaymentMethods(), true)) {
+                    $method = 'cash';
+                }
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $paidDate)) {
+                    $paidDate = date('Y-m-d');
+                }
+
+                $stmt = $db->prepare("UPDATE `client_fees` SET `status` = 'paid', `method` = :m, `reference` = :r, `fee_date` = :fd WHERE `id` = :id");
+                $stmt->execute([
+                    ':m'  => $method,
+                    ':r'  => mb_substr($reference, 0, 255),
+                    ':fd' => $paidDate,
+                    ':id' => $feeId,
+                ]);
+
+                $desc = "Marked fee #{$feeId} (₹{$fee['amount']}) as paid via " . clientPaymentMethodLabel($method) . " for {$name}";
+                $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('fee_paid', :d, 'client', :rid)")
+                   ->execute([':d' => $desc, ':rid' => $clientId]);
+
+                if (!empty($_POST['send_receipt'])) {
+                    sendFeeReceivedEmail($db, $clientId, $fee['amount'], $paidDate);
+                }
+            } elseif ($status === 'waived') {
+                $stmt = $db->prepare("UPDATE `client_fees` SET `status` = 'waived' WHERE `id` = :id");
+                $stmt->execute([':id' => $feeId]);
+
+                $desc = "Waived fee #{$feeId} (₹{$fee['amount']}) for {$name}";
+                $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('fee_waived', :d, 'client', :rid)")
+                   ->execute([':d' => $desc, ':rid' => $clientId]);
+            } else { // pending
+                $stmt = $db->prepare("UPDATE `client_fees` SET `status` = 'pending' WHERE `id` = :id");
+                $stmt->execute([':id' => $feeId]);
+
+                $desc = "Reverted fee #{$feeId} (₹{$fee['amount']}) to pending for {$name}";
+                $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('fee_reverted', :d, 'client', :rid)")
+                   ->execute([':d' => $desc, ':rid' => $clientId]);
+            }
+
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'delete_fee':
+            $feeId = intval($_POST['fee_id'] ?? 0);
+            if (!$feeId) {
+                echo json_encode(['success' => false, 'error' => 'Invalid fee ID']);
+                exit;
+            }
+            $fStmt = $db->prepare("SELECT * FROM `client_fees` WHERE `id` = :id");
+            $fStmt->execute([':id' => $feeId]);
+            $fee = $fStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$fee) {
+                echo json_encode(['success' => false, 'error' => 'Fee record not found']);
+                exit;
+            }
+            $clientId = (int) $fee['client_id'];
+            $name = clientLabel($db, $clientId);
+
+            $db->prepare("DELETE FROM `client_fees` WHERE `id` = :id")->execute([':id' => $feeId]);
+            $desc = "Deleted fee record #{$feeId} (₹{$fee['amount']}) for {$name}";
+            $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('fee_deleted', :d, 'client', :rid)")
+               ->execute([':d' => $desc, ':rid' => $clientId]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'verify_payment_report':
+            $reportId = intval($_POST['report_id'] ?? 0);
+            if (!$reportId) {
+                echo json_encode(['success' => false, 'error' => 'Invalid report ID']);
+                exit;
+            }
+            $rStmt = $db->prepare("SELECT * FROM `client_payment_reports` WHERE `id` = :id");
+            $rStmt->execute([':id' => $reportId]);
+            $rep = $rStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$rep) {
+                echo json_encode(['success' => false, 'error' => 'Payment report not found']);
+                exit;
+            }
+            $clientId = (int) $rep['client_id'];
+            $name = clientLabel($db, $clientId);
+
+            // Mark report as verified
+            $db->prepare("UPDATE `client_payment_reports` SET `status` = 'verified' WHERE `id` = :id")->execute([':id' => $reportId]);
+
+            // Try to match an open pending fee for this client with the same amount
+            $mFee = $db->prepare("SELECT `id` FROM `client_fees` WHERE `client_id` = :cid AND `status` = 'pending' AND `amount` = :a ORDER BY `fee_date` ASC LIMIT 1");
+            $mFee->execute([':cid' => $clientId, ':a' => $rep['amount']]);
+            $matchedFeeId = $mFee->fetchColumn();
+
+            if ($matchedFeeId) {
+                $db->prepare("UPDATE `client_fees` SET `status` = 'paid', `method` = :m, `reference` = :r, `fee_date` = :fd WHERE `id` = :id")
+                   ->execute([
+                       ':m'  => in_array($rep['method'], clientPaymentMethods(), true) ? $rep['method'] : 'other',
+                       ':r'  => mb_substr((string)$rep['reference'], 0, 255),
+                       ':fd' => $rep['paid_on'] ?: date('Y-m-d'),
+                       ':id' => $matchedFeeId,
+                   ]);
+                $finalFeeId = $matchedFeeId;
+            } else {
+                // If no exact match, create a paid fee record
+                $db->prepare("INSERT INTO `client_fees` (`client_id`, `amount`, `fee_date`, `description`, `status`, `method`, `reference`) VALUES (:cid, :a, :fd, :d, 'paid', :m, :r)")
+                   ->execute([
+                       ':cid' => $clientId,
+                       ':a'   => $rep['amount'],
+                       ':fd'  => $rep['paid_on'] ?: date('Y-m-d'),
+                       ':d'   => 'Verified payment report #' . $reportId,
+                       ':m'   => in_array($rep['method'], clientPaymentMethods(), true) ? $rep['method'] : 'other',
+                       ':r'   => mb_substr((string)$rep['reference'], 0, 255),
+                   ]);
+                $finalFeeId = $db->lastInsertId();
+            }
+
+            // Send receipt
+            sendFeeReceivedEmail($db, $clientId, $rep['amount'], $rep['paid_on'] ?: date('Y-m-d'));
+
+            $desc = "Verified payment report #{$reportId} (₹{$rep['amount']}) for {$name}";
+            $db->prepare("INSERT INTO `activity_log` (`action`, `description`, `reference_type`, `reference_id`) VALUES ('fee_verified', :d, 'client', :rid)")
+               ->execute([':d' => $desc, ':rid' => $clientId]);
+
+            echo json_encode(['success' => true, 'fee_id' => $finalFeeId]);
+            break;
+
+        case 'reject_payment_report':
+            $reportId = intval($_POST['report_id'] ?? 0);
+            if (!$reportId) {
+                echo json_encode(['success' => false, 'error' => 'Invalid report ID']);
+                exit;
+            }
+            $db->prepare("UPDATE `client_payment_reports` SET `status` = 'rejected' WHERE `id` = :id")->execute([':id' => $reportId]);
+            echo json_encode(['success' => true]);
             break;
 
         case 'resend_intake':

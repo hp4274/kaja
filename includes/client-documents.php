@@ -46,6 +46,38 @@ function documentMaxBytes() {
     return max(1, getSettingInt('upload_max_mb', 10)) * 1024 * 1024;
 }
 
+/**
+ * Maximum total storage in bytes allowed across all client-uploaded documents for one client.
+ * Defaults to 50 MB.
+ */
+function clientMaxTotalDocumentBytes() {
+    return max(1, getSettingInt('client_max_total_documents_mb', 50)) * 1024 * 1024;
+}
+
+/**
+ * Total size in bytes of active (non-archived) documents stored for a client.
+ * By design, admin/therapist uploads do NOT count towards the client's document storage limit.
+ * If $clientUploadedOnly is true (default), sums ONLY client-uploaded documents (`client_uploaded` = 1).
+ * If $clientUploadedOnly is false, sums all documents stored for the client.
+ */
+function clientTotalDocumentBytes(PDO $db, $clientId, $clientUploadedOnly = true) {
+    if ($clientUploadedOnly) {
+        $stmt = $db->prepare('
+            SELECT COALESCE(SUM(`size_bytes`), 0)
+            FROM `client_documents`
+            WHERE `client_id` = :c AND `archived_at` IS NULL AND `client_uploaded` = 1
+        ');
+    } else {
+        $stmt = $db->prepare('
+            SELECT COALESCE(SUM(`size_bytes`), 0)
+            FROM `client_documents`
+            WHERE `client_id` = :c AND `archived_at` IS NULL
+        ');
+    }
+    $stmt->execute([':c' => (int) $clientId]);
+    return (int) $stmt->fetchColumn();
+}
+
 function documentTypeIsAllowed($mimeType, $originalName) {
     $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
     return in_array($ext, documentAllowedExtensions(), true);
@@ -67,8 +99,10 @@ function generateStoredName($originalName) {
 /**
  * Move an uploaded file into storage and record it.
  * $upload is one entry of $_FILES.
+ * $userId: admin user ID when uploaded from admin, or null when uploaded from client portal.
+ * $isClientUpload: true when uploaded by the client from portal; false for therapist/admin uploads.
  */
-function storeClientDocument(PDO $db, $clientId, array $upload, $userId = null) {
+function storeClientDocument(PDO $db, $clientId, array $upload, $userId = null, $isClientUpload = false) {
     if (!isset($upload['error']) || $upload['error'] !== UPLOAD_ERR_OK) {
         throw new RuntimeException('The file did not upload correctly.');
     }
@@ -78,6 +112,24 @@ function storeClientDocument(PDO $db, $clientId, array $upload, $userId = null) 
     }
     if (!documentTypeIsAllowed($upload['type'], $upload['name'])) {
         throw new RuntimeException('That file type is not accepted.');
+    }
+
+    // Enforce per-client cumulative storage limit (default 50 MB) ONLY for client uploads.
+    // Admin uploads do not count against the client document storage limit, nor are they blocked by it.
+    if ($isClientUpload) {
+        $currentTotalBytes = clientTotalDocumentBytes($db, (int) $clientId, true);
+        $maxTotalBytes     = clientMaxTotalDocumentBytes();
+        if (($currentTotalBytes + (int) $upload['size']) > $maxTotalBytes) {
+            $maxMb  = (int) round($maxTotalBytes / (1024 * 1024));
+            $usedMb = round($currentTotalBytes / (1024 * 1024), 1);
+            $fileMb = round($upload['size'] / (1024 * 1024), 1);
+            $remMb  = max(0, round(($maxTotalBytes - $currentTotalBytes) / (1024 * 1024), 1));
+            throw new RuntimeException(
+                "Total document storage limit of {$maxMb} MB per client reached. " .
+                "Current usage: {$usedMb} MB ({$remMb} MB remaining). " .
+                "This file ({$fileMb} MB) exceeds available space. Please delete or archive older documents before uploading."
+            );
+        }
     }
 
     $dir = documentStorageDir();
@@ -96,8 +148,8 @@ function storeClientDocument(PDO $db, $clientId, array $upload, $userId = null) 
 
     $db->prepare('
         INSERT INTO `client_documents`
-            (`client_id`,`original_name`,`stored_name`,`mime_type`,`size_bytes`,`uploaded_by`)
-        VALUES (:c,:orig,:stored,:mime,:size,:by)
+            (`client_id`,`original_name`,`stored_name`,`mime_type`,`size_bytes`,`uploaded_by`,`client_uploaded`)
+        VALUES (:c,:orig,:stored,:mime,:size,:by,:cu)
     ')->execute([
         ':c'      => (int) $clientId,
         ':orig'   => mb_substr($upload['name'], 0, 255),
@@ -105,6 +157,7 @@ function storeClientDocument(PDO $db, $clientId, array $upload, $userId = null) 
         ':mime'   => mb_substr((string) $upload['type'], 0, 120),
         ':size'   => (int) $upload['size'],
         ':by'     => $userId === null ? null : (int) $userId,
+        ':cu'     => $isClientUpload ? 1 : 0,
     ]);
 
     return (int) $db->lastInsertId();

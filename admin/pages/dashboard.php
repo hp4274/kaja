@@ -28,6 +28,16 @@ $stalledIntakes  = staleIntakeLinks($db, getSettingInt('admin_reminder_hours', 4
 $queuedMail      = queuedMailCount();
 $awaitingReview  = clientsAwaitingReview($db);
 
+// Pending session requests (e.g. from client portal bookings)
+$pendingPortalSessions = $db->query("
+    SELECT s.*, c.first_name, c.last_name, c.email
+    FROM `sessions` s
+    JOIN `clients` c ON s.client_id = c.id
+    WHERE s.`status` = 'pending' AND s.`start_time` >= NOW() AND c.`archived_at` IS NULL
+    ORDER BY s.`start_time` ASC
+    LIMIT 5
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $todaysSessions = sessionsBetween($db, date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
 
 $totalLeads      = $db->query("SELECT COUNT(*) FROM `leads`")->fetchColumn();
@@ -209,6 +219,40 @@ if ($nextMonth > 12) { $nextMonth = 1; $nextYear++; }
      beside them on the right instead of stealing the calendar's row. -->
 <div class="dashboard-lower-grid">
 <div class="dashboard-lower-left">
+
+<?php if (!empty($pendingPortalSessions)): ?>
+<div class="panel" style="border-left: 4px solid var(--accent, #0d9488);">
+  <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="panel-title"><i class="bi bi-calendar-event text-teal"></i> Pending Session Requests (<?php echo count($pendingPortalSessions); ?>)</div>
+    <a href="index.php?page=sessions" class="btn btn-ghost btn-sm">All Sessions <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="panel-body-flush">
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <tbody>
+          <?php foreach ($pendingPortalSessions as $pps): ?>
+            <tr>
+              <td class="td-name">
+                <a href="index.php?page=client-profile&id=<?php echo (int) $pps['client_id']; ?>">
+                  <?php echo htmlspecialchars($pps['first_name'] . ' ' . $pps['last_name']); ?>
+                </a>
+              </td>
+              <td class="td-nowrap td-muted">
+                <?php echo date('D, d M, h:i A', strtotime($pps['start_time'])); ?>
+                <span class="badge" style="background:#e8f0fe; color:#1a73e8; margin-left:4px; font-size:0.75rem;"><?php echo ucfirst($pps['session_type']); ?></span>
+              </td>
+              <td class="td-actions">
+                <button class="btn btn-primary btn-sm" onclick="confirmPendingSession(<?php echo (int) $pps['id']; ?>, this)">Confirm</button>
+                <a href="index.php?page=client-profile&id=<?php echo (int) $pps['client_id']; ?>" class="btn btn-ghost btn-sm">Profile</a>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($awaitingReview)): ?>
 <div class="panel">
@@ -510,6 +554,29 @@ document.addEventListener('calendar:monthchanged', function (e) {
   selectedCalendarDay = calData.defaultDay || 1;
   openSelectedDay();
 });
+
+function confirmPendingSession(sid, btn) {
+  if (btn) btn.disabled = true;
+  var fd = new FormData();
+  fd.append('action', 'update_status');
+  fd.append('session_id', sid);
+  fd.append('status', 'confirmed');
+  fetch('api/sessions.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        showToast('Session confirmed and confirmation email sent');
+        setTimeout(function() { location.reload(); }, 600);
+      } else {
+        showToast(d.error || 'Failed to confirm session', 'error');
+        if (btn) btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      showToast('Network error', 'error');
+      if (btn) btn.disabled = false;
+    });
+}
 </script>
 
 <!-- Booking modal, shared with the sessions page. See admin/includes/session-booking-modal.php -->

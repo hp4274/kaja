@@ -103,7 +103,7 @@ function archiveClient(PDO $db, $id, $mergedInto = null) {
  * logged; letting an edit form move it would lose that trail.
  */
 function updateClientProfile(PDO $db, $id, array $fields) {
-    $allowed = ['first_name', 'last_name', 'email', 'phone', 'city', 'occupation', 'dob', 'concern'];
+    $allowed = ['first_name', 'last_name', 'email', 'phone', 'city', 'occupation', 'dob', 'concern', 'pref_mode', 'pref_times'];
     $set     = [];
     $params  = [':id' => (int) $id];
 

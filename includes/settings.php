@@ -71,6 +71,9 @@ function settingDefaults() {
         // is a real API integration and only worth it when a client needs
         // session isolation.
         'practice_video_link'      => '',
+        // Shown read-only in the client portal Billing page.
+        'practice_upi_id'          => '',
+        'practice_bank_details'    => '',
         'session_reminder_hours'   => '24',
 
         // PHP defaults to UTC on this install while MySQL runs on local time.
@@ -259,6 +262,21 @@ Best regards,
             "Best regards,
 {{practice_name}}",
 
+        'notify_client_otp_subject'        => 'Your login code - {{practice_name}}',
+        'notify_client_otp_body'           =>
+            "Hello {{client_name}},
+
+" .
+            "Your login code is {{otp_code}}. It expires in {{expires_minutes}} minutes.
+
+" .
+            "If you did not ask to sign in, you can ignore this email.
+
+" .
+            "Best regards,
+{{practice_name}}",
+        'notify_client_otp_bg' => '',
+
         'notify_lead_rejected_bg' => '',
         'notify_session_pending_bg' => '',
         'notify_session_rescheduled_bg' => '',
@@ -267,8 +285,9 @@ Best regards,
 
         // Uploads. Shared with Patient Intake the day it gains a file
         // question -- one setting, two consumers.
-        'upload_max_mb'         => '10',
-        'upload_allowed_types'  => 'pdf,jpg,jpeg,png,doc,docx',
+        'upload_max_mb'                 => '10',
+        'client_max_total_documents_mb' => '50',
+        'upload_allowed_types'          => 'pdf,jpg,jpeg,png,doc,docx',
         // Blank = a sibling of the project directory. Never put this inside
         // the web root: client documents are consent forms and ID proof.
         'document_storage_path' => '',
