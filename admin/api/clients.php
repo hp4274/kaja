@@ -448,19 +448,45 @@ try {
             }
             $name = clientLabel($db, $clientId);
 
-            // sessions/notes/fees/documents cascade off the FK on client_id;
-            // patient-intake has no FK, so its rows for this client are swept
-            // by hand, and the lead that made this client just loses the link.
-            // intake_links has an ON DELETE SET NULL FK, which would only orphan
-            // these rows (they'd linger with client_id wiped) -- deleted by hand
-            // instead so a client's intake history actually goes with them.
-            $db->prepare("DELETE FROM `intake_links` WHERE `client_id` = :id")->execute([':id' => $clientId]);
+            // -- 1. Delete document files from disk first, then DB rows --
+            $docs = $db->prepare("SELECT `stored_name` FROM `client_documents` WHERE `client_id` = :id");
+            $docs->execute([':id' => $clientId]);
+            $storageDir = documentStorageDir();
+            foreach ($docs->fetchAll(PDO::FETCH_COLUMN) as $fname) {
+                $path = $storageDir . DIRECTORY_SEPARATOR . $fname;
+                if (is_file($path)) { @unlink($path); }
+            }
+            $db->prepare("DELETE FROM `client_documents` WHERE `client_id` = :id")->execute([':id' => $clientId]);
+
+            // -- 2. Sessions, notes, fees --
+            $db->prepare("DELETE FROM `sessions`     WHERE `client_id` = :id")->execute([':id' => $clientId]);
+            $db->prepare("DELETE FROM `client_notes`  WHERE `client_id` = :id")->execute([':id' => $clientId]);
+            $db->prepare("DELETE FROM `client_fees`   WHERE `client_id` = :id")->execute([':id' => $clientId]);
+
+            // -- 3. Intake links & patient-intake --
+            $db->prepare("DELETE FROM `intake_links`   WHERE `client_id` = :id")->execute([':id' => $clientId]);
             $db->prepare("DELETE FROM `patient-intake` WHERE `client_id` = :id")->execute([':id' => $clientId]);
-            $db->prepare("UPDATE `leads` SET `client_id` = NULL WHERE `client_id` = :id")->execute([':id' => $clientId]);
+
+            // -- 4. Leads & their notes --
+            $leadIds = $db->prepare("SELECT `id` FROM `leads` WHERE `client_id` = :id");
+            $leadIds->execute([':id' => $clientId]);
+            $lids = $leadIds->fetchAll(PDO::FETCH_COLUMN);
+            if ($lids) {
+                $ph = implode(',', array_fill(0, count($lids), '?'));
+                $db->prepare("DELETE FROM `lead_notes` WHERE `lead_id` IN ($ph)")->execute($lids);
+                $db->prepare("DELETE FROM `leads`      WHERE `id` IN ($ph)")->execute($lids);
+            }
+
+            // -- 5. Payment reports (table may not exist on older schemas) --
+            try {
+                $db->prepare("DELETE FROM `client_payment_reports` WHERE `client_id` = :id")->execute([':id' => $clientId]);
+            } catch (PDOException $ignore) {}
+
+            // -- 6. Delete the client record itself --
             $db->prepare("DELETE FROM `clients` WHERE `id` = :id")->execute([':id' => $clientId]);
 
             $db->prepare("INSERT INTO `activity_log` (`action`,`description`,`reference_type`,`reference_id`) VALUES ('client_deleted',:d,'client',NULL)")
-               ->execute([':d' => $name . ' deleted, along with their intake data']);
+               ->execute([':d' => $name . ' deleted, along with all related data (leads, intake, sessions, notes, fees, documents)']);
 
             echo json_encode(['success' => true]);
             break;
