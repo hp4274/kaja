@@ -1,18 +1,26 @@
 <?php
 /**
- * One-time test-data seeder for the `sessions` table.
+ * One-time test-data seeder for the whole client lifecycle: leads -> intake
+ * links -> patient intake -> client -> sessions -> notes/documents.
  *
  *   php tools/seed-sessions.php
  *
- * Populates 5 dedicated "seed" clients (emails seed.clientN@yopmail.com) and
- * books sessions for them across Aug 2026 - Dec 2026, covering every
- * `status` x `session_type` combination plus edge cases: with/without a
- * video link, recurring series, rescheduled counts, reminder flags, response
- * tokens, and guaranteed weekend slots.
+ * Populates 5 dedicated "seed" clients (emails seed.clientN@yopmail.com), one
+ * per `clients.status` value, each with a coherent trail behind it (a lead
+ * that converted, an intake link at some stage of its lifecycle, and -- for
+ * the ones whose status implies intake happened -- a `patient-intake` row
+ * plus the encrypted `clients.intake_data` written through the one function
+ * allowed to touch it). A handful of standalone `prospectN@yopmail.com` leads
+ * are also seeded pre-conversion, so `leads` isn't only ever seen already
+ * converted. Sessions are then booked for the 5 real seed clients across
+ * Aug 2026 - Dec 2026, covering every `status` x `session_type` combination
+ * plus edge cases (video link, recurring series, reschedules, reminders,
+ * response tokens, weekends). Each client also gets a couple of `client_notes`
+ * and `client_documents` rows.
  *
- * Idempotent: only ever touches the 5 seed clients it owns. Every run wipes
- * and rebuilds their sessions, so running it twice does not double the data.
- * Never touches `blogs` or any real client/session row.
+ * Idempotent: only ever touches the 5 seed clients + seed/prospect leads it
+ * owns. Every run wipes and rebuilds their child rows, so running it twice
+ * does not double the data. Never touches `blogs` or any real client row.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -21,8 +29,13 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../db-config.php';
+require_once __DIR__ . '/../includes/intake-data.php'; // saveClientIntakeData() -- the only code allowed to write clients.intake_data
 
 $db = getDbConnection();
+
+function token(): string {
+    return bin2hex(random_bytes(32));
+}
 
 // ---------------------------------------------------------------------
 // 1. Seed clients (upsert by email so reruns don't duplicate them)
@@ -59,24 +72,155 @@ foreach ($seedClients as $i => $c) {
 }
 
 // ---------------------------------------------------------------------
-// 2. Wipe any sessions this script previously created for these clients
+// 2. Leads -> intake links -> patient intake, one coherent trail per client
+// ---------------------------------------------------------------------
+
+$idListSql = implode(',', array_map('intval', $clientIds));
+
+// Cascades intake_links (FK ON DELETE CASCADE); patient-intake has no FK so
+// it's cleared explicitly. Reset every seed client's intake_data too, since
+// which of them "has intake" is reassigned fresh below on every run.
+$db->exec("DELETE FROM `patient-intake` WHERE client_id IN ($idListSql)");
+$db->prepare("DELETE FROM leads WHERE client_id IN ($idListSql) OR email LIKE 'prospect%@yopmail.com'")->execute();
+$db->exec("UPDATE clients SET intake_data = NULL, intake_form_version = NULL, intake_submitted_at = NULL WHERE id IN ($idListSql)");
+
+$insertLead = $db->prepare(
+    'INSERT INTO leads (name, email, country_code, phone, preferred_date, preferred_time, preference, message, source, status, client_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+);
+
+// 2a. Standalone prospects, never converted -- leads.status coverage for the
+// states a client trail alone wouldn't reach.
+$prospects = [
+    ['Prospect New',       'prospect1@yopmail.com', 'home',        'new'],
+    ['Prospect Contacted', 'prospect2@yopmail.com', 'appointment', 'contacted'],
+    ['Prospect Confirmed', 'prospect3@yopmail.com', 'intake',      'confirmed'],
+    ['Prospect Rejected',  'prospect4@yopmail.com', 'home',        'rejected'],
+];
+$prospectLeadIds = [];
+foreach ($prospects as $p) {
+    [$name, $email, $source, $status] = $p;
+    $insertLead->execute([
+        $name, $email, '+1', '+15550009999', '2026-07-25', '10:00', 'online',
+        '[SEED] prospect lead, never converted.', $source, $status, null, '2026-07-10 09:00:00',
+    ]);
+    $prospectLeadIds[] = (int) $db->lastInsertId();
+}
+
+// 2b. One converted lead per seed client -- the trail sessions hang off of.
+$leadIds = [];
+foreach ($seedClients as $idx => $c) {
+    $insertLead->execute([
+        $c['first_name'] . ' ' . $c['last_name'], $c['email'], '+1', '+155500' . (1000 + $idx),
+        '2026-07-28', '11:00', 'online', '[SEED] converted to client.', 'appointment', 'converted',
+        $clientIds[$idx], '2026-07-20 ' . (9 + $idx) . ':00:00',
+    ]);
+    $leadIds[$idx] = (int) $db->lastInsertId();
+}
+
+$insertLink = $db->prepare(
+    'INSERT INTO intake_links (lead_id, client_id, token, form_version, status, expires_at, opened_at, filled_at, submitted_at, reminder_sent, created_at)
+     VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)'
+);
+
+function makeIntakeAnswers(array $c): array {
+    $answers = [
+        'first_name' => $c['first_name'], 'last_name' => $c['last_name'], 'email' => $c['email'],
+        'phone' => '+15550001000', 'city' => $c['city'], 'occupation' => 'Seed test occupation',
+        'dob' => '1990-01-01', 'concern' => $c['concern'],
+        'pref_consult' => 'video', 'pref_date' => '2026-08-01', 'pref_time' => 'morning',
+        'consent_given' => '1',
+    ];
+    for ($q = 1; $q <= 18; $q++) {
+        $answers["q1_$q"] = (string) ($q % 4); // 0-3 severity scale, cyclic
+        $answers["q2_$q"] = (string) (($q + 2) % 4);
+    }
+    return $answers;
+}
+
+$insertPatientIntake = $db->prepare(
+    'INSERT INTO `patient-intake` (
+        first_name, last_name, email, phone, city, occupation, dob, concern,
+        pref_consult, pref_date, pref_time,
+        q1_1,q1_2,q1_3,q1_4,q1_5,q1_6,q1_7,q1_8,q1_9,q1_10,q1_11,q1_12,q1_13,q1_14,q1_15,q1_16,q1_17,q1_18,
+        q2_1,q2_2,q2_3,q2_4,q2_5,q2_6,q2_7,q2_8,q2_9,q2_10,q2_11,q2_12,q2_13,q2_14,q2_15,q2_16,q2_17,q2_18,
+        intake_link_id, client_id, form_version, consent_given, consent_at, consent_version
+    ) VALUES (' . implode(',', array_fill(0, 53, '?')) . ')'
+);
+
+function insertPatientIntakeRow(PDOStatement $stmt, array $answers, int $linkId, int $clientId, string $consentAt): void {
+    $vals = [
+        $answers['first_name'], $answers['last_name'], $answers['email'], $answers['phone'],
+        $answers['city'], $answers['occupation'], $answers['dob'], $answers['concern'],
+        $answers['pref_consult'], $answers['pref_date'], $answers['pref_time'],
+    ];
+    for ($q = 1; $q <= 18; $q++) { $vals[] = $answers["q1_$q"]; }
+    for ($q = 1; $q <= 18; $q++) { $vals[] = $answers["q2_$q"]; }
+    $vals[] = $linkId;
+    $vals[] = $clientId;
+    $vals[] = 1; // form_version
+    $vals[] = 1; // consent_given
+    $vals[] = $consentAt;
+    $vals[] = 1; // consent_version
+    $stmt->execute($vals);
+}
+
+// 2c. Intake link (and, where the client's status implies it, patient intake
+// + encrypted clients.intake_data) per seed client -- covers every
+// intake_links.status value across the seed set: sent, filled, submitted,
+// expired (plus 'opened' via the standalone prospect below).
+//   idx0 pending   -> link just sent, nothing filled in yet.
+//   idx1 review    -> submitted, awaiting a human look (matches clients.status comment).
+//   idx2 active    -> submitted long ago, already reviewed and bookable.
+//   idx3 inactive  -> link expired before they ever finished it.
+//   idx4 completed -> an abandoned link (filled, never sent onward) plus the
+//                     resend that actually got submitted -- models a resend.
+foreach ($seedClients as $idx => $c) {
+    $leadId = $leadIds[$idx];
+    $clientId = $clientIds[$idx];
+
+    if ($idx === 0) { // pending
+        $insertLink->execute([$leadId, $clientId, token(), 'sent', '2026-08-05 00:00:00', null, null, null, 0, '2026-07-29 10:00:00']);
+        continue;
+    }
+    if ($idx === 3) { // inactive
+        $insertLink->execute([$leadId, $clientId, token(), 'expired', '2026-08-01 00:00:00', '2026-07-30 12:00:00', null, null, 1, '2026-07-29 10:00:00']);
+        continue;
+    }
+    if ($idx === 4) { // completed: abandoned link, then a resend that succeeded
+        $insertLink->execute([$leadId, $clientId, token(), 'filled', '2026-07-15 00:00:00', '2026-07-08 09:00:00', '2026-07-08 09:20:00', null, 1, '2026-07-05 09:00:00']);
+        $insertLink->execute([$leadId, $clientId, token(), 'submitted', '2026-08-10 00:00:00', '2026-07-31 09:00:00', '2026-07-31 09:20:00', '2026-07-31 09:30:00', 0, '2026-07-29 10:00:00']);
+        $finalLinkId = (int) $db->lastInsertId();
+    } else { // review (1) / active (2): submitted cleanly
+        $insertLink->execute([$leadId, $clientId, token(), 'submitted', '2026-08-15 00:00:00', '2026-07-30 09:00:00', '2026-07-30 09:20:00', '2026-07-30 09:30:00', 0, '2026-07-29 10:00:00']);
+        $finalLinkId = (int) $db->lastInsertId();
+    }
+
+    $answers = makeIntakeAnswers($c);
+    $consentAt = '2026-07-30 09:30:00';
+    insertPatientIntakeRow($insertPatientIntake, $answers, $finalLinkId, $clientId, $consentAt);
+    saveClientIntakeData($db, $clientId, $answers, 1);
+}
+
+// 2d. Standalone prospect mid-pipeline: opened the link, hasn't finished --
+// covers intake_links.status = 'opened' without needing a client yet.
+$insertLink->execute([$prospectLeadIds[2], null, token(), 'opened', '2026-08-20 00:00:00', '2026-07-26 14:00:00', null, null, 0, '2026-07-25 10:00:00']);
+
+// ---------------------------------------------------------------------
+// 3. Wipe any sessions this script previously created for these clients
 // ---------------------------------------------------------------------
 
 $in = implode(',', array_fill(0, count($clientIds), '?'));
 $db->prepare("DELETE FROM sessions WHERE client_id IN ($in)")->execute($clientIds);
 
 // ---------------------------------------------------------------------
-// 3. Build the rows
+// 4. Build the session rows
 // ---------------------------------------------------------------------
 
 $statuses = ['pending', 'confirmed', 'rejected', 'completed', 'cancelled', 'no-show'];
 $types    = ['online', 'inperson'];
 $times    = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
 $months   = ['2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
-
-function token(): string {
-    return bin2hex(random_bytes(32));
-}
 
 $rows = [];
 
@@ -210,7 +354,7 @@ foreach ($seriesDefs as $si => [$seriesId, $startStr, $type, $seriesStatuses]) {
 }
 
 // ---------------------------------------------------------------------
-// 4. Insert
+// 5. Insert sessions
 // ---------------------------------------------------------------------
 
 $insert = $db->prepare(
@@ -228,13 +372,93 @@ foreach ($rows as $r) {
     $inserted++;
 }
 
-echo "Seed clients: " . count($clientIds) . " (ids: " . implode(',', $clientIds) . ")\n";
-echo "Sessions inserted: $inserted\n";
-
 $idList = implode(',', array_map('intval', $clientIds));
+
+// ---------------------------------------------------------------------
+// 6. Client notes + documents -- one clinical note tied to a real completed
+// session where the client has one, plus an administrative note, plus one
+// document. Simple, table-native fields only; no fee/payment rows (not
+// asked for) and no actual files on disk (documents here are metadata rows,
+// same as the app stores -- the file itself lives outside the DB).
+// ---------------------------------------------------------------------
+
+$db->exec("DELETE FROM client_notes WHERE client_id IN ($idList)");
+$db->exec("DELETE FROM client_documents WHERE client_id IN ($idList)");
+
+$adminUserId = (int) ($db->query('SELECT id FROM users ORDER BY id LIMIT 1')->fetchColumn() ?: 0) ?: null;
+
+$insertNote = $db->prepare(
+    'INSERT INTO client_notes (client_id, note_type, user_id, note_kind, session_id, content)
+     VALUES (?, ?, ?, ?, ?, ?)'
+);
+$insertDoc = $db->prepare(
+    'INSERT INTO client_documents (client_id, original_name, stored_name, mime_type, size_bytes, uploaded_by, shared_with_client, client_uploaded)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+);
+
+foreach ($clientIds as $idx => $clientId) {
+    // Administrative note -- a status-history-style entry every client gets.
+    $insertNote->execute([
+        $clientId, 'general', $adminUserId, 'administrative', null,
+        "[SEED] Client record created via lead conversion; current status: {$seedClients[$idx]['status']}.",
+    ]);
+
+    // Clinical note on a real completed session, when this client has one.
+    $completedSessionId = $db->prepare('SELECT id FROM sessions WHERE client_id = ? AND status = "completed" ORDER BY start_time LIMIT 1');
+    $completedSessionId->execute([$clientId]);
+    $sessionId = $completedSessionId->fetchColumn();
+    if ($sessionId) {
+        $insertNote->execute([
+            $clientId, 'session', $adminUserId, 'session', (int) $sessionId,
+            '[SEED] Session notes: client engaged well, discussed presenting concern, plan reviewed.',
+        ]);
+    }
+
+    // Document metadata -- only for the two clients whose intake actually
+    // completed (matches "documents on file" being a post-intake thing).
+    if (in_array($idx, [1, 2, 4], true)) { // review, active, completed
+        $insertDoc->execute([
+            $clientId, 'consent-form.pdf', 'seed-doc-client' . ($idx + 1) . '.pdf',
+            'application/pdf', 102400, $adminUserId, 1, 0,
+        ]);
+    }
+}
+
+// ---------------------------------------------------------------------
+// 7. Report
+// ---------------------------------------------------------------------
+
+echo "Seed clients: " . count($clientIds) . " (ids: " . implode(',', $clientIds) . ")\n";
+echo "Prospect leads (unconverted): " . count($prospectLeadIds) . "\n";
+echo "Converted leads: " . count($leadIds) . "\n";
+
+$linkCount = $db->query("SELECT COUNT(*) FROM intake_links WHERE lead_id IN (" . implode(',', array_merge($leadIds, $prospectLeadIds)) . ")")->fetchColumn();
+echo "Intake links: $linkCount\n";
+
+$piCount = $db->query("SELECT COUNT(*) FROM `patient-intake` WHERE client_id IN ($idList)")->fetchColumn();
+echo "Patient intake rows: $piCount\n";
+
+echo "Sessions inserted: $inserted\n";
 $counts = $db->query(
     "SELECT status, session_type, COUNT(*) c FROM sessions WHERE client_id IN ($idList) GROUP BY status, session_type ORDER BY status, session_type"
 );
 foreach ($counts as $row) {
     echo "  {$row['status']} / {$row['session_type']}: {$row['c']}\n";
 }
+
+$noteCount = $db->query("SELECT COUNT(*) FROM client_notes WHERE client_id IN ($idList)")->fetchColumn();
+$docCount  = $db->query("SELECT COUNT(*) FROM client_documents WHERE client_id IN ($idList)")->fetchColumn();
+echo "Client notes: $noteCount\n";
+echo "Client documents: $docCount\n";
+
+echo "\nExample full chain (client_id {$clientIds[1]}, status review):\n";
+$chain = $db->query("
+    SELECT l.id lead_id, l.status lead_status, il.id link_id, il.status link_status,
+           pi.id patient_intake_id, c.status client_status, c.intake_submitted_at
+    FROM clients c
+    LEFT JOIN leads l ON l.client_id = c.id
+    LEFT JOIN intake_links il ON il.client_id = c.id AND il.status = 'submitted'
+    LEFT JOIN `patient-intake` pi ON pi.client_id = c.id
+    WHERE c.id = {$clientIds[1]}
+")->fetch();
+print_r($chain);
