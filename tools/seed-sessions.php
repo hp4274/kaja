@@ -1,26 +1,22 @@
 <?php
 /**
- * One-time test-data seeder for the whole client lifecycle: leads -> intake
- * links -> patient intake -> client -> sessions -> notes/documents.
+ * Local test data for the whole client lifecycle:
+ * lead -> intake link -> patient intake -> client -> sessions -> fees/notes/documents.
  *
  *   php tools/seed-sessions.php
  *
- * Populates 10 dedicated "seed" clients (seed.client1..10@yopmail.com), two
- * per `clients.status` value, each with a coherent trail behind it (a lead
- * that converted, an intake link at some stage of its lifecycle, and -- for
- * the ones whose status implies intake happened -- a `patient-intake` row
- * plus the encrypted `clients.intake_data` written through the one function
- * allowed to touch it). A handful of standalone `prospectN@yopmail.com` leads
- * are also seeded pre-conversion, so `leads` isn't only ever seen already
- * converted. Sessions are then booked for the 10 seed clients across
- * Aug 2026 - Dec 2026, covering every `status` x `session_type` combination
- * plus edge cases (video link, recurring series, reschedules, reminders,
- * response tokens, weekends). Each client also gets a couple of `client_notes`
- * and `client_documents` rows.
+ * 10 clients, two per clients.status, each with the trail its status implies,
+ * plus 4 leads that never converted. Sessions are dense around the database
+ * clock and every status is placed where it is possible: completed / no-show
+ * only before now, pending / confirmed only after, rejected / cancelled
+ * either side.
+ * "Now" is the database's NOW(), read once -- PHP and MySQL clocks disagree
+ * on this machine, so nothing here uses PHP's time().
  *
- * Idempotent: only ever touches the 10 seed clients + seed/prospect leads it
- * owns. Every run wipes and rebuilds their child rows, so running it twice
- * does not double the data. Never touches `blogs` or any real client row.
+ * Idempotent: every run deletes the clients and leads whose email is in the
+ * fixed lists below (plus the old seed.client* / prospect* addresses from
+ * earlier versions of this script) with all their child rows, then rebuilds.
+ * Nothing else is touched -- no real client, and never `blogs`.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -29,471 +25,452 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../db-config.php';
-require_once __DIR__ . '/../includes/intake-data.php'; // saveClientIntakeData() -- the only code allowed to write clients.intake_data
+require_once __DIR__ . '/../includes/intake-data.php'; // saveClientIntakeData(): the only writer of clients.intake_data
 
-$db = getDbConnection();
+$db  = getDbConnection();
+$now = strtotime($db->query('SELECT NOW()')->fetchColumn());
 
-function token(): string {
-    return bin2hex(random_bytes(32));
-}
+function token(): string { return bin2hex(random_bytes(32)); }
+function dt(int $ts): string { return date('Y-m-d H:i:s', $ts); }
+/** A moment that has already happened: $ts, or an hour ago if $ts is later. */
+function past(int $ts, int $now): string { return dt(min($ts, $now - 3600)); }
 
 // ---------------------------------------------------------------------
-// 1. Seed clients (upsert by email so reruns don't duplicate them)
+// The people. Emails are the idempotency key.
 // ---------------------------------------------------------------------
 
-// Two per clients.status value. seed.clientN@yopmail.com, N = 1..10.
-$seedClients = [];
-$people = [
-    ['Ananya', 'pending',   'Mumbai',    'anxiety'],
-    ['Rohan',  'pending',   'Pune',      'stress'],
-    ['Meera',  'review',    'Bengaluru', 'relationships'],
-    ['Karan',  'review',    'Delhi',     'grief'],
-    ['Priya',  'active',    'Chennai',   'depression'],
-    ['Dev',    'active',    'Hyderabad', 'anxiety'],
-    ['Isha',   'inactive',  'Kolkata',   'stress'],
-    ['Nikhil', 'inactive',  'Jaipur',    'sleep'],
-    ['Sara',   'completed', 'Ahmedabad', 'depression'],
-    ['Vivek',  'completed', 'Kochi',     'relationships'],
+$clients = [
+    // first, last, status, city, occupation, concern
+    ['Harsh',   'Patel',   'pending',   'Ahmedabad', 'Chartered accountant', 'anxiety'],
+    ['Emily',   'Carter',  'pending',   'Mumbai',    'Product designer',     'stress'],
+    ['Priya',   'Sharma',  'review',    'Delhi',     'School teacher',       'relationships'],
+    ['Rahul',   'Mehta',   'review',    'Pune',      'Sales manager',        'grief'],
+    ['Ananya',  'Iyer',    'active',    'Chennai',   'Software engineer',    'anxiety'],
+    ['Arjun',   'Reddy',   'active',    'Hyderabad', 'Architect',            'depression'],
+    ['Sneha',   'Nair',    'inactive',  'Kochi',     'Nurse',                'stress'],
+    ['Daniel',  'Brooks',  'inactive',  'Bengaluru', 'Data analyst',         'sleep'],
+    ['Kavya',   'Joshi',   'completed', 'Jaipur',    'Lawyer',               'depression'],
+    ['Vikram',  'Singh',   'completed', 'Chandigarh','Civil engineer',       'relationships'],
 ];
-foreach ($people as $n => [$first, $status, $city, $concern]) {
-    $seedClients[] = [
-        'first_name' => $first, 'last_name' => 'Seed', 'email' => 'seed.client' . ($n + 1) . '@yopmail.com',
-        'status' => $status, 'city' => $city, 'concern' => $concern,
-    ];
-}
+$prospects = [
+    // first, last, lead status, source, message
+    ['Neha',   'Kapoor', 'new',       'home',        'Hi, I have been feeling overwhelmed at work lately and would like to talk to someone.'],
+    ['Sophie', 'Turner', 'contacted', 'appointment', 'Looking for online sessions in the evenings, ideally weekly.'],
+    ['Aditya', 'Rao',    'confirmed', 'intake',      'My GP suggested therapy for ongoing low mood. Weekends suit me best.'],
+    ['Rohit',  'Verma',  'rejected',  'home',        'Can you prescribe medication for sleep?'],
+];
 
-$findClient   = $db->prepare('SELECT id FROM clients WHERE email = ?');
+$email = fn(string $first, string $last): string => strtolower("$first.$last") . '@yopmail.com';
+
+// ---------------------------------------------------------------------
+// 1. Clean slate for exactly these addresses
+// ---------------------------------------------------------------------
+
+$emails = [];
+foreach ($clients as [$f, $l]) { $emails[] = $email($f, $l); }
+foreach ($prospects as [$f, $l]) { $emails[] = $email($f, $l); }
+// Addresses earlier versions of this script created.
+for ($n = 1; $n <= 10; $n++) { $emails[] = "seed.client$n@yopmail.com"; }
+for ($n = 1; $n <= 4; $n++)  { $emails[] = "prospect$n@yopmail.com"; }
+
+$in = implode(',', array_fill(0, count($emails), '?'));
+$stmt = $db->prepare("SELECT id FROM clients WHERE email IN ($in)");
+$stmt->execute($emails);
+$oldIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+if ($oldIds) {
+    $ids = implode(',', $oldIds);
+    // No FK on these three, so they would not go with the client row.
+    $db->exec("DELETE FROM `patient-intake` WHERE client_id IN ($ids)");
+    $db->exec("DELETE FROM client_otps WHERE client_id IN ($ids)");
+    $db->exec("DELETE FROM leads WHERE client_id IN ($ids)");
+    // Cascades sessions, client_notes, client_fees, client_documents,
+    // client_payment_reports; intake_links.client_id is SET NULL and those
+    // links go with their lead below.
+    $db->exec("DELETE FROM clients WHERE id IN ($ids)");
+}
+$db->prepare("DELETE FROM `patient-intake` WHERE email IN ($in)")->execute($emails);
+$db->prepare("DELETE FROM leads WHERE email IN ($in)")->execute($emails); // cascades intake_links, lead_notes
+
+// ---------------------------------------------------------------------
+// 2. Clients, their converted leads, intake links and intake answers
+// ---------------------------------------------------------------------
+
 $insertClient = $db->prepare(
-    'INSERT INTO clients (first_name, last_name, email, phone, city, concern, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO clients (first_name, last_name, email, phone, city, occupation, dob, concern, status, pref_mode, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
-// Existing seed rows are brought back in line too: a rerun after the seed
-// definition changes must not leave an old status or name behind.
-$updateClient = $db->prepare(
-    'UPDATE clients SET first_name = ?, last_name = ?, phone = ?, city = ?, concern = ?, status = ?,
-            archived_at = NULL, merged_into_id = NULL
-     WHERE id = ?'
-);
-
-$clientIds = [];
-foreach ($seedClients as $i => $c) {
-    $phone = '+1555000' . str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT);
-    $findClient->execute([$c['email']]);
-    $row = $findClient->fetch();
-    if ($row) {
-        $updateClient->execute([$c['first_name'], $c['last_name'], $phone, $c['city'], $c['concern'], $c['status'], $row['id']]);
-        $clientIds[] = (int) $row['id'];
-        continue;
-    }
-    $insertClient->execute([$c['first_name'], $c['last_name'], $c['email'], $phone, $c['city'], $c['concern'], $c['status']]);
-    $clientIds[] = (int) $db->lastInsertId();
-}
-
-// Client ids grouped by status, for handing out sessions that fit the status.
-$byStatus = [];
-foreach ($seedClients as $i => $c) {
-    $byStatus[$c['status']][] = $clientIds[$i];
-}
-
-// ---------------------------------------------------------------------
-// 2. Leads -> intake links -> patient intake, one coherent trail per client
-// ---------------------------------------------------------------------
-
-$idListSql = implode(',', array_map('intval', $clientIds));
-
-// Cascades intake_links (FK ON DELETE CASCADE); patient-intake has no FK so
-// it's cleared explicitly. Reset every seed client's intake_data too, since
-// which of them "has intake" is reassigned fresh below on every run.
-$db->exec("DELETE FROM `patient-intake` WHERE client_id IN ($idListSql)");
-$db->prepare("DELETE FROM leads WHERE client_id IN ($idListSql) OR email LIKE 'prospect%@yopmail.com'")->execute();
-$db->exec("UPDATE clients SET intake_data = NULL, intake_form_version = NULL, intake_submitted_at = NULL WHERE id IN ($idListSql)");
-
 $insertLead = $db->prepare(
     'INSERT INTO leads (name, email, country_code, phone, preferred_date, preferred_time, preference, message, source, status, client_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+     VALUES (?, ?, "+91", ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
-
-// 2a. Standalone prospects, never converted -- leads.status coverage for the
-// states a client trail alone wouldn't reach.
-$prospects = [
-    ['Prospect New',       'prospect1@yopmail.com', 'home',        'new'],
-    ['Prospect Contacted', 'prospect2@yopmail.com', 'appointment', 'contacted'],
-    ['Prospect Confirmed', 'prospect3@yopmail.com', 'intake',      'confirmed'],
-    ['Prospect Rejected',  'prospect4@yopmail.com', 'home',        'rejected'],
-];
-$prospectLeadIds = [];
-foreach ($prospects as $p) {
-    [$name, $email, $source, $status] = $p;
-    $insertLead->execute([
-        $name, $email, '+1', '+15550009999', '2026-07-25', '10:00', 'online',
-        '[SEED] prospect lead, never converted.', $source, $status, null, '2026-07-10 09:00:00',
-    ]);
-    $prospectLeadIds[] = (int) $db->lastInsertId();
-}
-
-// 2b. One converted lead per seed client -- the trail sessions hang off of.
-$leadIds = [];
-foreach ($seedClients as $idx => $c) {
-    $insertLead->execute([
-        $c['first_name'] . ' ' . $c['last_name'], $c['email'], '+1', '+155500' . (1000 + $idx),
-        '2026-07-28', '11:00', 'online', '[SEED] converted to client.', 'appointment', 'converted',
-        $clientIds[$idx], '2026-07-20 ' . (9 + $idx) . ':00:00',
-    ]);
-    $leadIds[$idx] = (int) $db->lastInsertId();
-}
-
+$insertLeadNote = $db->prepare('INSERT INTO lead_notes (lead_id, user_id, content, created_at) VALUES (?, ?, ?, ?)');
 $insertLink = $db->prepare(
     'INSERT INTO intake_links (lead_id, client_id, token, form_version, status, expires_at, opened_at, filled_at, submitted_at, reminder_sent, created_at)
      VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)'
 );
-
-function makeIntakeAnswers(array $c): array {
-    $answers = [
-        'first_name' => $c['first_name'], 'last_name' => $c['last_name'], 'email' => $c['email'],
-        'phone' => '+15550001000', 'city' => $c['city'], 'occupation' => 'Seed test occupation',
-        'dob' => '1990-01-01', 'concern' => $c['concern'],
-        'pref_consult' => 'video', 'pref_date' => '2026-08-01', 'pref_time' => 'morning',
-        'consent_given' => '1',
-    ];
-    for ($q = 1; $q <= 18; $q++) {
-        $answers["q1_$q"] = (string) ($q % 4); // 0-3 severity scale, cyclic
-        $answers["q2_$q"] = (string) (($q + 2) % 4);
-    }
-    return $answers;
-}
-
-$insertPatientIntake = $db->prepare(
-    'INSERT INTO `patient-intake` (
-        first_name, last_name, email, phone, city, occupation, dob, concern,
-        pref_consult, pref_date, pref_time,
-        q1_1,q1_2,q1_3,q1_4,q1_5,q1_6,q1_7,q1_8,q1_9,q1_10,q1_11,q1_12,q1_13,q1_14,q1_15,q1_16,q1_17,q1_18,
-        q2_1,q2_2,q2_3,q2_4,q2_5,q2_6,q2_7,q2_8,q2_9,q2_10,q2_11,q2_12,q2_13,q2_14,q2_15,q2_16,q2_17,q2_18,
-        intake_link_id, client_id, form_version, consent_given, consent_at, consent_version
-    ) VALUES (' . implode(',', array_fill(0, 53, '?')) . ')'
+$qCols = [];
+for ($q = 1; $q <= 18; $q++) { $qCols[] = "q1_$q"; }
+for ($q = 1; $q <= 18; $q++) { $qCols[] = "q2_$q"; }
+$piCols = array_merge(
+    ['first_name', 'last_name', 'email', 'phone', 'city', 'occupation', 'dob', 'concern', 'pref_consult', 'pref_date', 'pref_time'],
+    $qCols,
+    ['intake_link_id', 'client_id', 'form_version', 'consent_given', 'consent_at', 'consent_version', 'created_at']
+);
+$insertIntake = $db->prepare(
+    'INSERT INTO `patient-intake` (`' . implode('`,`', $piCols) . '`) VALUES (' . implode(',', array_fill(0, count($piCols), '?')) . ')'
 );
 
-function insertPatientIntakeRow(PDOStatement $stmt, array $answers, int $linkId, int $clientId, string $consentAt): void {
-    $vals = [
-        $answers['first_name'], $answers['last_name'], $answers['email'], $answers['phone'],
-        $answers['city'], $answers['occupation'], $answers['dob'], $answers['concern'],
-        $answers['pref_consult'], $answers['pref_date'], $answers['pref_time'],
-    ];
-    for ($q = 1; $q <= 18; $q++) { $vals[] = $answers["q1_$q"]; }
-    for ($q = 1; $q <= 18; $q++) { $vals[] = $answers["q2_$q"]; }
-    $vals[] = $linkId;
-    $vals[] = $clientId;
-    $vals[] = 1; // form_version
-    $vals[] = 1; // consent_given
-    $vals[] = $consentAt;
-    $vals[] = 1; // consent_version
-    $stmt->execute($vals);
-}
+$leadMessages = [
+    'anxiety'       => 'I keep getting anxious before meetings and it is affecting my sleep.',
+    'stress'        => 'Work has been very stressful for months and I would like some support.',
+    'relationships' => 'Going through a difficult phase with my partner and want to talk it through.',
+    'grief'         => 'I lost my father earlier this year and am struggling to cope.',
+    'depression'    => 'Feeling low and unmotivated most days for a while now.',
+    'sleep'         => 'Trouble falling asleep most nights, mind will not switch off.',
+];
 
-// 2c. Intake link(s) per seed client, then patient intake + encrypted
-// clients.intake_data for every client whose status means intake came back.
-// Pending is the one status that by definition has no intake yet
-// ("created when a lead was confirmed, intake not yet returned"), so its
-// chain stops at the link. Across the set every intake_links.status occurs:
-//   pending #1   -> 'sent', not opened yet.
-//   pending #2   -> first link 'expired' unopened, the resend 'opened'.
-//   completed #1 -> an abandoned 'filled' link, then the resend 'submitted'.
-//   everyone else -> 'submitted' cleanly.
-$seenStatus = [];
-foreach ($seedClients as $idx => $c) {
-    $leadId   = $leadIds[$idx];
-    $clientId = $clientIds[$idx];
-    $nth      = $seenStatus[$c['status']] = ($seenStatus[$c['status']] ?? 0) + 1;
+$clientIds = [];
+$byStatus  = [];
+$nth       = [];
+$adminId   = $db->query('SELECT id FROM users ORDER BY id LIMIT 1')->fetchColumn() ?: null;
+foreach ($clients as $i => [$first, $last, $status, $city, $job, $concern]) {
+    $addr  = $email($first, $last);
+    $phone = '+91 98' . str_pad((string) (20431577 + $i * 7919), 8, '0', STR_PAD_LEFT);
+    $dob   = (1984 + $i * 2) . '-0' . (1 + $i % 9) . '-1' . ($i % 9);
+    $mode  = $i % 3 === 0 ? 'inperson' : 'online';
+    $k     = $nth[$status] = ($nth[$status] ?? 0) + 1;
 
-    if ($c['status'] === 'pending') {
-        if ($nth === 1) {
-            $insertLink->execute([$leadId, $clientId, token(), 'sent', '2026-10-07 00:00:00', null, null, null, 0, '2026-09-28 10:00:00']);
+    // Pending clients arrived recently; everyone else came in over the summer.
+    $leadAt   = $status === 'pending' ? '2026-09-2' . (1 + $i) . ' 10:15:00' : '2026-07-0' . (1 + $i % 9) . ' 11:30:00';
+    $leadTs   = strtotime($leadAt);
+    $clientAt = dt($leadTs + 2 * 86400);
+
+    $insertClient->execute([$first, $last, $addr, $phone, $city, $job, $dob, $concern, $status, $mode, $clientAt]);
+    $clientId = (int) $db->lastInsertId();
+    $clientIds[$i] = $clientId;
+    $clientSince[$i] = strtotime($clientAt);
+    $byStatus[$status][] = $clientId;
+
+    $insertLead->execute([
+        "$first $last", $addr, substr($phone, 4), date('Y-m-d', $leadTs + 7 * 86400), '11:00:00', $mode,
+        $leadMessages[$concern], $i % 2 ? 'appointment' : 'home', 'converted', $clientId, $leadAt,
+    ]);
+    $leadId = (int) $db->lastInsertId();
+    $insertLeadNote->execute([$leadId, $adminId,
+        "Screened by phone. Fit looks appropriate for $concern work; explained intake, fees and confidentiality before conversion.",
+        past($leadTs + 2 * 3600, $now)]);
+
+    $linkAt = $leadTs + 2 * 86400;
+    if ($status === 'pending') {
+        // Intake not back yet -- that is what pending means.
+        if ($k === 1) {
+            $insertLink->execute([$leadId, $clientId, token(), 'sent', dt($linkAt + 7 * 86400), null, null, null, 0, dt($linkAt)]);
         } else {
-            $insertLink->execute([$leadId, $clientId, token(), 'expired', '2026-09-10 00:00:00', null, null, null, 1, '2026-09-03 10:00:00']);
-            $insertLink->execute([$leadId, $clientId, token(), 'opened', '2026-10-06 00:00:00', '2026-09-29 18:00:00', null, null, 0, '2026-09-29 10:00:00']);
+            $insertLink->execute([$leadId, $clientId, token(), 'opened', dt($linkAt + 7 * 86400), past($linkAt + 5 * 3600, $now), null, null, 0, dt($linkAt)]);
         }
         continue;
     }
 
-    if ($c['status'] === 'completed' && $nth === 1) {
-        $insertLink->execute([$leadId, $clientId, token(), 'filled', '2026-07-15 00:00:00', '2026-07-08 09:00:00', '2026-07-08 09:20:00', null, 1, '2026-07-05 09:00:00']);
+    if ($status === 'inactive' && $k === 2) {
+        // First link lapsed unopened; the resend below is the one they used.
+        $insertLink->execute([$leadId, $clientId, token(), 'expired', dt($linkAt - 86400 * 2), null, null, null, 1, dt($linkAt - 86400 * 9)]);
     }
-    $insertLink->execute([$leadId, $clientId, token(), 'submitted', '2026-08-15 00:00:00', '2026-07-30 09:00:00', '2026-07-30 09:20:00', '2026-07-30 09:30:00', 0, '2026-07-29 10:00:00']);
-    $finalLinkId = (int) $db->lastInsertId();
+    if ($status === 'completed' && $k === 1) {
+        // Started the form, got interrupted, finished it on a resent link.
+        $insertLink->execute([$leadId, $clientId, token(), 'filled', dt($linkAt + 7 * 86400), dt($linkAt + 3600), dt($linkAt + 4000), null, 1, dt($linkAt - 86400)]);
+    }
+    $submittedTs = $status === 'review' ? $now - 2 * 86400 : $linkAt + 86400;
+    $insertLink->execute([$leadId, $clientId, token(), 'submitted', dt($submittedTs + 6 * 86400),
+        dt($submittedTs - 1800), dt($submittedTs - 1500), dt($submittedTs), 0, dt($submittedTs - 86400)]);
+    $linkId = (int) $db->lastInsertId();
 
-    $answers = makeIntakeAnswers($c);
-    $consentAt = '2026-07-30 09:30:00';
-    insertPatientIntakeRow($insertPatientIntake, $answers, $finalLinkId, $clientId, $consentAt);
+    $answers = [
+        'first_name' => $first, 'last_name' => $last, 'email' => $addr, 'phone' => $phone,
+        'city' => $city, 'occupation' => $job, 'dob' => $dob, 'concern' => $concern,
+        'pref_consult' => $mode === 'online' ? 'video' : 'in-person',
+        'pref_date' => date('Y-m-d', $submittedTs + 5 * 86400), 'pref_time' => $i % 2 ? 'evening' : 'morning',
+        'consent_given' => '1',
+    ];
+    foreach ($qCols as $n => $col) { $answers[$col] = (string) (($n * 7 + $i * 3) % 4); } // 0-3 scale
+
+    $row = [];
+    foreach (array_slice($piCols, 0, 11 + count($qCols)) as $col) { $row[] = $answers[$col]; }
+    $insertIntake->execute(array_merge($row, [$linkId, $clientId, 1, 1, dt($submittedTs), 1, dt($submittedTs)]));
     saveClientIntakeData($db, $clientId, $answers, 1);
 }
 
-// 2d. Standalone prospect mid-pipeline: opened the link, hasn't finished --
-// covers intake_links.status = 'opened' without needing a client yet.
-$insertLink->execute([$prospectLeadIds[2], null, token(), 'opened', '2026-08-20 00:00:00', '2026-07-26 14:00:00', null, null, 0, '2026-07-25 10:00:00']);
-
-// ---------------------------------------------------------------------
-// 3. Wipe any sessions this script previously created for these clients
-// ---------------------------------------------------------------------
-
-$in = implode(',', array_fill(0, count($clientIds), '?'));
-$db->prepare("DELETE FROM sessions WHERE client_id IN ($in)")->execute($clientIds);
-
-// ---------------------------------------------------------------------
-// 4. Build the session rows
-// ---------------------------------------------------------------------
-
-$statuses = ['pending', 'confirmed', 'rejected', 'completed', 'cancelled', 'no-show'];
-$types    = ['online', 'inperson'];
-$times    = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
-$months   = ['2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
-
-$rows = [];
-
-// 3a. Full status x type matrix, every month.
-foreach ($months as $mi => $month) {
-    $i = 0;
-    foreach ($statuses as $status) {
-        foreach ($types as $type) {
-            $day    = 2 + $i * 2; // 2..24, always a valid day in any month
-            $date   = "$month-" . str_pad((string) $day, 2, '0', STR_PAD_LEFT);
-            $time   = $times[$i % count($times)];
-            $start  = "$date $time:00";
-            $end    = date('Y-m-d H:i:s', strtotime($start) + 3600);
-            // The full matrix books the active clients: they're the only
-            // ones a confirmed/completed session is coherent for all year.
-            $client = $byStatus['active'][$i % 2];
-
-            $hasLink = $type === 'online' ? ($i % 4 !== 0) : ($i % 5 === 0); // edge cases both ways
-            $videoLink = $hasLink ? 'https://meet.rewirewithkajal.test/room-seed-' . $mi . '-' . $i : null;
-
-            $responseToken = null;
-            $respondedAt   = null;
-            $cancelledReason = null;
-            $reminderSent = 0;
-            $reminder30   = 0;
-
-            switch ($status) {
-                case 'pending':
-                    // Half already have a booking link sent, half don't yet.
-                    if ($i % 2 === 0) { $responseToken = token(); }
-                    break;
-                case 'confirmed':
-                    $responseToken = token();
-                    $respondedAt   = date('Y-m-d H:i:s', strtotime($start) - 86400);
-                    break;
-                case 'rejected':
-                    $responseToken = token();
-                    $respondedAt   = date('Y-m-d H:i:s', strtotime($start) - 43200);
-                    break;
-                case 'completed':
-                    $reminderSent = 1;
-                    $reminder30   = 1;
-                    break;
-                case 'cancelled':
-                    $cancelledReason = 'Client requested reschedule due to a conflict.';
-                    break;
-                case 'no-show':
-                    $reminderSent = 1;
-                    $reminder30   = 1;
-                    break;
-            }
-
-            $rescheduled = ($i % 7 === 0) ? 2 : (($i % 5 === 0) ? 1 : 0);
-            $notes = ($i % 2 === 0) ? "[SEED] $status/$type test session for {$date}." : null;
-
-            $rows[] = [
-                $client, $start, $end, $type, $status,
-                $responseToken, $respondedAt, $videoLink,
-                null, $cancelledReason, $rescheduled,
-                $reminderSent, $reminder30, $notes,
-            ];
-            $i++;
-        }
-    }
-
-    // 3b. Guaranteed weekend coverage per month (one Sat + one Sun booking).
-    $ts = strtotime("$month-01");
-    $lastDay = (int) date('t', $ts);
-    $sawSat = false;
-    $sawSun = false;
-    for ($d = 1; $d <= $lastDay; $d++) {
-        $dow = (int) date('N', strtotime("$month-" . str_pad((string) $d, 2, '0', STR_PAD_LEFT)));
-        if ($dow === 6 || $dow === 7) {
-            $isSat  = $dow === 6;
-            $date   = "$month-" . str_pad((string) $d, 2, '0', STR_PAD_LEFT);
-            $start  = "$date " . ($isSat ? '10:00:00' : '16:00:00');
-            $end    = date('Y-m-d H:i:s', strtotime($start) + 3600);
-            // Saturday: an active client's confirmed slot. Sunday: a booking
-            // request still pending, from someone not yet bookable (pending
-            // or review) -- rotated so each of those four gets one.
-            $notYetBookable = array_merge($byStatus['pending'], $byStatus['review']);
-            $client = $isSat ? $byStatus['active'][$mi % 2] : $notYetBookable[$mi % 4];
-            $status = $isSat ? 'confirmed' : 'pending';
-            $type   = $isSat ? 'inperson' : 'online';
-            $rows[] = [
-                $client, $start, $end, $type, $status,
-                $isSat ? token() : null, $isSat ? date('Y-m-d H:i:s', strtotime($start) - 86400) : null,
-                $isSat ? null : 'https://meet.rewirewithkajal.test/room-weekend-' . $month,
-                null, null, 0, 0, 0,
-                '[SEED] weekend coverage (' . ($isSat ? 'Saturday' : 'Sunday') . ').',
-            ];
-            // Only need the first Sat and first Sun found in the month.
-            if ($isSat) { $sawSat = true; } else { $sawSun = true; }
-            if ($sawSat && $sawSun) { break; }
-        }
+// Leads that never became clients.
+$prospectLeadIds = [];
+foreach ($prospects as $p => [$first, $last, $status, $source, $message]) {
+    $at = '2026-09-' . (14 + $p * 3) . ' 16:40:00';
+    $insertLead->execute([
+        "$first $last", $email($first, $last), '98' . (76543210 - $p * 1111), '2026-10-0' . (5 + $p), '18:00:00',
+        $p % 2 ? 'online' : 'inperson', $message, $source, $status, null, $at,
+    ]);
+    $leadId = (int) $db->lastInsertId();
+    $prospectLeadIds[] = $leadId;
+    $insertLeadNote->execute([$leadId, $adminId, [
+        'New enquiry awaiting first review; check availability and preferred mode before responding.',
+        'Sent a warm reply with available evening slots and asked for consent to share intake link.',
+        'Accepted as a fit. Intake link opened, but the form has not come back yet.',
+        'Outside scope for therapy-only practice; replied with medication/psychiatry referral guidance.',
+    ][$p], dt(strtotime($at) + 45 * 60)]);
+    if ($status === 'confirmed') { // intake link sent, opened, not started
+        $insertLink->execute([$leadId, null, token(), 'opened', dt(strtotime($at) + 8 * 86400),
+            dt(strtotime($at) + 86400 + 3600), null, null, 0, dt(strtotime($at) + 86400)]);
     }
 }
 
-// 3c. Recurring series, 4 weekly occurrences each. Inactive and completed
-// clients get past series that ended (dropped off / finished treatment);
-// an active client gets an upcoming one.
-$seriesDefs = [
-    // [series id, client, start, type, statuses per occurrence]
-    [9001, $byStatus['inactive'][0],  '2026-08-05 10:00:00', 'online',   ['completed', 'completed', 'no-show', 'cancelled']],
-    [9002, $byStatus['inactive'][1],  '2026-08-12 14:00:00', 'inperson', ['completed', 'completed', 'completed', 'cancelled']],
-    [9003, $byStatus['completed'][0], '2026-08-03 10:00:00', 'online',   ['completed', 'completed', 'completed', 'completed']],
-    [9004, $byStatus['completed'][1], '2026-08-20 14:00:00', 'inperson', ['completed', 'completed', 'completed', 'completed']],
-    [9005, $byStatus['active'][1],    '2026-11-02 18:00:00', 'online',   ['confirmed', 'pending', 'pending', 'pending']],
+// ---------------------------------------------------------------------
+// 3. Sessions -- status decided by where the slot falls relative to now
+// ---------------------------------------------------------------------
+
+const PRACTICE_ROOM = 'https://meet.jit.si/RewireWithKajalPractice';
+
+$pastCycle   = ['completed', 'completed', 'no-show', 'completed', 'cancelled', 'rejected'];
+$futureCycle = ['confirmed', 'pending', 'confirmed', 'cancelled', 'rejected', 'pending'];
+
+$sessionNotes = [
+    'completed' => [
+        'Reviewed mood and anxiety ratings since last appointment. Client linked spikes to presentation deadlines and agreed to track anticipatory thoughts before meetings.',
+        'Practised box breathing and 5-4-3-2-1 grounding in session. Homework: 10 minutes daily plus a trigger log with intensity before and after.',
+        'Explored a conflict at work and rehearsed a boundary-setting conversation. Client reported relief after naming what they can and cannot control.',
+        'Reviewed sleep diary. Agreed fixed wake time, wind-down routine and no phone in bed for one week before changing anything else.',
+        'Mapped grief waves across the week and normalised the non-linear pattern. Client chose one supportive person to contact before the next session.',
+        'Checked risk and protective factors. No current self-harm intent reported; crisis contacts reviewed and copied into the safety plan.',
+    ],
+    'no-show'   => [
+        'Client did not attend and gave no notice. Follow-up message sent with a check-in and rebooking options.',
+        'Waited 15 minutes in the online room. Logged as no-show; fee policy to be discussed before next booking.',
+    ],
+    'rejected'  => [
+        'Requested slot clashed with another booking; alternative times offered for later in the week.',
+        'Request declined because the client asked for a time outside working hours. Sent two available options.',
+    ],
+    'confirmed' => [
+        'Follow-up session confirmed: review homework, mood tracking and any barriers to practice.',
+        'First full therapy session confirmed after intake review; agenda is history, goals and safety planning.',
+        null,
+    ],
+    'pending'   => [
+        'Booking request received through the client portal; waiting for client to accept or choose another slot.',
+        'Therapist proposed this slot after intake review. Confirmation link sent.',
+        null,
+    ],
+    'cancelled' => [
+        'Cancelled with notice; reschedule options sent.',
+        null,
+    ],
+];
+$cancelReasons = [
+    'Client had a family commitment and asked to move the appointment.',
+    'Client unwell; will rebook once recovered.',
+    'Therapist unavailable -- session moved.',
 ];
 
-foreach ($seriesDefs as [$seriesId, $client, $startStr, $type, $seriesStatuses]) {
-    $t = strtotime($startStr);
-    foreach ($seriesStatuses as $occIndex => $status) {
-        $start = date('Y-m-d H:i:s', $t + $occIndex * 7 * 86400);
-        $end   = date('Y-m-d H:i:s', strtotime($start) + 3600);
+$rows = [];
+$count = [];
+$addSession = function (int $client, int $start, string $type, string $status, ?int $series = null)
+    use (&$rows, &$count, $now, $sessionNotes, $cancelReasons) {
+    $isPast = $start < $now;
+    $valid  = $isPast ? ['completed', 'no-show', 'cancelled', 'rejected'] : ['pending', 'confirmed', 'cancelled', 'rejected'];
+    if (!in_array($status, $valid, true)) {
+        throw new LogicException("$status is impossible for a session at " . dt($start));
+    }
+    $n = $count[$status] = ($count[$status] ?? 0) + 1;
 
-        $responseToken = null;
-        $respondedAt   = null;
-        $cancelledReason = null;
-        $reminderSent = in_array($status, ['completed', 'no-show'], true) ? 1 : 0;
-        $reminder30   = $reminderSent;
-        if ($status === 'confirmed') {
-            $responseToken = token();
-            $respondedAt   = date('Y-m-d H:i:s', strtotime($start) - 86400);
-        }
-        if ($status === 'cancelled') {
-            $cancelledReason = 'Series discontinued after occurrence ' . ($occIndex + 1) . '.';
-        }
+    $created   = past($start - 10 * 86400, $now);
+    $token     = null;
+    $responded = null;
+    if ($status !== 'cancelled' && ($status !== 'pending' || $n % 2)) {
+        $token = token(); // booking link went out; half the pending ones not yet
+    }
+    if ($status !== 'pending' && $token) {
+        $responded = past($start - 3 * 86400, $now); // never in the future
+    }
+    // Reminders only go to sessions that were on, and only once their time came.
+    $remindable = in_array($status, ['confirmed', 'completed', 'no-show'], true);
+    $rem24 = $remindable && $start - 86400 <= $now ? 1 : 0;
+    $rem30 = $remindable && $start - 1800  <= $now ? 1 : 0;
 
-        $rows[] = [
-            $client, $start, $end, $type, $status,
-            $responseToken, $respondedAt,
-            $type === 'online' ? 'https://meet.rewirewithkajal.test/room-series-' . $seriesId : null,
-            $seriesId, $cancelledReason,
-            $occIndex > 0 && $status === 'confirmed' ? 1 : 0,
-            $reminderSent, $reminder30,
-            "[SEED] recurring series $seriesId, occurrence " . ($occIndex + 1) . '/' . count($seriesStatuses) . '.',
-        ];
+    $notes = $sessionNotes[$status][$n % count($sessionNotes[$status])];
+    $link  = $type === 'online' && $n % 5 !== 0 ? PRACTICE_ROOM : null; // an online one now and then without a link yet
+
+    $rows[] = [
+        $client, dt($start), dt($start + 3600), $type, $status, $token, $responded, $link, $series,
+        $status === 'cancelled' ? $cancelReasons[$n % count($cancelReasons)] : null,
+        $n % 7 === 0 ? 1 : 0, $rem24, $rem30, $notes, $created,
+    ];
+};
+
+$months = ['2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
+$times  = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'];
+
+// 3a. Active clients: 12 slots a month, types alternating, status from
+// whichever cycle fits the slot. The monthly offset rotates which type
+// meets which status, so every status meets both types.
+foreach ($months as $mi => $month) {
+    for ($i = 0; $i < 12; $i++) {
+        $start  = strtotime(sprintf('%s-%02d %s:00', $month, 2 + $i * 2, $times[$i % 6]));
+        $cycle  = $start < $now ? $pastCycle : $futureCycle;
+        $addSession($byStatus['active'][$i % 2], $start, $i % 2 ? 'inperson' : 'online', $cycle[($i + $mi) % 6]);
+    }
+    // 3b. First Saturday and Sunday of the month, too.
+    foreach (['saturday' => '10:00', 'sunday' => '16:00'] as $day => $time) {
+        $start = strtotime("first $day of " . date('F Y', strtotime("$month-01")) . " $time");
+        $addSession($byStatus['active'][$day === 'sunday' ? 1 : 0], $start, $day === 'sunday' ? 'online' : 'inperson',
+            $start < $now ? 'completed' : ($day === 'sunday' ? 'pending' : 'confirmed'));
+    }
+}
+
+// 3c. A dense, relative-to-now matrix that guarantees each meaningful
+// status/type/time variant even when the database clock moves.
+$pastVariants = [
+    ['completed', 'online'], ['completed', 'inperson'],
+    ['no-show', 'online'], ['no-show', 'inperson'],
+    ['cancelled', 'online'], ['cancelled', 'inperson'],
+    ['rejected', 'online'], ['rejected', 'inperson'],
+];
+foreach ($pastVariants as $v => [$status, $type]) {
+    $addSession($byStatus['active'][$v % 2], $now - (20 - $v) * 3600, $type, $status);
+}
+$futureVariants = [
+    ['pending', 'online'], ['pending', 'inperson'],
+    ['confirmed', 'online'], ['confirmed', 'inperson'],
+    ['cancelled', 'online'], ['cancelled', 'inperson'],
+    ['rejected', 'online'], ['rejected', 'inperson'],
+];
+foreach ($futureVariants as $v => [$status, $type]) {
+    $addSession($byStatus['active'][$v % 2], $now + (4 + $v) * 86400 + 2 * 3600, $type, $status);
+}
+
+// 3d. Pending / review clients are not bookable yet: one booking request each.
+foreach (array_merge($byStatus['pending'], $byStatus['review']) as $k => $client) {
+    $addSession($client, strtotime('2026-10-' . sprintf('%02d', 4 + $k * 7) . ' 12:00:00'), $k % 2 ? 'inperson' : 'online', 'pending');
+}
+
+// 3e. Weekly recurring series. Past occurrences take the $past pattern,
+// future ones the $future pattern, so a series spanning now switches over.
+$series = [
+    // id, client, first start, weeks, type, past pattern, future pattern
+    [9001, $byStatus['inactive'][0],  '2026-08-05 10:00', 4, 'online',   ['completed', 'completed', 'no-show', 'cancelled'], []],
+    [9002, $byStatus['inactive'][1],  '2026-08-12 14:00', 4, 'inperson', ['completed', 'completed', 'completed', 'cancelled'], []],
+    [9003, $byStatus['completed'][0], '2026-08-03 10:00', 6, 'online',   ['completed'], []],
+    [9004, $byStatus['completed'][1], '2026-08-20 14:00', 5, 'inperson', ['completed', 'completed', 'no-show', 'completed', 'completed'], []],
+    [9005, $byStatus['active'][1],    '2026-09-09 18:00', 8, 'online',   ['completed', 'completed', 'no-show'], ['confirmed', 'confirmed', 'pending']],
+    [9006, $byStatus['active'][0],    '2026-11-03 08:00', 6, 'online',   ['completed'], ['confirmed', 'pending']],
+];
+foreach ($series as [$id, $client, $first, $weeks, $type, $pastPat, $futurePat]) {
+    $p = $f = 0;
+    for ($w = 0; $w < $weeks; $w++) {
+        $start = strtotime($first) + $w * 7 * 86400;
+        $status = $start < $now
+            ? $pastPat[min($p++, count($pastPat) - 1)]
+            : $futurePat[min($f++, count($futurePat) - 1)];
+        $addSession($client, $start, $type, $status, $id);
+    }
+}
+
+$insertSession = $db->prepare(
+    'INSERT INTO sessions (client_id, start_time, end_time, session_type, status, response_token, responded_at,
+        video_link, recurring_series_id, cancelled_reason, rescheduled_count, reminder_sent, reminder30_sent, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+);
+foreach ($rows as $r) { $insertSession->execute($r); }
+
+// ---------------------------------------------------------------------
+// 4. Fee transactions, notes and documents, as a therapist would have them
+// ---------------------------------------------------------------------
+
+$adminNote = [
+    'pending'   => 'Initial phone consultation done. Intake form sent with a reminder scheduled if it is not opened by tomorrow evening. Client asked about online availability and fees.',
+    'review'    => 'Intake form received. Review PHQ/GAD scores, presenting concern and risk answers before offering a first appointment.',
+    'active'    => 'Intake reviewed. Agreed weekly sessions; fee and cancellation policy explained. Client prefers structured homework and evening slots where possible.',
+    'inactive'  => 'Client has paused therapy because of work travel. Open to resuming; send a low-pressure check-in next month and offer updated availability.',
+    'completed' => 'Treatment goals met. Closing summary shared; client knows they can return for booster sessions if symptoms recur.',
+];
+$statusReviewNote = [
+    'pending'   => 'Admin task: verify that the intake link is still active and resend if no submission arrives within 48 hours.',
+    'review'    => 'Clinical review queue: check sleep, appetite, functioning and support system before finalising the treatment plan.',
+    'active'    => 'Care plan: continue weekly CBT-informed work; track attendance, homework completion and symptom ratings monthly.',
+    'inactive'  => 'Pause note: client was stable at last contact, with no acute risk. Do not discharge until the planned check-in has happened.',
+    'completed' => 'Closure note: relapse-prevention plan documented; client has warning signs, coping steps and re-entry instructions.',
+];
+$docs = [
+    'review'    => ['Signed consent form.pdf'],
+    'active'    => ['Signed consent form.pdf', 'Safety plan.pdf'],
+    'inactive'  => ['Signed consent form.pdf'],
+    'completed' => ['Signed consent form.pdf', 'Closing summary.pdf'],
+];
+$insertFee = $db->prepare('INSERT INTO client_fees (client_id, session_id, amount, description, status, method, reference, fee_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+$insertNote = $db->prepare('INSERT INTO client_notes (client_id, note_type, user_id, note_kind, session_id, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+$insertDoc  = $db->prepare('INSERT INTO client_documents (client_id, original_name, stored_name, mime_type, size_bytes, uploaded_by, uploaded_at, shared_with_client, client_uploaded) VALUES (?, ?, ?, "application/pdf", ?, ?, ?, ?, 0)');
+$firstDone  = $db->prepare('SELECT id, start_time FROM sessions WHERE client_id = ? AND status = "completed" ORDER BY start_time LIMIT 1');
+$feeDone    = $db->prepare('SELECT id, start_time, session_type FROM sessions WHERE client_id = ? AND status = "completed" ORDER BY start_time LIMIT 3');
+$feeFuture  = $db->prepare('SELECT id, start_time, session_type FROM sessions WHERE client_id = ? AND status IN ("pending","confirmed") AND start_time >= NOW() ORDER BY start_time LIMIT 1');
+$feeNoShow  = $db->prepare('SELECT id, start_time FROM sessions WHERE client_id = ? AND status = "no-show" ORDER BY start_time DESC LIMIT 1');
+$methods    = ['upi', 'bank_transfer', 'cash', 'other'];
+
+foreach ($clients as $i => [$first, $last, $status, , , $concern]) {
+    $clientId = $clientIds[$i];
+    $insertNote->execute([$clientId, 'general', $adminId, 'administrative', null, $adminNote[$status], past($clientSince[$i] + 3600, $now)]);
+    $insertNote->execute([$clientId, 'general', $adminId, 'administrative', null, $statusReviewNote[$status], past($clientSince[$i] + 2 * 3600, $now)]);
+
+    $feeDone->execute([$clientId]);
+    foreach ($feeDone->fetchAll() as $p => $s) {
+        $method = $methods[($i + $p) % count($methods)];
+        $amount = $s['session_type'] === 'online' ? '2500.00' : '3000.00';
+        $insertFee->execute([$clientId, (int) $s['id'], $amount,
+            ($s['session_type'] === 'online' ? 'Online' : 'In-person') . ' therapy session fee',
+            'paid', $method, strtoupper($method) . '-SEED-' . $clientId . '-' . ($p + 1), date('Y-m-d', strtotime($s['start_time']))]);
+    }
+    $feeFuture->execute([$clientId]);
+    if ($s = $feeFuture->fetch()) {
+        $insertFee->execute([$clientId, (int) $s['id'], $s['session_type'] === 'online' ? '2500.00' : '3000.00',
+            'Upcoming therapy session fee', 'pending', 'upi', '', date('Y-m-d', strtotime($s['start_time']))]);
+    }
+    $feeNoShow->execute([$clientId]);
+    if ($s = $feeNoShow->fetch()) {
+        $insertFee->execute([$clientId, (int) $s['id'], '1500.00',
+            'No-show fee waived after clinical follow-up', 'waived', 'other', 'WAIVED-SEED-' . $clientId, date('Y-m-d', strtotime($s['start_time']))]);
+    }
+    if (in_array($status, ['pending', 'review'], true)) {
+        $insertFee->execute([$clientId, null, '2500.00', 'First-session fee estimate pending booking', 'pending', 'upi', '', date('Y-m-d', $clientSince[$i])]);
+    }
+
+    $firstDone->execute([$clientId]);
+    if ($s = $firstDone->fetch()) {
+        $insertNote->execute([$clientId, 'session', $adminId, 'session', (int) $s['id'],
+            "First session. Presenting concern: $concern. Built rapport, took history, agreed three goals for the next six sessions, and checked consent for between-session email reminders.",
+            dt(strtotime($s['start_time']) + 7200)]);
+    }
+    foreach ($docs[$status] ?? [] as $d => $name) {
+        // stored_name is generated, like an upload -- never a readable filename.
+        $insertDoc->execute([$clientId, $name, bin2hex(random_bytes(16)) . '.pdf', 80000 + $i * 5120 + $d * 999, $adminId,
+            // Consent form once intake is in; anything else a few weeks later.
+            past(($status === 'review' ? $now - 86400 : $clientSince[$i] + 5 * 86400) + $d * 21 * 86400, $now), $d === 0 ? 1 : 0]);
     }
 }
 
 // ---------------------------------------------------------------------
-// 5. Insert sessions
+// 5. Report
 // ---------------------------------------------------------------------
 
-$insert = $db->prepare(
-    'INSERT INTO sessions
-        (client_id, start_time, end_time, session_type, status,
-         response_token, responded_at, video_link,
-         recurring_series_id, cancelled_reason, rescheduled_count,
-         reminder_sent, reminder30_sent, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-);
+$ids = implode(',', $clientIds);
+$one = fn(string $sql) => $db->query($sql)->fetchColumn();
+$leadIds = implode(',', array_merge($prospectLeadIds, array_map('intval', $db->query("SELECT id FROM leads WHERE client_id IN ($ids)")->fetchAll(PDO::FETCH_COLUMN))));
 
-$inserted = 0;
-foreach ($rows as $r) {
-    $insert->execute($r);
-    $inserted++;
+echo "Database now: " . dt($now) . "\n";
+echo "clients: " . count($clientIds) . "\n";
+echo "leads: " . $one("SELECT COUNT(*) FROM leads WHERE id IN ($leadIds)") . "\n";
+echo "intake_links: " . $one("SELECT COUNT(*) FROM intake_links WHERE lead_id IN ($leadIds)") . "\n";
+echo "lead_notes: " . $one("SELECT COUNT(*) FROM lead_notes WHERE lead_id IN ($leadIds)") . "\n";
+echo "patient-intake: " . $one("SELECT COUNT(*) FROM `patient-intake` WHERE client_id IN ($ids)") . "\n";
+echo "sessions: " . count($rows) . "\n";
+foreach ($db->query("SELECT status, SUM(start_time < NOW()) past, SUM(start_time >= NOW()) future FROM sessions WHERE client_id IN ($ids) GROUP BY status") as $r) {
+    printf("  %-10s past %3d  future %3d\n", $r['status'], $r['past'], $r['future']);
 }
-
-$idList = implode(',', array_map('intval', $clientIds));
-
-// ---------------------------------------------------------------------
-// 6. Client notes + documents -- one clinical note tied to a real completed
-// session where the client has one, plus an administrative note, plus one
-// document. Simple, table-native fields only; no fee/payment rows (not
-// asked for) and no actual files on disk (documents here are metadata rows,
-// same as the app stores -- the file itself lives outside the DB).
-// ---------------------------------------------------------------------
-
-$db->exec("DELETE FROM client_notes WHERE client_id IN ($idList)");
-$db->exec("DELETE FROM client_documents WHERE client_id IN ($idList)");
-
-$adminUserId = (int) ($db->query('SELECT id FROM users ORDER BY id LIMIT 1')->fetchColumn() ?: 0) ?: null;
-
-$insertNote = $db->prepare(
-    'INSERT INTO client_notes (client_id, note_type, user_id, note_kind, session_id, content)
-     VALUES (?, ?, ?, ?, ?, ?)'
-);
-$insertDoc = $db->prepare(
-    'INSERT INTO client_documents (client_id, original_name, stored_name, mime_type, size_bytes, uploaded_by, shared_with_client, client_uploaded)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-);
-
-foreach ($clientIds as $idx => $clientId) {
-    // Administrative note -- a status-history-style entry every client gets.
-    $insertNote->execute([
-        $clientId, 'general', $adminUserId, 'administrative', null,
-        "[SEED] Client record created via lead conversion; current status: {$seedClients[$idx]['status']}.",
-    ]);
-
-    // Clinical note on a real completed session, when this client has one.
-    $completedSessionId = $db->prepare('SELECT id FROM sessions WHERE client_id = ? AND status = "completed" ORDER BY start_time LIMIT 1');
-    $completedSessionId->execute([$clientId]);
-    $sessionId = $completedSessionId->fetchColumn();
-    if ($sessionId) {
-        $insertNote->execute([
-            $clientId, 'session', $adminUserId, 'session', (int) $sessionId,
-            '[SEED] Session notes: client engaged well, discussed presenting concern, plan reviewed.',
-        ]);
-    }
-
-    // Document metadata -- only once intake has come back, i.e. not pending.
-    if ($seedClients[$idx]['status'] !== 'pending') {
-        $insertDoc->execute([
-            $clientId, 'consent-form.pdf', 'seed-doc-client' . ($idx + 1) . '.pdf',
-            'application/pdf', 102400, $adminUserId, 1, 0,
-        ]);
-    }
-}
-
-// ---------------------------------------------------------------------
-// 7. Report
-// ---------------------------------------------------------------------
-
-echo "Seed clients: " . count($clientIds) . " (ids: " . implode(',', $clientIds) . ")\n";
-echo "Prospect leads (unconverted): " . count($prospectLeadIds) . "\n";
-echo "Converted leads: " . count($leadIds) . "\n";
-
-$linkCount = $db->query("SELECT COUNT(*) FROM intake_links WHERE lead_id IN (" . implode(',', array_merge($leadIds, $prospectLeadIds)) . ")")->fetchColumn();
-echo "Intake links: $linkCount\n";
-
-$piCount = $db->query("SELECT COUNT(*) FROM `patient-intake` WHERE client_id IN ($idList)")->fetchColumn();
-echo "Patient intake rows: $piCount\n";
-
-echo "Sessions inserted: $inserted\n";
-$counts = $db->query(
-    "SELECT status, session_type, COUNT(*) c FROM sessions WHERE client_id IN ($idList) GROUP BY status, session_type ORDER BY status, session_type"
-);
-foreach ($counts as $row) {
-    echo "  {$row['status']} / {$row['session_type']}: {$row['c']}\n";
-}
-
-$noteCount = $db->query("SELECT COUNT(*) FROM client_notes WHERE client_id IN ($idList)")->fetchColumn();
-$docCount  = $db->query("SELECT COUNT(*) FROM client_documents WHERE client_id IN ($idList)")->fetchColumn();
-echo "Client notes: $noteCount\n";
-echo "Client documents: $docCount\n";
-
-echo "\nChain per client (client -> lead -> intake links -> patient intake -> intake_data -> sessions):\n";
-$chain = $db->query("
-    SELECT c.id, c.email, c.status,
-           (SELECT GROUP_CONCAT(l.status) FROM leads l WHERE l.client_id = c.id) AS lead,
-           (SELECT GROUP_CONCAT(il.status ORDER BY il.id) FROM intake_links il WHERE il.client_id = c.id) AS links,
-           (SELECT COUNT(*) FROM `patient-intake` pi WHERE pi.client_id = c.id) AS intake,
-           c.intake_data IS NOT NULL AS intake_data,
-           (SELECT COUNT(*) FROM sessions s WHERE s.client_id = c.id) AS sessions
-    FROM clients c WHERE c.id IN ($idList) ORDER BY c.id
-");
-foreach ($chain as $r) {
-    printf("  #%d %-26s %-9s lead=%s links=%s intake=%d intake_data=%d sessions=%d\n",
-        $r['id'], $r['email'], $r['status'], $r['lead'], $r['links'], $r['intake'], $r['intake_data'], $r['sessions']);
-}
+echo "client_fees: " . $one("SELECT COUNT(*) FROM client_fees WHERE client_id IN ($ids)") . "\n";
+echo "client_notes: " . $one("SELECT COUNT(*) FROM client_notes WHERE client_id IN ($ids)") . "\n";
+echo "client_documents: " . $one("SELECT COUNT(*) FROM client_documents WHERE client_id IN ($ids)") . "\n";
