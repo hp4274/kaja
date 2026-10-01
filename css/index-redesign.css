@@ -332,6 +332,10 @@ a {
   color: #E07A5F;
 }
 
+.rw-play-icon-wrap .bi-play-fill {
+  margin-left: 1px;
+}
+
 .rw-trust-badges {
   display: flex;
   gap: 28px;
@@ -801,7 +805,8 @@ a {
 .rw-process-badge-wrap {
   position: relative;
   margin-bottom: 28px;
-  display: inline-block;
+  display: flex;
+  justify-content: center;
 }
 
 /* Multi-layer Concentric Glowing Circle */
