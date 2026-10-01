@@ -161,6 +161,18 @@ $first = array_key_first($templates);
                         <button type="button" class="btn btn-ghost btn-sm" data-bg-choose="<?php echo htmlspecialchars($id); ?>">
                           <i class="bi bi-upload" aria-hidden="true"></i> <span>Choose image</span>
                         </button>
+                        <!-- Reuses whatever another email already has, instead of
+                             uploading the same picture twice. Copies the file --
+                             see api/email-bg.php's `copy` action -- so removing
+                             this one later never deletes the other email's image.
+                             Picking an option copies immediately; there is no
+                             separate Copy button to click. -->
+                        <select class="form-select form-select-sm" data-bg-copy-from="<?php echo htmlspecialchars($id); ?>" aria-label="Copy background from another email">
+                          <option value="">Copy background from&hellip;</option>
+                          <?php foreach ($templates as $oid => $ot): if ($oid === $id) { continue; } ?>
+                            <option value="<?php echo htmlspecialchars($oid); ?>"><?php echo htmlspecialchars($ot['label']); ?></option>
+                          <?php endforeach; ?>
+                        </select>
                         <button type="button" class="btn btn-ghost btn-sm" data-bg-remove="<?php echo htmlspecialchars($id); ?>" hidden>
                           <i class="bi bi-trash3" aria-hidden="true"></i> Remove
                         </button>
@@ -350,10 +362,11 @@ $first = array_key_first($templates);
   }
 
   function sendBg(id, fd, done) {
-    var choose = q('data-bg-choose', id), remove = q('data-bg-remove', id);
+    var choose = q('data-bg-choose', id), remove = q('data-bg-remove', id), copyFrom = q('data-bg-copy-from', id);
     // Disabled while in flight: a second click is a second upload racing the
     // first, and the loser's file is the one that ends up deleted.
     choose.disabled = remove.disabled = true;
+    if (copyFrom) { copyFrom.disabled = true; }
     bgError(id, '');
 
     fd.append('template', id);
@@ -367,7 +380,10 @@ $first = array_key_first($templates);
         done();
       })
       .catch(function () { bgError(id, 'Network error. Try again.'); })
-      .then(function () { choose.disabled = remove.disabled = false; });
+      .then(function () {
+        choose.disabled = remove.disabled = false;
+        if (copyFrom) { copyFrom.disabled = false; }
+      });
   }
 
   document.querySelectorAll('[data-bg-choose]').forEach(function (btn) {
@@ -403,6 +419,23 @@ $first = array_key_first($templates);
       var fd = new FormData();
       fd.append('action', 'remove');
       sendBg(id, fd, function () { showToast('Background removed'); });
+    });
+  });
+
+  document.querySelectorAll('[data-bg-copy-from]').forEach(function (select) {
+    var id = select.dataset.bgCopyFrom;
+
+    select.addEventListener('change', function () {
+      var from = select.value;
+      if (!from) { return; }
+
+      var fd = new FormData();
+      fd.append('action', 'copy');
+      fd.append('from', from);
+      sendBg(id, fd, function () {
+        showToast('Background copied');
+        select.value = '';   // back to the placeholder; it never sits on the last pick
+      });
     });
   });
 

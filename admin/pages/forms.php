@@ -71,6 +71,9 @@ $editableCount = count($questions) - array_sum(array_map('count', $fixed));
               </td>
               <td><?php echo $t['questions']; ?></td>
               <td>
+                <?php if ($t['is_default']): ?>
+                  <span class="badge badge-published" title="The form used when a send path does not ask which one"><i class="bi bi-star-fill"></i> Default</span>
+                <?php endif; ?>
                 <?php if ($t['locked']):
                   $pendingNames = intakeLinksPendingNames($db, $t['version']);
                   $pendingTitle = $pendingNames

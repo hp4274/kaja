@@ -2,7 +2,7 @@
 /**
  * Background image for one email: upload, replace, remove.
  *
- * The image is stored in the code tree (images/email-backgrounds/) and the
+ * The image is stored in the code tree (uploads/email-backgrounds/) and the
  * setting holds only its filename. It is never attached to a message; the
  * mailer references it by URL.
  */
@@ -54,6 +54,38 @@ if ($action === 'remove') {
     exit;
 }
 
+if ($action === 'copy') {
+    $from = (string) ($_POST['from'] ?? '');
+    if (!isset($templates[$from])) {
+        bgFail('Choose an email to copy from.');
+    }
+    $sourceFile = emailBackgroundFile($from);
+    if ($sourceFile === '') {
+        bgFail('That email has no background to copy.');
+    }
+
+    // A fresh copy under this template's own name, not a shared reference --
+    // removing or replacing one email's background later must never delete a
+    // file a different email is still showing.
+    $ext  = substr($sourceFile, strrpos($sourceFile, '.') + 1);
+    $name = $id . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $dir  = emailBackgroundDir();
+    if (!@copy($dir . '/' . $sourceFile, $dir . '/' . $name)) {
+        bgFail('The image could not be copied.');
+    }
+
+    bgDeleteCurrent($id);
+    setSetting($key, $name);
+
+    echo json_encode([
+        'success' => true,
+        'url'     => emailBackgroundPreviewUrl($id),
+        'public'  => emailBackgroundUrl($id),
+        'private' => emailUrlIsPrivate(emailBackgroundUrl($id)),
+    ]);
+    exit;
+}
+
 if ($action !== 'upload') {
     bgFail('Unknown action.');
 }
@@ -83,10 +115,10 @@ if (!isset($types[$mime]) || @getimagesize($file['tmp_name']) === false) {
 
 $dir = emailBackgroundDir();
 if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-    bgFail('The images/email-backgrounds folder cannot be created.');
+    bgFail('The uploads/email-backgrounds folder cannot be created.');
 }
 if (!is_writable($dir)) {
-    bgFail('The images/email-backgrounds folder is not writable.');
+    bgFail('The uploads/email-backgrounds folder is not writable.');
 }
 
 // A fresh name every time. Mail clients and image proxies cache by URL, so

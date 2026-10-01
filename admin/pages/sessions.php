@@ -366,4 +366,21 @@ document.querySelectorAll('.modal-overlay').forEach(function(m) {
   m.addEventListener('click', function(e) { if(e.target===m) m.classList.remove('open'); });
 });
 
+// A status change or a reschedule made from inside a day's session list saves
+// by reloading this page, which used to land back on the bare calendar --
+// showDaySessions() remembers which day was open (see session-booking-modal.php)
+// so it can be reopened once here. Read-and-forget: a stale flag left behind
+// by navigating away with the modal still open must not keep reopening it on
+// every later visit.
+(function () {
+  var stored;
+  try { stored = sessionStorage.getItem('kajaOpenDayModal'); } catch (e) { stored = null; }
+  if (!stored) { return; }
+  try { sessionStorage.removeItem('kajaOpenDayModal'); } catch (e) {}
+
+  if (stored.slice(0, 7) !== (window.CAL_MONTH || '')) { return; }   // a different month now on screen
+  var day = parseInt(stored.slice(8, 10), 10);
+  if (day) { showDaySessions(day); }
+})();
+
 </script>

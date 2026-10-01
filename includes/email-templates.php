@@ -342,12 +342,12 @@ function emailTemplateKeys() {
 /**
  * Background images.
  *
- * Kept in the code tree, in images/email-backgrounds/, and referenced from the
- * email by absolute URL. Nothing is attached: the message stays a few
+ * Kept in the code tree, in uploads/email-backgrounds/, and referenced from
+ * the email by absolute URL. Nothing is attached: the message stays a few
  * kilobytes whatever the picture weighs.
  */
 function emailBackgroundDir() {
-    return __DIR__ . '/../images/email-backgrounds';
+    return __DIR__ . '/../uploads/email-backgrounds';
 }
 
 /** Types accepted, by MIME. The extension comes from here, never from the upload. */
@@ -388,13 +388,13 @@ function emailBackgroundFile($templateId) {
 /** What a recipient's mail client fetches: absolute, or '' for a plain mail. */
 function emailBackgroundUrl($templateId) {
     $file = emailBackgroundFile($templateId);
-    return $file === '' ? '' : siteBaseUrl() . 'images/email-backgrounds/' . rawurlencode($file);
+    return $file === '' ? '' : siteBaseUrl() . 'uploads/email-backgrounds/' . rawurlencode($file);
 }
 
 /** Same file, addressed from the admin panel's own directory. */
 function emailBackgroundPreviewUrl($templateId) {
     $file = emailBackgroundFile($templateId);
-    return $file === '' ? '' : '../images/email-backgrounds/' . rawurlencode($file);
+    return $file === '' ? '' : '../uploads/email-backgrounds/' . rawurlencode($file);
 }
 
 /** True when a recipient's mail app could not possibly reach $url. */

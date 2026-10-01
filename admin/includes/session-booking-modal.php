@@ -397,6 +397,7 @@ var availabilityDirty = false;
 
 function closeDayModal() {
   document.getElementById('daySessionsModal').classList.remove('open');
+  try { sessionStorage.removeItem('kajaOpenDayModal'); } catch (e) {}
   if (availabilityDirty) { availabilityDirty = false; location.reload(); }
 }
 
@@ -469,6 +470,14 @@ function showDaySessions(day) {
 
   document.getElementById('daySessionsContent').innerHTML = html;
   document.getElementById('daySessionsModal').classList.add('open');
+
+  // Changing a session's status or rescheduling it (see sessions.php) saves
+  // by reloading the whole page, same as every other write on this page --
+  // and a plain reload forgets which day's list was open, dropping back to
+  // the bare calendar. Remembered here so the page can reopen the same day
+  // once, right after that reload; closeDayModal() below clears it again the
+  // moment the day is closed on purpose.
+  try { sessionStorage.setItem('kajaOpenDayModal', calendarDate(day)); } catch (e) {}
 }
 
 /**

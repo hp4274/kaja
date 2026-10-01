@@ -6,6 +6,13 @@
 /storage/documents/
 /storage/logs/
 
+# Uploaded files and images
+/uploads/*
+/uploads/**/*
+!/uploads/**/
+!/uploads/**/.gitkeep
+!/uploads/**/.htaccess
+
 # Local scratch and test artifacts
 /_backup_pre_formfix/
 /docs/

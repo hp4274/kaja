@@ -3403,6 +3403,15 @@ body.admin-body.admin-dark-theme {
 }
 .settings-section-head i { font-size: 0.95rem; }
 
+/* ─── The settings page's own stacking rhythm ───
+   The three panels inside the settings form sat edge to edge with no gap
+   between them, and the Access heading and the panels after it were just as
+   flush against whatever came before. One gap between stacked panels, a
+   bigger one between sections -- the same rhythm .content-grid and
+   .mail-field already use elsewhere in the admin. */
+#settings-form > .panel + .panel { margin-top: var(--space-5); }
+.settings-page + .settings-page { margin-top: var(--space-6); }
+
 /* ─── A setting whose answers are a short list ───
    A promise of "two working days" has four sensible answers and no sensible
    free-text one. A number box invites 47, and 47 working days is not a reply
@@ -3623,7 +3632,8 @@ body.admin-body.admin-dark-theme {
 .bg-thumb.has-image { border-style: solid; }
 .bg-thumb.has-image i { display: none; }
 
-.bg-picker-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.bg-picker-actions { display: flex; flex-wrap: nowrap; gap: var(--space-2); }
+.bg-picker-actions select { min-width: 0; max-width: 170px; flex-shrink: 1; }
 
 /* The preview's image, behind the white card. The card stays white in the dark
    theme too, because the email it stands for is white in the recipient's
